@@ -1,3 +1,9 @@
+import aws_ecs_service from './aws-ecs-service.svg';
+import aws_ecs_task from './aws-ecs-task.svg';
+import aws_ecs_container from './aws-ecs-container.svg';
+import aws_beanstalk_application from './aws-beanstalk-application.svg';
+import aws_beanstalk from './aws-beanstalk.svg';
+import aws_beanstalk_version from './aws-beanstalk-version.svg';
 import cloudflare from './saas-cloudflare.svg';
 import user from './external-user.svg';
 import vercel from './saas-vercel.svg';
@@ -111,6 +117,15 @@ const icons: Record<string, string> = {
   'gcp.storage': gcp_storage,
   'aws.alb': aws_alb,
   'aws.ecs': aws_ecs,
+  'aws.ecs-cluster': aws_ecs,
+  'aws.ecs-task-definition': aws_ecs_task,
+  'aws.ecs-service': aws_ecs_service,
+  'aws.ecs-task': aws_ecs_task,
+  'aws.ecs-container': aws_ecs_container,
+  'aws.beanstalk-application': aws_beanstalk_application,
+  'aws.beanstalk-environment': aws_beanstalk,
+  'aws.beanstalk-version': aws_beanstalk_version,
+
   'aws.rds': aws_rds,
   'aws.ec2': aws_ec2,
   'aws.s3': aws_s3,

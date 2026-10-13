@@ -291,3 +291,178 @@ test('Git ref traversal is rejected even when target contents look like a commit
     await rm(temporary, { recursive: true, force: true });
   }
 });
+
+test('ECS の cluster/service/task definition と Beanstalk の application/environment/version を分離する', () => {
+  const resources = [
+    {
+      address: 'aws_ecs_cluster.main',
+      type: 'aws_ecs_cluster',
+      values: { id: 'cluster-id', arn: 'cluster-arn' },
+    },
+    {
+      address: 'aws_ecs_task_definition.api',
+      type: 'aws_ecs_task_definition',
+      values: { arn: 'definition-arn', container_definitions: 'SECRET_SENTINEL' },
+    },
+    {
+      address: 'aws_ecs_service.api',
+      type: 'aws_ecs_service',
+      values: { cluster: 'cluster-arn', task_definition: 'definition-arn' },
+    },
+    {
+      address: 'aws_elastic_beanstalk_application.web',
+      type: 'aws_elastic_beanstalk_application',
+      values: { name: 'web' },
+    },
+    {
+      address: 'aws_elastic_beanstalk_application_version.v3',
+      type: 'aws_elastic_beanstalk_application_version',
+      values: { application: 'web', name: 'v3', bucket: 'SECRET_SENTINEL' },
+    },
+    {
+      address: 'aws_elastic_beanstalk_environment.prod',
+      type: 'aws_elastic_beanstalk_environment',
+      values: { application: 'web', version_label: 'v3', setting: [{ value: 'SECRET_SENTINEL' }] },
+    },
+  ];
+  const input = { format_version: '1.0', values: { root_module: { resources } } };
+  const diagram = importTerraformJSON(input);
+  const by = (type: string) => diagram.resources.find((r) => r.type === type)!;
+  assert.equal(by('aws.ecs-service').parentId, by('aws.ecs-cluster').id);
+  assert.equal(by('aws.ecs-task-definition').parentId, undefined);
+  assert.equal(by('aws.beanstalk-environment').parentId, by('aws.beanstalk-application').id);
+  assert.equal(by('aws.beanstalk-version').parentId, by('aws.beanstalk-application').id);
+  assert.ok(
+    diagram.connections.some(
+      (e) =>
+        e.source === by('aws.ecs-service').id &&
+        e.target === by('aws.ecs-task-definition').id &&
+        e.kind === 'dependency',
+    ),
+  );
+  assert.ok(
+    diagram.connections.some(
+      (e) =>
+        e.source === by('aws.beanstalk-environment').id &&
+        e.target === by('aws.beanstalk-version').id,
+    ),
+  );
+  assert.ok(diagram.connections.every((e) => e.kind !== 'traffic'));
+  assert.ok(!JSON.stringify(diagram).includes('SECRET_SENTINEL'));
+  assert.equal(diagram.resources.length, resources.length); // 稼働タスク・管理下EC2を推測生成しない。
+  resources.push({
+    address: 'aws_ecs_cluster.other',
+    type: 'aws_ecs_cluster',
+    values: { id: 'cluster-id', arn: 'cluster-arn' },
+  });
+  const ambiguous = importTerraformJSON(input).resources.find((r) => r.type === 'aws.ecs-service')!;
+  assert.equal(ambiguous.parentId, undefined);
+  assert.ok(ambiguous.unresolved?.includes('cluster の関連先は候補が複数あり未解決'));
+});
+
+test('ECS 関連先の機密・未確定値を使わず、異なる版やアプリに誤接続しない', () => {
+  for (const mask of ['sensitive_values', 'after_unknown']) {
+    const address = 'aws_ecs_service.api';
+    const resources = [
+      { address: 'aws_ecs_cluster.main', type: 'aws_ecs_cluster', values: { arn: 'cluster-arn' } },
+      {
+        address: 'aws_ecs_task_definition.api',
+        type: 'aws_ecs_task_definition',
+        values: { arn: 'definition:12' },
+      },
+      {
+        address,
+        type: 'aws_ecs_service',
+        values: { cluster: 'cluster-arn', task_definition: 'definition:13' },
+        ...(mask === 'sensitive_values' ? { sensitive_values: { cluster: true } } : {}),
+      },
+    ];
+    const diagram = importTerraformJSON({
+      format_version: '1.0',
+      planned_values: { root_module: { resources } },
+      resource_changes: [
+        { address, change: { after_unknown: mask === 'after_unknown' ? { cluster: true } : {} } },
+      ],
+    });
+    const service = diagram.resources.find((r) => r.type === 'aws.ecs-service')!;
+    assert.equal(service.parentId, undefined);
+    assert.ok(service.unresolved?.includes('task_definition の関連先は未解決'));
+    assert.equal(diagram.connections.length, 0);
+  }
+  const diagram = importTerraformJSON({
+    format_version: '1.0',
+    values: {
+      root_module: {
+        resources: [
+          {
+            address: 'aws_elastic_beanstalk_application_version.other',
+            type: 'aws_elastic_beanstalk_application_version',
+            values: { name: 'v3', application: 'other' },
+          },
+          {
+            address: 'aws_elastic_beanstalk_environment.web',
+            type: 'aws_elastic_beanstalk_environment',
+            values: { application: 'web', version_label: 'v3' },
+          },
+        ],
+      },
+    },
+  });
+  assert.equal(diagram.connections.length, 0);
+});
+
+test('ECS・Beanstalk の静的直接参照を解決し、全体未確定のplanを関連解決に使わない', async () => {
+  const temporary = await mkdtemp(path.join(tmpdir(), 'infra-canvas-ecs-'));
+  try {
+    await writeFile(
+      path.join(temporary, 'main.tf'),
+      `
+resource "aws_ecs_cluster" "main" {}
+resource "aws_ecs_task_definition" "api" {}
+resource "aws_ecs_service" "api" {
+  cluster = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.api.arn
+}
+resource "aws_elastic_beanstalk_application" "web" {}
+resource "aws_elastic_beanstalk_environment" "prod" {
+  application = aws_elastic_beanstalk_application.web.name
+}
+`,
+    );
+    const diagram = await importTerraformRepository({ repository: temporary });
+    const by = (type: string) => diagram.resources.find((r) => r.type === type)!;
+    assert.equal(by('aws.ecs-service').parentId, by('aws.ecs-cluster').id);
+    assert.equal(by('aws.beanstalk-environment').parentId, by('aws.beanstalk-application').id);
+    assert.ok(
+      diagram.connections.some(
+        (e) =>
+          e.source === by('aws.ecs-service').id &&
+          e.target === by('aws.ecs-task-definition').id &&
+          e.attributes.label === 'task-definition',
+      ),
+    );
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+  const diagram = importTerraformJSON({
+    format_version: '1.0',
+    planned_values: {
+      root_module: {
+        resources: [
+          {
+            address: 'aws_ecs_cluster.main',
+            type: 'aws_ecs_cluster',
+            values: { arn: 'cluster-arn' },
+          },
+          {
+            address: 'aws_ecs_service.api',
+            type: 'aws_ecs_service',
+            values: { cluster: 'cluster-arn' },
+          },
+        ],
+      },
+    },
+    resource_changes: [{ address: 'aws_ecs_service.api', change: { after_unknown: true } }],
+  });
+  assert.equal(diagram.resources.find((r) => r.type === 'aws.ecs-service')?.parentId, undefined);
+});

@@ -14,7 +14,7 @@ import type {
 export interface LayoutOptions {
   direction?: 'RIGHT' | 'DOWN';
 }
-export const layoutVersion = 'infra-canvas-layout-3';
+export const layoutVersion = 'infra-canvas-layout-4';
 
 const kindLabels = {
   traffic: '通信',
@@ -59,8 +59,17 @@ export async function layoutGraph(
         const collapsed = isBoundary(resource) && graph.collapsed.includes(resource.id);
         // 折りたたみ境界にはアイコン・余白・展開ボタンの幅を確保する。
         const headerWidth = isBoundary(resource) ? 112 : 80;
-        const width = Math.max(180, Math.min(labelWidth + headerWidth, 480));
-        const labelLines = collapsed ? Math.ceil(labelWidth / (width - headerWidth)) : 1;
+        const detailBoundary = isBoundary(resource) && resource.type.startsWith('aws.');
+        const width = Math.max(
+          180,
+          Math.min(
+            Math.max(labelWidth, detailBoundary ? textWidth(resource.type, 6, 10) : 0) +
+              headerWidth,
+            480,
+          ),
+        );
+        const labelLines =
+          collapsed || detailBoundary ? Math.ceil(labelWidth / (width - headerWidth)) : 1;
         const node: ElkNode = {
           id: resource.id,
           width,
@@ -68,7 +77,15 @@ export async function layoutGraph(
         };
         if (nested.length) {
           node.children = nested;
-          node.layoutOptions = { 'elk.padding': '[top=56,left=24,bottom=24,right=24]' };
+          node.layoutOptions = {
+            'elk.padding': `[top=${detailBoundary ? 68 + Math.max(0, labelLines - 1) * 18 : 56},left=24,bottom=24,right=24]`,
+            ...(detailBoundary
+              ? {
+                  'elk.nodeSize.constraints': 'MINIMUM_SIZE',
+                  'elk.nodeSize.minimum': `(${width}, ${node.height})`,
+                }
+              : {}),
+          };
         }
         return node;
       });

@@ -778,3 +778,14 @@ textarea:focus-visible {
 .react-flow__panel.react-flow__minimap {
   bottom: 48px;
 }
+
+.detail-boundary-card.boundary-card .resource-text {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+}
+.detail-boundary-card .resource-text strong {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  overflow: visible;
+}

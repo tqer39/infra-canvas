@@ -88,3 +88,22 @@ node --import tsx --test tests/terraform.test.ts
 
 plan/state 識別、module/count/for_each の実体、ソース対応、ルート根拠、配置設定と実配置、
 SG の重複関連、依存の意味、未確定値、秘密の除外、静的読み取りを回帰テストします。
+
+## ECS と Elastic Beanstalk
+
+`aws_ecs_cluster`、`aws_ecs_service`、`aws_ecs_task_definition` を別種別へ変換します。
+サービスの `cluster` を解決できればクラスターの配下に置き、`task_definition` は定義への依存線にします。
+ID・ARN・名前または静的な直接参照が、一つの候補と完全一致する場合だけ関連付けます。
+異なるリビジョンを同一視しません。曖昧な候補は未解決として残します。
+タスク定義はクラスターへ所属させません。
+
+`aws_elastic_beanstalk_application`、`aws_elastic_beanstalk_environment`、
+`aws_elastic_beanstalk_application_version` をアプリケーション・環境・版へ変換します。
+`application` の一意な参照で環境と版を所属させ、同じアプリケーション内の
+`version_label` と版の `name` が一意に一致する場合に依存線を表示します。
+
+参照値は関連解決だけに使います。機密・未確定値は除外し、コンテナ定義JSON、環境変数、
+Beanstalkの任意の `setting`、ソースバンドルの場所を表示属性へ取り込みません。
+設定内のVPC・Subnetの解釈、管理下のEC2・ALB・ASG・EKS等の自動発見は未対応です。
+Terraformのサービス定義から実行タスクを推測して増やすこともありません。
+必要な実体はDSLで明示できます。クラウドAPIへの接続は行いません。

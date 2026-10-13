@@ -1058,5 +1058,93 @@
     "origin": "独自作成の頭と肩のシルエット",
     "createdAt": "2026-10-13",
     "sha256": "3a91f6ce7bcb84750f29e6e198223fb0f4e0ed3f75d0b57eb1b85b58cbc4a98a"
+  },
+  {
+    "type": "aws.ecs-service",
+    "file": "aws-ecs-service.svg",
+    "archivePath": "Resource-Icons_07312026/Res_Containers/Res_Amazon-Elastic-Container-Service_Service_48.svg",
+    "sha256": "1c126898214b87568a5c50cd23025d92be86de3712d68716feb4a167ab1bbb98",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
+  },
+  {
+    "type": "aws.ecs-task",
+    "file": "aws-ecs-task.svg",
+    "archivePath": "Resource-Icons_07312026/Res_Containers/Res_Amazon-Elastic-Container-Service_Task_48.svg",
+    "sha256": "6cc12036f3e8df2a73618725ed37487c3f0bfe71f7e690a22a149d419d0bc0c2",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
+  },
+  {
+    "type": "aws.ecs-container",
+    "file": "aws-ecs-container.svg",
+    "archivePath": "Resource-Icons_07312026/Res_Containers/Res_Amazon-Elastic-Container-Service_Container-1_48.svg",
+    "sha256": "4227712d7340cbee88c20e41f8ec0fe998901fcd5eb1576e46dab800c9cbce66",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
+  },
+  {
+    "type": "aws.beanstalk-application",
+    "file": "aws-beanstalk-application.svg",
+    "archivePath": "Resource-Icons_07312026/Res_Compute/Res_AWS-Elastic-Beanstalk_Application_48.svg",
+    "sha256": "d330abba89ad544291553a7eaf34a9c4076ecb2adcce316e4df3cf45f6233ebf",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
+  },
+  {
+    "type": "aws.beanstalk-environment",
+    "file": "aws-beanstalk.svg",
+    "archivePath": "Architecture-Service-Icons_07312026/Arch_Compute/48/Arch_AWS-Elastic-Beanstalk_48.svg",
+    "sha256": "79d0808e006ccae23af10b2862407af43962383ab874f2f03a73264c4704eabe",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
+  },
+  {
+    "type": "aws.beanstalk-version",
+    "file": "aws-beanstalk-version.svg",
+    "archivePath": "Resource-Icons_07312026/Res_Compute/Res_AWS-Elastic-Beanstalk_Deployment_48.svg",
+    "sha256": "998ff96ff85321334313787300c8899ac3df496dcc98c4385fe592256fd48a2b",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
+  },
+  {
+    "type": "aws.ecs-cluster",
+    "file": "aws-ecs.svg",
+    "archivePath": "Architecture-Service-Icons_07312026/Arch_Containers/48/Arch_Amazon-Elastic-Container-Service_48.svg",
+    "sha256": "7f8b2883cd6171a42bdcafab2d20d17c3cf886d306c62846c6c555ad26463b04",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
+  },
+  {
+    "type": "aws.ecs-task-definition",
+    "file": "aws-ecs-task.svg",
+    "archivePath": "Resource-Icons_07312026/Res_Containers/Res_Amazon-Elastic-Container-Service_Task_48.svg",
+    "sha256": "6cc12036f3e8df2a73618725ed37487c3f0bfe71f7e690a22a149d419d0bc0c2",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
   }
 ]

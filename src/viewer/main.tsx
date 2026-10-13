@@ -88,7 +88,7 @@ function ResourceCard({ data }: NodeProps<ResourceNode>) {
   const homepage = getIconHomepage(resource.type);
   return (
     <div
-      className={`resource-card ${boundary && !collapsed ? 'boundary-card' : ''} ${collapsed ? 'collapsed-card' : ''} ${related ? 'related' : ''} ${muted ? 'muted' : ''}`}
+      className={`resource-card ${boundary && !collapsed ? 'boundary-card' : ''} ${boundary && resource.type.startsWith('aws.') ? 'detail-boundary-card' : ''} ${collapsed ? 'collapsed-card' : ''} ${related ? 'related' : ''} ${muted ? 'muted' : ''}`}
     >
       <Handle type="target" position={Position.Left} />
       <Handle type="source" position={Position.Right} />

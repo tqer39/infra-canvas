@@ -15,6 +15,13 @@ test.beforeAll(() => {
   execFileSync(process.execPath, [
     'dist/cli.js',
     'html',
+    'examples/ecs-beanstalk.infra',
+    '--out',
+    'artifacts/ecs-beanstalk.html',
+  ]);
+  execFileSync(process.execPath, [
+    'dist/cli.js',
+    'html',
     'examples/saas.infra',
     '--out',
     'artifacts/saas.html',
@@ -558,3 +565,60 @@ test('大規模・GCP Azure・複数クラウドの入力が実際に描画さ�
   await page.getByRole('button', { name: 'Fit View' }).click();
   await page.screenshot({ path: 'artifacts/large.png' });
 });
+
+for (const offline of [false, true]) {
+  test(`ECS・Beanstalk の詳細種別・公式アイコン・境界集約を表示する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(
+      offline ? 'file://' + resolve('artifacts/ecs-beanstalk.html') : 'http://127.0.0.1:5188',
+    );
+    if (!offline)
+      await page.locator('input[type=file]').setInputFiles('examples/ecs-beanstalk.infra');
+    await expect(page.locator('.document-title')).toHaveText('ECS と Elastic Beanstalk の詳細構成');
+    await expect(page.locator('.service-icon')).toHaveCount(15);
+    await expect
+      .poll(() =>
+        page
+          .locator('.service-icon')
+          .evaluateAll((images) =>
+            images.every(
+              (element) =>
+                (element as HTMLImageElement).complete &&
+                (element as HTMLImageElement).naturalWidth > 0,
+            ),
+          ),
+      )
+      .toBe(true);
+    const node = (id: string) => page.locator(`.react-flow__node[data-id="${id}"]`);
+    await expect
+      .poll(() =>
+        page
+          .locator('.detail-boundary-card .resource-text strong')
+          .evaluateAll((labels) =>
+            labels.every((label) => label.scrollWidth <= label.clientWidth + 1),
+          ),
+      )
+      .toBe(true);
+
+    await page.getByRole('button', { name: 'ECS クラスターを折りたたむ', exact: true }).click();
+    await expect(node('task_a')).toHaveCount(0);
+    await expect(node('definition')).toHaveCount(1);
+    await page.getByRole('button', { name: 'ECS クラスターを展開', exact: true }).click();
+    await expect(node('task_a')).toHaveCount(1);
+    await expect(node('service').locator('.resource-type')).toHaveText('aws.ecs-service');
+    await page
+      .getByRole('button', { name: 'Web 環境（Standard・設計例）を折りたたむ', exact: true })
+      .click();
+    await expect(node('instance')).toHaveCount(0);
+    await expect(node('worker_instance')).toHaveCount(1);
+    await page
+      .getByRole('button', { name: 'Web 環境（Standard・設計例）を展開', exact: true })
+      .click();
+    await expect(node('instance')).toHaveCount(1);
+    await page.getByRole('button', { name: 'Fit View' }).click();
+    await page.screenshot({ path: `artifacts/ecs-beanstalk-${offline ? 'offline' : 'dev'}.png` });
+  });
+}

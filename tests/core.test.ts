@@ -395,3 +395,27 @@ describe('外部 JSON の共通検証', () => {
     await assert.rejects(layoutGraph(graph), /循環/);
   });
 });
+
+it('ECS・Beanstalk の詳細境界は折りたたみで集約し、展開で関係を復元する', async () => {
+  const { readFileSync } = await import('node:fs');
+  const parsed = parseDSL(readFileSync('examples/ecs-beanstalk.infra', 'utf8'));
+  assert.deepEqual(parsed.diagnostics, []);
+  const diagram = validateDiagram(parsed.diagram);
+  const full = buildDisplayGraph(diagram);
+  const folded = buildDisplayGraph(diagram, { collapsed: ['cluster', 'web', 'definition'] });
+  assert.equal(folded.representative.task_a, 'cluster');
+  assert.equal(folded.representative.instance, 'web');
+  assert.equal(folded.representative.container_definition, 'definition');
+  assert.ok(
+    folded.connections.some((edge) => edge.source === 'cluster' && edge.target === 'definition'),
+  );
+  assert.deepEqual(
+    buildDisplayGraph(diagram, { expanded: ['cluster', 'web', 'definition'] }),
+    full,
+  );
+  const restored = parseDSL(serializeDSL(diagram));
+  assert.deepEqual(restored.diagnostics, []);
+  assert.equal(restored.diagram?.resources.length, diagram.resources.length);
+  const layout = await layoutGraph(full);
+  assert.equal(layout.nodes.length, diagram.resources.length);
+});

@@ -24,8 +24,12 @@ const types: Record<string, string> = {
   aws_lb: 'aws.alb',
   aws_alb: 'aws.alb',
   aws_instance: 'aws.ec2',
-  aws_ecs_cluster: 'aws.ecs',
-  aws_ecs_service: 'aws.ecs',
+  aws_ecs_cluster: 'aws.ecs-cluster',
+  aws_ecs_service: 'aws.ecs-service',
+  aws_ecs_task_definition: 'aws.ecs-task-definition',
+  aws_elastic_beanstalk_application: 'aws.beanstalk-application',
+  aws_elastic_beanstalk_environment: 'aws.beanstalk-environment',
+  aws_elastic_beanstalk_application_version: 'aws.beanstalk-version',
   aws_db_instance: 'aws.rds',
   aws_security_group: 'sg',
   aws_internet_gateway: 'aws.igw',
@@ -193,8 +197,59 @@ function build(items: Item[], kind: Provenance['kind'], context: TerraformContex
     }
     return targets;
   };
+  // 関連先の ID/ARN/名前は解決だけに使用し、機密値・未確定値・曖昧な候補は公開しない。
+  const semanticTarget = (item: Item, key: string, type: string): string | undefined => {
+    const input = value(item, key);
+    if (typeof input !== 'string') return;
+    const candidates = items.filter(
+      (candidate) =>
+        get(candidate.address).type === type &&
+        (candidate.address === input ||
+          ['id', 'arn', 'name'].some((field) => value(candidate, field) === input)),
+    );
+    if (candidates.length === 1) return candidates[0]!.address;
+    get(item.address).unresolved!.push(
+      `${key} の関連先は${candidates.length > 1 ? '候補が複数あり' : ''}未解決`,
+    );
+    return;
+  };
   for (const item of items) {
     const resource = get(item.address);
+    if (item.type === 'aws_ecs_service') {
+      const cluster = semanticTarget(item, 'cluster', 'aws.ecs-cluster');
+      if (cluster) resource.parentId = cluster;
+      const definition = semanticTarget(item, 'task_definition', 'aws.ecs-task-definition');
+      if (definition) edge(item.address, definition, 'dependency', 'task-definition');
+    }
+    if (
+      ['aws_elastic_beanstalk_environment', 'aws_elastic_beanstalk_application_version'].includes(
+        item.type,
+      )
+    ) {
+      const application = semanticTarget(item, 'application', 'aws.beanstalk-application');
+      if (application) resource.parentId = application;
+    }
+    if (item.type === 'aws_elastic_beanstalk_environment') {
+      // バージョン名はアプリケーション内で一意。別アプリの同名版を結び付けない。
+      const version = value(item, 'version_label');
+      if (typeof version === 'string') {
+        const candidates = items.filter(
+          (candidate) =>
+            candidate.type === 'aws_elastic_beanstalk_application_version' &&
+            value(candidate, 'name') === version &&
+            value(candidate, 'application') === value(item, 'application') &&
+            typeof value(item, 'application') === 'string',
+        );
+        if (
+          candidates.length === 1 &&
+          resource.parentId &&
+          get(resource.parentId).type === 'aws.beanstalk-application'
+        )
+          edge(item.address, candidates[0]!.address, 'dependency', 'application-version');
+        else resource.unresolved!.push('version_label の関連先は未解決');
+      }
+      resource.unresolved!.push('環境が内部生成するリソースと実配置は未取得（DSLで明示可能）');
+    }
     for (const target of related(item, value(item, 'vpc_id'), 'vpc', 'VPC')) {
       if (
         get(target).type === 'vpc' &&
@@ -357,7 +412,11 @@ export function importTerraformJSON(input: unknown, context: TerraformContext = 
               ),
         unknown:
           change.after_unknown === true
-            ? Object.fromEntries(Object.keys(safe).map((key) => [key, true]))
+            ? Object.fromEntries(
+                [...new Set([...Object.keys(safe), ...Object.keys(obj(resource.values))])].map(
+                  (key) => [key, true],
+                ),
+              )
             : obj(change.after_unknown),
         dependencies: arr(resource.depends_on).filter((v): v is string => typeof v === 'string'),
       });
@@ -484,6 +543,9 @@ export async function importTerraformRepository(
                 'security_groups',
                 'gateway_id',
                 'route_table_id',
+                'cluster',
+                'task_definition',
+                'application',
               ].includes(key)
             ) {
               values[key] = expression.trim().startsWith('[')

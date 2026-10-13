@@ -178,3 +178,33 @@ ELK のアルゴリズム、seed、入力 ID 順序を固定します。同じ�
 
 実例は `examples/aws.infra`、`examples/gcp-azure.infra`、`examples/multicloud.infra`、
 `examples/large.infra` にあります。大規模例はサービス 300 個、境界 18 個、接続 299 本です。
+
+## ECS と Elastic Beanstalk の詳細構成
+
+`aws.ecs` は従来の概要表現として維持します。詳細には次の型を使います。
+
+| 型                          | 意味                               | 入れ子                   |
+| --------------------------- | ---------------------------------- | ------------------------ |
+| `aws.ecs-cluster`           | ECS クラスター                     | サービス、単発タスクなど |
+| `aws.ecs-service`           | タスク数を維持するサービス         | 設計・観測した実行タスク |
+| `aws.ecs-task-definition`   | タスクの設計図・リビジョン         | コンテナ定義             |
+| `aws.ecs-task`              | 起動するタスク                     | 実行コンテナ             |
+| `aws.ecs-container`         | コンテナ定義または実行コンテナ     | なし                     |
+| `aws.beanstalk-application` | アプリケーションの論理的なまとまり | 環境、アプリケーション版 |
+| `aws.beanstalk-environment` | 版を実行する環境                   | 明示した管理下リソース   |
+| `aws.beanstalk-version`     | 配備するアプリケーション版         | なし                     |
+
+タスク定義はクラスターやサービスと別ノードで宣言し、複数サービス・単発タスクから
+接続できます。サービスから定義への `dependency`、実行タスクから定義への `association`、
+環境から版への `deploy` など、意図を明記します。入れ子境界は折りたたみ・展開・詳細移動できます。
+`meta.cpu`、`meta.memory`、`meta.desiredCount`、`meta.tier` などは拡張テキスト属性で記述できます。
+コンテナの環境変数や認証情報は記載しないでください。
+
+[ecs-beanstalk.infra](../examples/ecs-beanstalk.infra) はECSのサービス、単発タスク、
+タスク定義と、Beanstalk StandardのWeb/Worker環境の設計例です。
+実行タスクや管理下EC2は実環境から取得した情報ではありません。
+BeanstalkにはEKSを使うClusterモードもあります。すべての環境をALB・EC2構成とみなさず、
+図に必要な実体と関係を明示してください。
+
+概念は [ECS公式説明](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/Welcome.html) と
+[Beanstalk公式説明](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/concepts.html) に基づきます。
