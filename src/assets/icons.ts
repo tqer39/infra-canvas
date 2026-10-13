@@ -1,3 +1,18 @@
+import claude from './saas-claude.svg';
+import claudecode from './saas-claudecode.svg';
+import googlegemini from './saas-googlegemini.svg';
+import deepseek from './saas-deepseek.svg';
+import mistralai from './saas-mistralai.svg';
+import perplexity from './saas-perplexity.svg';
+import qwen from './saas-qwen.svg';
+import openrouter from './saas-openrouter.svg';
+import replicate from './saas-replicate.svg';
+import ollama from './saas-ollama.svg';
+import lmstudio from './saas-lmstudio.svg';
+import vllm from './saas-vllm.svg';
+import dify from './saas-dify.svg';
+import langchain from './saas-langchain.svg';
+import langgraph from './saas-langgraph.svg';
 import aws_transit_gateway from './aws-transit-gateway.svg';
 import aws_tgw_attachment from './aws-tgw-attachment.svg';
 import aws_ram_share from './aws-ram.svg';
@@ -71,6 +86,21 @@ import azure_app from './azure-app.svg';
 import azure_sql from './azure-sql.svg';
 import azure_storage from './azure-storage.svg';
 const icons: Record<string, string> = {
+  'saas.claude': claude,
+  'saas.claudecode': claudecode,
+  'saas.googlegemini': googlegemini,
+  'saas.deepseek': deepseek,
+  'saas.mistralai': mistralai,
+  'saas.perplexity': perplexity,
+  'saas.qwen': qwen,
+  'saas.openrouter': openrouter,
+  'saas.replicate': replicate,
+  'saas.ollama': ollama,
+  'saas.lmstudio': lmstudio,
+  'saas.vllm': vllm,
+  'saas.dify': dify,
+  'saas.langchain': langchain,
+  'saas.langgraph': langgraph,
   'aws.organization': aws_organizations,
   'aws.organization-root': aws_organizations,
   'aws.organizational-unit': aws_organizational_unit,

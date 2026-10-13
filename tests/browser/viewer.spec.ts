@@ -344,7 +344,7 @@ for (const offline of [false, true]) {
     await expect(page.locator('.detail-panel')).toContainText('a → target');
     await expect(page.locator('.detail-panel')).toContainText('b → target');
   });
-  test(`主要43サービスのアイコンとブランドカラーを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
+  test(`主要58サービスのアイコンとブランドカラーを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
     context,
   }) => {
@@ -358,9 +358,9 @@ for (const offline of [false, true]) {
     );
     if (!offline)
       await page.locator('input[type=file]').setInputFiles('examples/service-catalog.infra');
-    await expect(page.locator('.canvas-footer')).toContainText('43 要素');
+    await expect(page.locator('.canvas-footer')).toContainText('58 要素');
     const images = page.locator('.service-icon');
-    await expect(images).toHaveCount(43);
+    await expect(images).toHaveCount(58);
     await expect
       .poll(() =>
         images.evaluateAll((images) =>
@@ -409,7 +409,7 @@ for (const offline of [false, true]) {
         }),
       brandColors,
     );
-    expect(renderedColors).toHaveLength(37);
+    expect(renderedColors).toHaveLength(52);
     expect(renderedColors.filter((brand) => !brand.matches)).toEqual([]);
     if (offline) expect(requests).toEqual([]);
   });

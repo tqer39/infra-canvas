@@ -26,7 +26,7 @@ test('同梱アイコンは記録したハッシュと一致し、外部資産�
   }
 });
 
-test('Simple Icons の37種はブランドカラーを適用し、原本の形状を保持する', () => {
+test('Simple Icons の52種はブランドカラーを適用し、原本の形状を保持する', () => {
   const manifest = JSON.parse(readFileSync('src/assets/manifest.json', 'utf8')) as {
     type: string;
     file: string;
@@ -35,7 +35,7 @@ test('Simple Icons の37種はブランドカラーを適用し、原本の形�
     originalSha256?: string;
   }[];
   const colored = manifest.filter((icon) => icon.provider === 'Simple Icons');
-  assert.equal(colored.length, 37);
+  assert.equal(colored.length, 52);
   for (const icon of colored) {
     assert.match(icon.brandColor ?? '', /^#[0-9A-F]{6}$/);
     const svg = readFileSync(`src/assets/${icon.file}`, 'utf8');
@@ -60,4 +60,32 @@ test('SaaS の実例は9サービスの有効な DSL で、すべて同梱アイ
   assert.equal(new Set(parsed.diagram.resources.map((resource) => resource.type)).size, 9);
   for (const resource of parsed.diagram.resources)
     assert.ok(manifest.some((entry) => entry.type === resource.type));
+});
+
+test('LLMカタログと全サービスカタログは有効で、同梱資産の型を漏れなく表示する', () => {
+  const manifest = JSON.parse(readFileSync('src/assets/manifest.json', 'utf8')) as {
+    type: string;
+  }[];
+  const catalogs = ['service-catalog', 'llm-catalog'].map((name) => {
+    const parsed = parseDSL(readFileSync(`examples/${name}.infra`, 'utf8'));
+    assert.ok(parsed.diagram, JSON.stringify(parsed.diagnostics));
+    assert.deepEqual(validateDiagram(parsed.diagram).diagnostics, []);
+    const types = parsed.diagram.resources.map((resource) => resource.type);
+    assert.equal(new Set(types).size, types.length);
+    for (const type of types)
+      assert.ok(
+        manifest.some((entry) => entry.type === type),
+        type,
+      );
+    return types;
+  });
+  assert.deepEqual(
+    [...catalogs[0]].sort(),
+    manifest
+      .filter((entry) => entry.type.startsWith('saas.'))
+      .map((entry) => entry.type)
+      .sort(),
+  );
+  assert.equal(catalogs[1].length, 17);
+  for (const type of catalogs[1]) assert.ok(catalogs[0].includes(type), type);
 });

@@ -1,0 +1,20 @@
+diagram "LLM・AI サービスのアイコン" version=1 {
+  saas.anthropic anthropic "Anthropic"
+  saas.huggingface huggingface "Hugging Face"
+  saas.claude claude "Claude"
+  saas.claudecode claudecode "Claude Code"
+  saas.googlegemini googlegemini "Google Gemini"
+  saas.deepseek deepseek "DeepSeek"
+  saas.mistralai mistralai "Mistral AI"
+  saas.perplexity perplexity "Perplexity"
+  saas.qwen qwen "QWen"
+  saas.openrouter openrouter "OpenRouter"
+  saas.replicate replicate "Replicate"
+  saas.ollama ollama "Ollama"
+  saas.lmstudio lmstudio "LM Studio"
+  saas.vllm vllm "vLLM"
+  saas.dify dify "Dify"
+  saas.langchain langchain "LangChain"
+  saas.langgraph langgraph "LangGraph"
+  view service level=service
+}
