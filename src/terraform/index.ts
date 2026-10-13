@@ -19,6 +19,12 @@ const obj = (value: unknown): Obj =>
 const arr = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 const str = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
 const types: Record<string, string> = {
+  aws_organizations_organization: 'aws.organization',
+  aws_organizations_root: 'aws.organization-root',
+  aws_organizations_organizational_unit: 'aws.organizational-unit',
+  aws_organizations_account: 'aws.organization-account',
+  aws_organizations_policy: 'aws.organization-policy',
+  aws_organizations_policy_attachment: 'aws.organization-policy-attachment',
   aws_vpc: 'vpc',
   aws_subnet: 'subnet',
   aws_lb: 'aws.alb',
@@ -116,6 +122,47 @@ function modulePrefix(address: string): string | undefined {
   return match?.[1];
 }
 function build(items: Item[], kind: Provenance['kind'], context: TerraformContext): Diagram {
+  if (kind === 'static')
+    for (const item of items) {
+      if (
+        item.type === 'aws_organizations_organization' &&
+        items.some(
+          (candidate) =>
+            candidate.dependencies.includes(item.address) &&
+            ['parent_id', 'target_id'].some(
+              (key) => candidate.values[key] === item.address + '.roots[0]',
+            ),
+        )
+      ) {
+        item.values.roots = [{ id: item.address + '.roots[0]' }];
+      }
+    }
+  // Rootはcomputed rootsまたは静的なroots[0].id直接参照から生成する。
+  items = items.flatMap((item) => {
+    if (
+      item.type !== 'aws_organizations_organization' ||
+      hasSensitive(item.sensitive.roots) ||
+      hasSensitive(item.unknown.roots)
+    )
+      return [item];
+    return [
+      item,
+      ...arr(item.values.roots).flatMap((root, index): Item[] => {
+        const id = obj(root).id;
+        if (typeof id !== 'string') return [];
+        return [
+          {
+            address: item.address + '.roots[' + index + ']',
+            type: 'aws_organizations_root',
+            values: { id, organization: item.address },
+            sensitive: {},
+            unknown: {},
+            dependencies: [],
+          },
+        ];
+      }),
+    ];
+  });
   const d = empty();
   const ids = new Map<string, string>();
   const ambiguousIds = new Set<string>();
@@ -155,6 +202,16 @@ function build(items: Item[], kind: Provenance['kind'], context: TerraformContex
     const parent = modulePrefix(item.address);
     if (parent) addModule(parent);
     const attributes = clean(item.values, item.sensitive);
+    if (
+      item.type === 'aws_organizations_policy' &&
+      !hasSensitive(item.sensitive.type) &&
+      !hasSensitive(item.unknown.type) &&
+      typeof item.values.type === 'string' &&
+      /^(SERVICE_CONTROL_POLICY|RESOURCE_CONTROL_POLICY|TAG_POLICY|BACKUP_POLICY|AISERVICES_OPT_OUT_POLICY|BEDROCK_POLICY|CHATBOT_POLICY|DECLARATIVE_POLICY_EC2|INSPECTOR_POLICY|S3_POLICY|SECURITYHUB_POLICY|UPGRADE_ROLLOUT_POLICY)$/.test(
+        item.values.type,
+      )
+    )
+      attributes['meta.policyType'] = item.values.type;
     attributes.terraformType = item.type;
     const resource: Resource = {
       id: item.address,
@@ -253,6 +310,14 @@ function build(items: Item[], kind: Provenance['kind'], context: TerraformContex
     return;
   };
   const topology: Record<string, [string, string | string[], string][]> = {
+    aws_organizations_policy_attachment: [
+      ['policy_id', 'aws.organization-policy', 'attached-policy'],
+      [
+        'target_id',
+        ['aws.organization-root', 'aws.organizational-unit', 'aws.organization-account'],
+        'policy-target（権限付与を示さない）',
+      ],
+    ],
     aws_ec2_transit_gateway_vpc_attachment: [
       ['transit_gateway_id', 'aws.transit-gateway', 'attached-transit-gateway'],
     ],
@@ -300,6 +365,38 @@ function build(items: Item[], kind: Provenance['kind'], context: TerraformContex
       ['interface', 'gcp.router-interface', 'bgp-interface'],
     ],
   };
+  const organizationParents = new Map<string, string>();
+  for (const item of items) {
+    if (item.type === 'aws_organizations_root') {
+      const parent = semanticTarget(item, 'organization', 'aws.organization', ['id']);
+      if (parent) organizationParents.set(item.address, parent);
+    }
+    if (
+      ['aws_organizations_organizational_unit', 'aws_organizations_account'].includes(item.type)
+    ) {
+      const parent = semanticTarget(
+        item,
+        'parent_id',
+        ['aws.organization-root', 'aws.organizational-unit'],
+        ['id'],
+      );
+      if (parent) organizationParents.set(item.address, parent);
+      else
+        get(item.address).unresolved!.push(
+          'Organizationsの所属は未解決（省略時もRoot所属を推測しません）',
+        );
+    }
+  }
+  for (const [child, parent] of organizationParents) {
+    const seen = new Set([child]);
+    let current: string | undefined = parent;
+    while (current && !seen.has(current)) {
+      seen.add(current);
+      current = organizationParents.get(current);
+    }
+    if (current) get(child).unresolved!.push('Organizationsの所属が循環しているため未解決');
+    else get(child).parentId = parent;
+  }
   for (const item of items) {
     const resource = get(item.address);
     for (const [key, targetType, label] of topology[item.type] ?? []) {
@@ -307,9 +404,11 @@ function build(items: Item[], kind: Provenance['kind'], context: TerraformContex
         item,
         key,
         targetType,
-        key === 'transit_gateway_attachment_id'
-          ? ['id', 'transit_gateway_attachment_id']
-          : undefined,
+        item.type === 'aws_organizations_policy_attachment'
+          ? ['id']
+          : key === 'transit_gateway_attachment_id'
+            ? ['id', 'transit_gateway_attachment_id']
+            : undefined,
       );
       if (target) edge(item.address, target, 'association', label);
     }
@@ -638,6 +737,10 @@ export async function importTerraformRepository(
             dependencies.push(target);
             if (
               !sources.definitions.get(target)?.repeated &&
+              (!['parent_id', 'policy_id', 'target_id'].includes(key) ||
+                /^aws_organizations_(?:organization\.[\w-]+\.roots\[0\]|(?:organizational_unit|account|policy)\.[\w-]+)\.id$/.test(
+                  expression.trim(),
+                )) &&
               [
                 'vpc_id',
                 'subnet_id',
@@ -650,6 +753,9 @@ export async function importTerraformRepository(
                 'cluster',
                 'task_definition',
                 'application',
+                'parent_id',
+                'policy_id',
+                'target_id',
                 'customer_gateway_id',
                 'interface',
                 'network',
@@ -666,7 +772,12 @@ export async function importTerraformRepository(
             ) {
               values[key] = expression.trim().startsWith('[')
                 ? [...arr(values[key]), target]
-                : target;
+                : ['parent_id', 'target_id'].includes(key) &&
+                    /^aws_organizations_organization\.[\w-]+\.roots\[0\]\.id$/.test(
+                      expression.trim(),
+                    )
+                  ? target + '.roots[0]'
+                  : target;
               delete unknown[key];
             }
           }

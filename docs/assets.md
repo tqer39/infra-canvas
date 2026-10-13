@@ -140,3 +140,9 @@ Cloud VPNとCloud Routerは公式ページが配布するLegacy console iconsの
 Core product iconsにこの2製品の固有アイコンがないため、legacy配布物を明示して同梱しています。
 HA/外部VPN/トンネルはCloud VPN、Router interface/BGP peerはCloud Routerアイコンを共有します。
 `cloudPack=gcp-legacy` をマニフェストに記録し、月次更新ではcoreとlegacyのZIPを別々に取得します。
+
+## Organizationsのアイコン
+
+組織・OU・Organizationsアカウントは公式AWSのService/Resource Iconsを使います。
+Root・ポリシー・適用設定はOrganizationsのサービスアイコンを共有し、型名で区別します。
+原本・出典・ハッシュをマニフェストに記録し、月次更新とオフラインHTMLの対象に含めます。

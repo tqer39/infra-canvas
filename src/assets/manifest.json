@@ -1328,5 +1328,71 @@
     "version": "配布物 SHA-256 a6d9d7921758042538b462f03cf64614c2cebd96743b3ed63580a769fc7de3e9",
     "archiveSha256": "a6d9d7921758042538b462f03cf64614c2cebd96743b3ed63580a769fc7de3e9",
     "cloudPack": "gcp-legacy"
+  },
+  {
+    "type": "aws.organization",
+    "file": "aws-organizations.svg",
+    "archivePath": "Architecture-Service-Icons_07312026/Arch_Management-Tools/48/Arch_AWS-Organizations_48.svg",
+    "sha256": "f049a5f29536f8fcfcacd19baa197b6af175ff235ebf7451726b469c088629c9",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
+  },
+  {
+    "type": "aws.organizational-unit",
+    "file": "aws-ou.svg",
+    "archivePath": "Resource-Icons_07312026/Res_Management-Governance/Res_AWS-Organizations_Organizational-Unit_48.svg",
+    "sha256": "b72e74b0564a93fba1b0e3114fae29bc06756be706a7744cbc65c07a2637f1a6",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
+  },
+  {
+    "type": "aws.organization-account",
+    "file": "aws-organization-account.svg",
+    "archivePath": "Resource-Icons_07312026/Res_Management-Governance/Res_AWS-Organizations_Account_48.svg",
+    "sha256": "767410eeea775f5629c837ee29cd9bb089e6d1993b38057eed3ecdc3dcb0c8e3",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
+  },
+  {
+    "type": "aws.organization-root",
+    "file": "aws-organizations.svg",
+    "archivePath": "Architecture-Service-Icons_07312026/Arch_Management-Tools/48/Arch_AWS-Organizations_48.svg",
+    "sha256": "f049a5f29536f8fcfcacd19baa197b6af175ff235ebf7451726b469c088629c9",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
+  },
+  {
+    "type": "aws.organization-policy",
+    "file": "aws-organizations.svg",
+    "archivePath": "Architecture-Service-Icons_07312026/Arch_Management-Tools/48/Arch_AWS-Organizations_48.svg",
+    "sha256": "f049a5f29536f8fcfcacd19baa197b6af175ff235ebf7451726b469c088629c9",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
+  },
+  {
+    "type": "aws.organization-policy-attachment",
+    "file": "aws-organizations.svg",
+    "archivePath": "Architecture-Service-Icons_07312026/Arch_Management-Tools/48/Arch_AWS-Organizations_48.svg",
+    "sha256": "f049a5f29536f8fcfcacd19baa197b6af175ff235ebf7451726b469c088629c9",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
   }
 ]

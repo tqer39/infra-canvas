@@ -8,6 +8,13 @@ test.beforeAll(() => {
   execFileSync(process.execPath, [
     'dist/cli.js',
     'html',
+    'examples/organizations.infra',
+    '--out',
+    'artifacts/organizations.html',
+  ]);
+  execFileSync(process.execPath, [
+    'dist/cli.js',
+    'html',
     'examples/aws.infra',
     '--out',
     'artifacts/aws.html',
@@ -667,5 +674,44 @@ for (const offline of [false, true]) {
     await page.getByRole('button', { name: '選択を解除', exact: true }).click();
     await page.getByRole('button', { name: 'Fit View' }).click();
     await page.screenshot({ path: `artifacts/transit-vpn-${offline ? 'offline' : 'dev'}.png` });
+  });
+}
+
+for (const offline of [false, true]) {
+  test(`OrganizationsのOU/accountを展開・集約してポリシーを選択する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(
+      offline ? 'file://' + resolve('artifacts/organizations.html') : 'http://127.0.0.1:5188',
+    );
+    if (!offline)
+      await page.locator('input[type=file]').setInputFiles('examples/organizations.infra');
+    await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    await expect(page.locator('.react-flow__node[data-id="prod"]')).toBeVisible();
+    await expect(page.locator('.react-flow__node[data-id="workloads"]')).toBeVisible();
+    await page.locator('.react-flow__node[data-id="workloads"] .boundary-toggle').click();
+    await expect(page.locator('.react-flow__node[data-id="prod"]')).toHaveCount(0);
+    await page.getByRole('button', { name: 'すべて展開する', exact: true }).click();
+    await expect(page.locator('.react-flow__node[data-id="prod"]')).toBeVisible();
+    await page.getByRole('textbox', { name: 'リソース検索' }).fill('ワークロード向け SCP');
+    await page.locator('.search-results button').click();
+    await expect(page.locator('.detail-panel h2')).toHaveText('ワークロード向け SCP');
+    await expect(page.locator('.detail-panel')).toContainText('SERVICE_CONTROL_POLICY');
+    await expect
+      .poll(() =>
+        page
+          .locator('.service-icon')
+          .evaluateAll((images) =>
+            images.every(
+              (e) => (e as HTMLImageElement).complete && (e as HTMLImageElement).naturalWidth > 0,
+            ),
+          ),
+      )
+      .toBe(true);
+    await page.getByRole('button', { name: '選択を解除', exact: true }).click();
+    await page.getByRole('button', { name: 'Fit View' }).click();
+    await page.screenshot({ path: `artifacts/organizations-${offline ? 'offline' : 'dev'}.png` });
   });
 }

@@ -25,7 +25,9 @@ export function buildDisplayGraph(diagram: Diagram, options: DisplayOptions = {}
   if (level === 'overview')
     for (const resource of diagram.resources)
       if (
-        ['account', 'project', 'subscription'].includes(resource.type) &&
+        ['account', 'project', 'subscription', 'aws.organization-account'].includes(
+          resource.type,
+        ) &&
         !expanded.has(resource.id)
       )
         collapsed.add(resource.id);

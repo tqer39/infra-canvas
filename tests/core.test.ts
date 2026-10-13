@@ -442,3 +442,30 @@ it('共有TGW・VPNの跨る接続は所属を変えず、折りたたみ解除�
   const layout = await layoutGraph(full);
   assert.equal(layout.nodes.length, 28);
 });
+
+it('Organizationsの入れ子OUを折りたたみ、ポリシーとRAM共有の端点を復元する', async () => {
+  const { readFileSync } = await import('node:fs');
+  const diagram = validateDiagram(
+    parseDSL(readFileSync('examples/organizations.infra', 'utf8')).diagram,
+  );
+  const full = buildDisplayGraph(diagram);
+  const folded = buildDisplayGraph(diagram, { collapsed: ['workloads'] });
+  assert.ok(
+    folded.connections.some(
+      (e) => e.source === 'scp' && e.target === 'workloads' && e.kind === 'association',
+    ),
+  );
+  assert.ok(
+    folded.connections.some(
+      (e) => e.source === 'ram' && e.target === 'workloads' && e.kind === 'auth',
+    ),
+  );
+  assert.deepEqual(buildDisplayGraph(diagram), full);
+  const overview = buildDisplayGraph(diagram, { view: 'overview' });
+  assert.ok(!overview.resources.some((r) => r.id === 'tgw'));
+  assert.ok(overview.resources.some((r) => r.id === 'network_account'));
+  assert.equal(
+    (await layoutGraph(full, { direction: 'DOWN' })).nodes.length,
+    diagram.resources.length,
+  );
+});

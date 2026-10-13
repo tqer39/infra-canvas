@@ -236,3 +236,19 @@ Google VPCはglobal、HA VPNとCloud Routerは明示したリージョンに置�
 [Google CloudからAWSへのHA VPN](https://docs.cloud.google.com/network-connectivity/docs/vpn/how-to/connect-ha-vpn-aws-peer-gateway)
 を根拠に、構成例は所有アカウント内のAWS VPN接続2本・Customer Gateway2つ、Google側4トンネルを描きます。
 PSKや実IPは含みません。構成図の設計例であり、接続状態やSLA、ルートの到達性を検証する機能ではありません。
+
+## AWS Organizations
+
+[organizations.infra](../examples/organizations.infra) では、組織 → Root → 入れ子OU → アカウントを境界で定義します。
+型は `aws.organization`、`aws.organization-root`、`aws.organizational-unit`、`aws.organization-account` です。
+アカウント内にはリージョン・VPC・各サービスを置けます。既存の `account` も引き続き使えます。
+管理アカウントとメンバーアカウントは名前や `meta.role` で明示します。
+概要ではOrganizationsアカウントも折りたたみ、OUは独立して展開・折りたたみできます。
+
+`aws.organization-policy` と `aws.organization-policy-attachment` でポリシーと適用設定を分けられます。
+`meta.policyType` にSCP・タグポリシー等の種別を記述し、Root・OU・アカウントへの適用を `association` で結びます。
+組織の所属だけからRAM共有・IAMの信頼や通信関係を推測しません。
+SCPの継承・実効権限の計算や実際のアカウント作成は行いません。
+SCPは権限を付与せず、管理アカウントにも適用されません。
+[Organizationsの概念](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_getting-started_concepts.html) と
+[SCPの公式説明](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html) を参照してください。

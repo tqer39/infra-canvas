@@ -71,6 +71,12 @@ import azure_app from './azure-app.svg';
 import azure_sql from './azure-sql.svg';
 import azure_storage from './azure-storage.svg';
 const icons: Record<string, string> = {
+  'aws.organization': aws_organizations,
+  'aws.organization-root': aws_organizations,
+  'aws.organizational-unit': aws_organizational_unit,
+  'aws.organization-account': aws_organization_account,
+  'aws.organization-policy': aws_organizations,
+  'aws.organization-policy-attachment': aws_organizations,
   'external.user': user,
   'aws.transit-gateway': aws_transit_gateway,
   'aws.tgw-attachment': aws_tgw_attachment,
@@ -167,3 +173,6 @@ export const getIcon = (type: string): string | undefined => icons[type];
 
 export const getIconHomepage = (type: string): string | undefined =>
   type === 'saas.fly' ? 'https://fly.io' : undefined;
+import aws_organizations from './aws-organizations.svg';
+import aws_organizational_unit from './aws-ou.svg';
+import aws_organization_account from './aws-organization-account.svg';

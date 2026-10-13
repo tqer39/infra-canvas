@@ -127,3 +127,17 @@ self_link・ID・直接参照を完全一致で解決します。裸の名前は
 PSK、VPNの生成済み設定XML、実IP、BGP認証、任意の設定は取り込みません。
 トンネル/BGPの稼働状態、ルーティングの到達性、共有承認状態をクラウドAPIから確認する機能はありません。
 Terraformの参照は通信線へ変換しません。必要なクラウド間の対向・通信意図はDSLで明示できます。
+
+## Organizationsの階層とポリシー
+
+`aws_organizations_organization`、`aws_organizations_organizational_unit`、`aws_organizations_account`、
+`aws_organizations_policy`、`aws_organizations_policy_attachment` を取り込みます。
+organizationの明示的な `roots` からRoot境界を作り、OU・アカウントの `parent_id` を一意なID・直接参照で解決します。
+静的な `aws_organizations_organization.NAME.roots[0].id` の直接参照もRootを表示します。
+繰り返し定義・式・機密値・未確定値・複数候補・所属循環は推測せず未解決に残します。
+`parent_id` 省略時のRoot所属、organizationのaccounts一覧からのアカウント生成や管理アカウント推定は行いません。
+
+policy attachmentの `policy_id` と `target_id` は設定関係の線に変換します。
+明示した対応ポリシー種別だけを `meta.policyType` に取り込み、本文JSON・アカウントメール・タグはコピーしません。
+ポリシーの継承や有効性、実効権限の評価、実際のアカウント作成・招待・移動は行いません。
+各アカウント内のTerraformリソース所属をprovider aliasから推測しません。必要な配置はDSLで明示してください。
