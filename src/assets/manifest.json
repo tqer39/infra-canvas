@@ -191,8 +191,14 @@
     "retrievedAt": "2026-10-13",
     "provider": "Simple Icons",
     "usage": "サービス識別用途。商標権は提供元に帰属し、提供元の利用条件に従う。",
-    "sha256": "7153e7c2de67386c02835960855f627769573039aeb03e89577c7fb7f94f0c44",
-    "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）"
+    "sha256": "51716da44105a100e654dcc6b577436b2e48a4f922df19e4ca30a7db814100f9",
+    "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
+    "originalSha256": "7153e7c2de67386c02835960855f627769573039aeb03e89577c7fb7f94f0c44",
+    "brandColor": "#145FE4",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）",
+    "archivePath": "package/icons/1password.svg",
+    "archiveSha256": "20ebead4f6bc93464812a5e260d19fc4d84772e5eeff69a6fbea263ca2441c5f"
   },
   {
     "type": "saas.elasticsearch",
@@ -205,8 +211,14 @@
     "retrievedAt": "2026-10-13",
     "provider": "Simple Icons",
     "usage": "サービス識別用途。商標権は提供元に帰属し、提供元の利用条件に従う。",
-    "sha256": "f866863bb80c3f1e22cb49541442c9db2112bba74b8c1210328bd3536984e6a3",
-    "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）"
+    "sha256": "698802b0b724880c41eb3fa8715f29891debf93a85d8fb71e39f230a6a37f727",
+    "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
+    "originalSha256": "f866863bb80c3f1e22cb49541442c9db2112bba74b8c1210328bd3536984e6a3",
+    "brandColor": "#005571",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）",
+    "archivePath": "package/icons/elasticsearch.svg",
+    "archiveSha256": "20ebead4f6bc93464812a5e260d19fc4d84772e5eeff69a6fbea263ca2441c5f"
   },
   {
     "type": "saas.kibana",
@@ -219,8 +231,14 @@
     "retrievedAt": "2026-10-13",
     "provider": "Simple Icons",
     "usage": "サービス識別用途。商標権は提供元に帰属し、提供元の利用条件に従う。",
-    "sha256": "eac3cd50862291d418991d6f05aae14bf795f6653d6bbcf814ec8240f58b8c9c",
-    "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）"
+    "sha256": "5e484f5ca911bb2e05da2d23a5bdcb7957dcbbc6110fd7962f0ca4892403e65e",
+    "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
+    "originalSha256": "eac3cd50862291d418991d6f05aae14bf795f6653d6bbcf814ec8240f58b8c9c",
+    "brandColor": "#005571",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）",
+    "archivePath": "package/icons/kibana.svg",
+    "archiveSha256": "20ebead4f6bc93464812a5e260d19fc4d84772e5eeff69a6fbea263ca2441c5f"
   },
   {
     "type": "saas.cloudflare",
@@ -238,7 +256,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "408096d99907fd99e0863cb5d73f77a72537c6a85fd8d5e2704178a83a891f08"
+    "sha256": "32876bda81542203316d67b9623818ac60986897cac79f70e03e8f31f7b7f160",
+    "originalSha256": "408096d99907fd99e0863cb5d73f77a72537c6a85fd8d5e2704178a83a891f08",
+    "brandColor": "#F38020",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.vercel",
@@ -256,7 +278,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "57f1e4135486c566e9878fddd259f7f6bf8ec43f31e7e6e38a36d9e814a1c0e0"
+    "sha256": "075b9d221ef5a7ea63d85f140bd2d63007f31d3ed8ceec011abc3ffd529827e3",
+    "originalSha256": "57f1e4135486c566e9878fddd259f7f6bf8ec43f31e7e6e38a36d9e814a1c0e0",
+    "brandColor": "#000000",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.netlify",
@@ -274,7 +300,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "adbe4ef3579ca1ef95e1903ff8599a5a55e5c6531fab3f7edaf2b4adee0f4ef9"
+    "sha256": "f2d591c3a629c6ff7fa122646710526ed711584890dc1aeb9e864c2746f973f1",
+    "originalSha256": "adbe4ef3579ca1ef95e1903ff8599a5a55e5c6531fab3f7edaf2b4adee0f4ef9",
+    "brandColor": "#00C7B7",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.supabase",
@@ -291,7 +321,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "61bf16d93be418f723ae1e137e57afdad4f185352fbc6dea9482af1e0a89ccf7"
+    "sha256": "75f9566421d97d4f1d8d7f34526189fd6e727ca83987432fc2477c2fc8388086",
+    "originalSha256": "61bf16d93be418f723ae1e137e57afdad4f185352fbc6dea9482af1e0a89ccf7",
+    "brandColor": "#3FCF8E",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.firebase",
@@ -309,7 +343,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "3f46d84a41479d7789cc36b82c2b6852e6bbbfd30ebee5b7a3aef7d49758295a"
+    "sha256": "abbf47a2efb5468324769adb713211d1611f16550440bb3ca9d224462e2f44c3",
+    "originalSha256": "3f46d84a41479d7789cc36b82c2b6852e6bbbfd30ebee5b7a3aef7d49758295a",
+    "brandColor": "#DD2C00",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.digitalocean",
@@ -327,7 +365,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "21c374a43a70f8a833ea6c84c904e64f5a20586714b1e0a16b34cb1d9cf29998"
+    "sha256": "a381454d22f05a4e7034c3e869c99bcac9a6f915ccc00577ed131b604baed489",
+    "originalSha256": "21c374a43a70f8a833ea6c84c904e64f5a20586714b1e0a16b34cb1d9cf29998",
+    "brandColor": "#0080FF",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.render",
@@ -344,7 +386,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "bd1597c44b4417a0f22f4ae6df79f935b4afd850f7a6a6717090b6f46f28e6d6"
+    "sha256": "b460719d5abfab2915ea2adb677ed725210207ff877d8765938c4d5a8b7c27f2",
+    "originalSha256": "bd1597c44b4417a0f22f4ae6df79f935b4afd850f7a6a6717090b6f46f28e6d6",
+    "brandColor": "#000000",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.railway",
@@ -361,7 +407,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "1e386a6d03360dd84cd858bc69b3ac9452afc212846a197f7a890898439a7f1d"
+    "sha256": "213044bcf6d0d1bbd9077ef5b98ce0a96b0c7c5a6aaccadfe6ffdaca13fe04b7",
+    "originalSha256": "1e386a6d03360dd84cd858bc69b3ac9452afc212846a197f7a890898439a7f1d",
+    "brandColor": "#0B0D0E",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.mongodb",
@@ -378,7 +428,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "6698757ee85997e8167b2eacaff8395d6987954185488f2e90b88ef387fec6c7"
+    "sha256": "cf259f556e99f2df9056e60f34ef0eed3eeb4d096dec34f251b0f7a3a5c76fdd",
+    "originalSha256": "6698757ee85997e8167b2eacaff8395d6987954185488f2e90b88ef387fec6c7",
+    "brandColor": "#47A248",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.redis",
@@ -396,7 +450,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "428b86deb14c8bdacdcdf75987fe454f367bcd078a7e4ae3f84de29aa5bdf136"
+    "sha256": "4245419834dd111d83a8ed645a2e305c67faa0af5c5b864eb5f0991de156034c",
+    "originalSha256": "428b86deb14c8bdacdcdf75987fe454f367bcd078a7e4ae3f84de29aa5bdf136",
+    "brandColor": "#FF4438",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.postgresql",
@@ -414,7 +472,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "c8ccadbd88c9312c2ad3734c4861b31d3485ce179ee91d64793143f83cfa745c"
+    "sha256": "bc45b1c56d0b1501dea387dbec4fda450d2ebc35244a620791815509d8c41dba",
+    "originalSha256": "c8ccadbd88c9312c2ad3734c4861b31d3485ce179ee91d64793143f83cfa745c",
+    "brandColor": "#4169E1",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.mysql",
@@ -432,7 +494,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "67c144cc3e44ad14062a3f20ebe29c5e7eeb2c2c9c0f43cf48d87fe6291a8b2d"
+    "sha256": "df58ab1e11500e6862bb2c53fbbe688e21b40758cd09090f2283649268f27872",
+    "originalSha256": "67c144cc3e44ad14062a3f20ebe29c5e7eeb2c2c9c0f43cf48d87fe6291a8b2d",
+    "brandColor": "#4479A1",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.docker",
@@ -449,7 +515,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "65571291c261ef869c31540a38f3ca0f0ee3bb73f179c172211c8860f19a6359"
+    "sha256": "ba1fb157870b2ec02e054aed42154ac7418e25af91ec321fd328d17cad4023cd",
+    "originalSha256": "65571291c261ef869c31540a38f3ca0f0ee3bb73f179c172211c8860f19a6359",
+    "brandColor": "#2496ED",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.kubernetes",
@@ -466,7 +536,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "ceee2f4e87fa1533600672190c156194039f744fa9b5da10e83f002178e84b47"
+    "sha256": "76037c7167ffdf86e7e014871ba0f42faa38e016c4e5a40aa3b3b011ce789587",
+    "originalSha256": "ceee2f4e87fa1533600672190c156194039f744fa9b5da10e83f002178e84b47",
+    "brandColor": "#326CE5",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.terraform",
@@ -484,7 +558,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "9c3737d360a174afec8fa0208332a3991f087ea0b7bacb1eea16598883e1a730"
+    "sha256": "894a34063749ee52f945fd24ec5983b79e0da9cafa16d99e2f0b6506a8908ae5",
+    "originalSha256": "9c3737d360a174afec8fa0208332a3991f087ea0b7bacb1eea16598883e1a730",
+    "brandColor": "#844FBA",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.sentry",
@@ -501,7 +579,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "8ba32902ffbac503784607374f57df5e3cbcf57a99d0adff03e735575500adc6"
+    "sha256": "24ac56868a3b5dd440c4de2a3cf8f6864591ba81067eedd8d6be0b0690b136eb",
+    "originalSha256": "8ba32902ffbac503784607374f57df5e3cbcf57a99d0adff03e735575500adc6",
+    "brandColor": "#362D59",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.datadog",
@@ -519,7 +601,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "2dae0a9ddf090ec01626d9d0f73b1740a70ad280de92e2c27136bc81151fd1ff"
+    "sha256": "92caaec8a2091cfb92167d24a90c7f9748beabee3a552dc9077897bfcba3bdc5",
+    "originalSha256": "2dae0a9ddf090ec01626d9d0f73b1740a70ad280de92e2c27136bc81151fd1ff",
+    "brandColor": "#632CA6",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.grafana",
@@ -536,7 +622,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "e6da4ab998d25d509e27ce8a1f1afcb2d549907569b6fb1e4065890877cffefa"
+    "sha256": "fd70ea7298d67665cae32bdf1721fa7bd0b6b79b6f7cd8da1e3f77c97bbcdcc9",
+    "originalSha256": "e6da4ab998d25d509e27ce8a1f1afcb2d549907569b6fb1e4065890877cffefa",
+    "brandColor": "#F46800",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.prometheus",
@@ -553,7 +643,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "6dd2480e57936b879f7626b7c71dcd51163da700d8510843516a66316bf8f379"
+    "sha256": "aae7efa90a77c233d051d1d5a8b1ed9e78f39d357364be8c2f1d9383a476d027",
+    "originalSha256": "6dd2480e57936b879f7626b7c71dcd51163da700d8510843516a66316bf8f379",
+    "brandColor": "#E6522C",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.circleci",
@@ -570,7 +664,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "870bee0dae492b875ef775483bcc806de8785f393e71350b3de69196708a10fa"
+    "sha256": "80f69b1d53bb06cd13c84c4a6adae5cb140bf107731e8694f6115e9f2d065bef",
+    "originalSha256": "870bee0dae492b875ef775483bcc806de8785f393e71350b3de69196708a10fa",
+    "brandColor": "#343434",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.bitbucket",
@@ -588,7 +686,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "887f3bbce5d63f56958fb3dbe3c1b850314ef71a1f21dd5f2099637f01e4b241"
+    "sha256": "cbefef6f884299fdded5aedcde3c6fa3164702a24ecdfe11549374b03eaaddb0",
+    "originalSha256": "887f3bbce5d63f56958fb3dbe3c1b850314ef71a1f21dd5f2099637f01e4b241",
+    "brandColor": "#0052CC",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.jira",
@@ -606,7 +708,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "68f8703698538ee7863bf69b72bf9f0d78a72d218e7eb7e0617237ae43ae5ade"
+    "sha256": "f831a691d67e7a187a358ea91f98e5d51ef93345d905651258d0fbd1f4d5f363",
+    "originalSha256": "68f8703698538ee7863bf69b72bf9f0d78a72d218e7eb7e0617237ae43ae5ade",
+    "brandColor": "#0052CC",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.notion",
@@ -623,7 +729,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "b17d2a2b592a06252efef522d5205f0c7a958f748d40df1011ed081417e42f85"
+    "sha256": "fdddc8f06178df169036d3f5fc336eb98b15cad375afa04d0a5cd7aa61b65739",
+    "originalSha256": "b17d2a2b592a06252efef522d5205f0c7a958f748d40df1011ed081417e42f85",
+    "brandColor": "#000000",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.discord",
@@ -641,7 +751,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "1d364b72c9eaf1fe37d17ca88cd8fb541308dc0f3b09e2ab3b824f380b3493d5"
+    "sha256": "79a8105c2fc15d8caa6ee7b87b58597432e171386d22a2cc2237f0eb3bbbe7dd",
+    "originalSha256": "1d364b72c9eaf1fe37d17ca88cd8fb541308dc0f3b09e2ab3b824f380b3493d5",
+    "brandColor": "#5865F2",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.stripe",
@@ -658,7 +772,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "130c6d957b8977f5eda2928267b9df531ca038a400a801765d263801bb1bd870"
+    "sha256": "7576775bf9915b696bbb9162268f5c56147d2b4221a76ac6a9ca92835239b7e9",
+    "originalSha256": "130c6d957b8977f5eda2928267b9df531ca038a400a801765d263801bb1bd870",
+    "brandColor": "#635BFF",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.auth0",
@@ -675,7 +793,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "cad263a6fac5f35ed2eab436051c09ea48254994bdd708fce5f87500bd29f09b"
+    "sha256": "64170e087b3bd4c7803cf73ab840955dd2c5ce00777eb686c39dda26915c2a01",
+    "originalSha256": "cad263a6fac5f35ed2eab436051c09ea48254994bdd708fce5f87500bd29f09b",
+    "brandColor": "#EB5424",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.okta",
@@ -693,7 +815,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "1e743aa55a6f3ad93fcf49f47fc8c3366f2c23ed0552e613a4e8fd1690c7633b"
+    "sha256": "c0d39f09920a50aec44c2a69e4daab5174ac76b936bc27b83713676af0d428ee",
+    "originalSha256": "1e743aa55a6f3ad93fcf49f47fc8c3366f2c23ed0552e613a4e8fd1690c7633b",
+    "brandColor": "#007DC1",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.anthropic",
@@ -710,7 +836,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "1cc599f6ebce2016dc388cf84e54a52c6b13487655c7e243554d654c7bce1882"
+    "sha256": "1c10881e4729127e1a86e569613d786240acae13eacfa01860be065b66260e36",
+    "originalSha256": "1cc599f6ebce2016dc388cf84e54a52c6b13487655c7e243554d654c7bce1882",
+    "brandColor": "#191919",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.huggingface",
@@ -728,7 +858,11 @@
     "region": "Global",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "aa81744034eecf4ac6b3fb7108dd71223965c7af3c534932391314563b150109"
+    "sha256": "c167703fa2fb404f1de9bbbd38b6ac6c4c01dbeae49e7783521333ba03ab706a",
+    "originalSha256": "aa81744034eecf4ac6b3fb7108dd71223965c7af3c534932391314563b150109",
+    "brandColor": "#FFD21E",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.qiita",
@@ -746,7 +880,11 @@
     "region": "Japan",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "c90673ba6bd21e134b565097c569772cfabc6fc92f56fbb8c72a030edb411f78"
+    "sha256": "7dceff7195cdd6e88d4c00f082975e44144c383b57411e46f165a7ab6af99e5d",
+    "originalSha256": "c90673ba6bd21e134b565097c569772cfabc6fc92f56fbb8c72a030edb411f78",
+    "brandColor": "#55C500",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.zenn",
@@ -763,7 +901,11 @@
     "region": "Japan",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "9d99562419f41eb916ebf9d96d5c8ced66e922d3472375ef6c85dc275a0b4959"
+    "sha256": "a3d1a942d392ca5706350739625dbca8f3fb8dfe2e839684dfcd8e0a68727e9a",
+    "originalSha256": "9d99562419f41eb916ebf9d96d5c8ced66e922d3472375ef6c85dc275a0b4959",
+    "brandColor": "#3EA8FF",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.line",
@@ -781,7 +923,11 @@
     "region": "Japan",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "b62430462354f95914536d7205128647d5563cdb805bc9aca000300aaed816c8"
+    "sha256": "b33b86ee7c335abcccb12c08188823d40eb3ddc9521362ac94d9d9c55077db68",
+    "originalSha256": "b62430462354f95914536d7205128647d5563cdb805bc9aca000300aaed816c8",
+    "brandColor": "#00C300",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.hatenabookmark",
@@ -798,7 +944,11 @@
     "region": "Japan",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "9769faaad115391f5632602efb962a330528a0869e6c6954ad4d31816fd5f447"
+    "sha256": "af040bda4c39fcd3fe5a69f7254bcede1894008583e5fd87563a3c40f9a31df7",
+    "originalSha256": "9769faaad115391f5632602efb962a330528a0869e6c6954ad4d31816fd5f447",
+    "brandColor": "#00A4DE",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
     "type": "saas.rakuten",
@@ -816,6 +966,10 @@
     "region": "Japan",
     "usage": "サービス・技術の識別用途。商標権は各社に帰属し、提供元の利用条件に従う。",
     "collectionLicense": "CC0-1.0（各社の商標の利用許諾ではない）",
-    "sha256": "845c61ff21c70d8db90c378fec0e762a8eda9ab9a918bf3ff6ca0b28e9604db7"
+    "sha256": "7e6b3bcd574e5a892d3b294066070b838989388de8946f128c6b2a7e2746bf32",
+    "originalSha256": "845c61ff21c70d8db90c378fec0e762a8eda9ab9a918bf3ff6ca0b28e9604db7",
+    "brandColor": "#BF0000",
+    "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
+    "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   }
 ]

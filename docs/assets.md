@@ -41,7 +41,8 @@ AWS ALB は Elastic Load Balancing アイコンです。未対応の種別は代
 
 公式6サービスの SVG は取得したファイルを変更せずに保存しています。
 1Password・Elasticsearch・Kibana は [Simple Icons](https://github.com/simple-icons/simple-icons) が提供する
-モノクロ版です。各社公式から直接取得した資産ではありません。
+SVG に同じ固定版のブランドカラー（`hex`）を適用したものです。形状は維持します。
+各社公式から直接取得した資産ではありません。原本と着色後のハッシュ・カラーの出典を記録しています。
 同コレクションの CC0 ライセンスと免責事項を `src/assets/SIMPLE-ICONS-LICENSE.txt`、
 `src/assets/SIMPLE-ICONS-DISCLAIMER.txt` に同梱しています。
 CC0 は各社の商標利用の許諾を意味しません。各ブランドの権利と利用条件は別途適用されます。

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { parseDSL, validateDiagram } from '../src/core/index.js';
 
-test('同梱アイコンは記録した原本と一致し、外部資産や実行コードを含まない', () => {
+test('同梱アイコンは記録したハッシュと一致し、外部資産や実行コードを含まない', () => {
   const manifest = JSON.parse(readFileSync('src/assets/manifest.json', 'utf8')) as {
     type: string;
     file: string;
@@ -24,6 +24,37 @@ test('同梱アイコンは記録した原本と一致し、外部資産や実�
     );
     if (entry.type.startsWith('saas.')) assert.match(entry.source ?? '', /^https:\/\//);
   }
+});
+
+test('Simple Icons の37種はブランドカラーを適用し、原本の形状を保持する', () => {
+  const manifest = JSON.parse(readFileSync('src/assets/manifest.json', 'utf8')) as {
+    type: string;
+    file: string;
+    provider?: string;
+    brandColor?: string;
+    originalSha256?: string;
+  }[];
+  const colored = manifest.filter((icon) => icon.provider === 'Simple Icons');
+  assert.equal(colored.length, 37);
+  for (const icon of colored) {
+    assert.match(icon.brandColor ?? '', /^#[0-9A-F]{6}$/);
+    const svg = readFileSync(`src/assets/${icon.file}`, 'utf8');
+    assert.ok(svg.startsWith(`<svg fill="${icon.brandColor}" `), icon.type);
+    const original = svg.replace(`<svg fill="${icon.brandColor}" `, '<svg ');
+    assert.equal(
+      createHash('sha256').update(original).digest('hex'),
+      icon.originalSha256,
+      icon.type,
+    );
+  }
+  for (const [type, color] of Object.entries({
+    'saas.line': '#00C300',
+    'saas.zenn': '#3EA8FF',
+    'saas.cloudflare': '#F38020',
+    'saas.stripe': '#635BFF',
+    'saas.vercel': '#000000',
+  }))
+    assert.equal(colored.find((icon) => icon.type === type)?.brandColor, color);
 });
 
 test('SaaS の実例は9サービスの有効な DSL で、すべて同梱アイコンに対応する', () => {

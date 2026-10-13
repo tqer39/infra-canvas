@@ -281,7 +281,7 @@ for (const offline of [false, true]) {
     await expect(page.locator('.detail-panel')).toContainText('a → target');
     await expect(page.locator('.detail-panel')).toContainText('b → target');
   });
-  test(`主要43サービスのアイコンが読み込める (${offline ? 'HTML' : '開発画面'})`, async ({
+  test(`主要43サービスのアイコンとブランドカラーを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
     context,
   }) => {
@@ -309,6 +309,45 @@ for (const offline of [false, true]) {
       )
       .toBe(true);
     await expect(page.locator('.fallback-icon')).toHaveCount(0);
+    const brandColors = (
+      JSON.parse(readFileSync('src/assets/manifest.json', 'utf8')) as {
+        type: string;
+        brandColor?: string;
+      }[]
+    )
+      .filter((icon) => icon.brandColor)
+      .map((icon) => ({ type: icon.type, color: icon.brandColor! }));
+    const renderedColors = await images.evaluateAll(
+      (elements, brands) =>
+        brands.map((brand) => {
+          const image = elements.find(
+            (element) =>
+              element
+                .closest('.resource-card')
+                ?.querySelector('.resource-type')
+                ?.textContent?.trim() === brand.type,
+          ) as HTMLImageElement;
+          const canvas = document.createElement('canvas');
+          canvas.width = canvas.height = 48;
+          const context = canvas.getContext('2d')!;
+          context.drawImage(image, 0, 0, 48, 48);
+          const pixels = context.getImageData(0, 0, 48, 48).data;
+          const rgb = [1, 3, 5].map((offset) =>
+            Number.parseInt(brand.color.slice(offset, offset + 2), 16),
+          );
+          let matching = 0;
+          for (let i = 0; i < pixels.length; i += 4)
+            if (
+              pixels[i + 3] > 240 &&
+              rgb.every((channel, index) => Math.abs(pixels[i + index] - channel) <= 2)
+            )
+              matching++;
+          return { type: brand.type, matches: matching > 10 };
+        }),
+      brandColors,
+    );
+    expect(renderedColors).toHaveLength(37);
+    expect(renderedColors.filter((brand) => !brand.matches)).toEqual([]);
     if (offline) expect(requests).toEqual([]);
   });
 }
