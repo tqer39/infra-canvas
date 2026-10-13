@@ -1,0 +1,41 @@
+diagram "AWS 2アカウント Web アプリケーション" version=1 {
+  account prod "本番アカウント" account="111111111111" {
+    region tokyo "東京" region="ap-northeast-1" {
+      vpc main "本番 VPC" cidr="10.0.0.0/16" {
+        subnet public_a "Public AZ-a" public az="ap-northeast-1a" cidr="10.0.0.0/24"
+        subnet public_c "Public AZ-c" public az="ap-northeast-1c" cidr="10.0.1.0/24"
+        subnet private_a "Private AZ-a" private az="ap-northeast-1a" cidr="10.0.10.0/24"
+        subnet private_c "Private AZ-c" private az="ap-northeast-1c" cidr="10.0.11.0/24"
+        aws.alb web "Application Load Balancer" subnets=[public_a, public_c]
+        aws.ecs api "ECS API" subnets=[private_a, private_c]
+        aws.rds db "PostgreSQL" subnets=[private_a, private_c]
+        sg application "アプリケーション SG" members=[web, api]
+        sg database "データベース SG" members=[db]
+        sg observability "監視 SG" members=[api, db]
+      }
+      aws.iam deploy_role "デプロイ IAM Role"
+      aws.s3 uploads "アップロード"
+    }
+  }
+  account dev "開発アカウント" account="222222222222" {
+    vpc development "開発 VPC" region="ap-northeast-1" {
+      subnet dev_private "開発 Subnet" private az="ap-northeast-1a"
+      aws.ecs dev_api "開発 ECS" subnets=[dev_private]
+    }
+  }
+  github.repository repository "tqer39/example"
+  github.actions actions "GitHub Actions"
+  external.user users "利用者"
+  users -> web kind=traffic protocol=https port=443
+  web -> api kind=traffic protocol=http port=8080
+  api -> db kind=traffic protocol=tcp port=5432
+  api -> uploads kind=dependency label="オブジェクト保存"
+  repository -> actions kind=deploy label="workflow"
+  actions -> deploy_role kind=auth protocol=oidc label="OIDC 信頼"
+  deploy_role -> api kind=deploy label="サービス更新"
+  actions -> dev_api kind=deploy
+  view overview level=overview direction=RIGHT
+  view service level=service direction=RIGHT
+  view network level=subnet direction=RIGHT
+  view security level=resource overlay=sg direction=RIGHT
+}

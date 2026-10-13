@@ -1,0 +1,32 @@
+diagram "マルチクラウド設計案" version=1 {
+  external.user customer "利用者"
+  external.service identity "外部 ID プロバイダー"
+  account aws_prod "AWS 本番" {
+    aws.cloudfront cdn "CloudFront"
+    aws.lambda api "Lambda API"
+    aws.s3 objects "S3"
+  }
+  project gcp_analytics "Google Cloud 分析" {
+    gcp.bigquery warehouse "BigQuery"
+    gcp.pubsub events "Pub/Sub"
+  }
+  subscription azure_enterprise "Azure 管理" {
+    azure.functions integration "Functions"
+    azure.keyvault keys "Key Vault"
+  }
+  github.actions pipeline "CI/CD"
+  customer -> cdn kind=traffic protocol=https port=443
+  cdn -> api kind=traffic protocol=https port=443
+  api -> identity kind=auth protocol=oidc
+  api -> objects kind=dependency
+  api -> events kind=traffic protocol=https port=443
+  events -> warehouse kind=dependency
+  integration -> keys kind=auth
+  integration -> api kind=traffic protocol=https port=443
+  pipeline -> api kind=deploy
+  pipeline -> integration kind=deploy
+  view overview level=overview
+  view service level=service
+  view network level=subnet
+  view security level=resource overlay=sg
+}

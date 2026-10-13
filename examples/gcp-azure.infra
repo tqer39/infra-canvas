@@ -1,0 +1,26 @@
+diagram "Google Cloud と Azure" version=1 {
+  project google "Google Cloud プロジェクト" project="demo-project" {
+    network google_vpc "VPC（グローバル）" scope="global" {
+      subnet google_subnet "東京 Subnet" region="asia-northeast1" cidr="10.20.0.0/24"
+      gcp.compute compute "Compute Engine" subnets=[google_subnet] az="asia-northeast1-a"
+      gcp.sql database "Cloud SQL" region="asia-northeast1"
+    }
+    gcp.storage bucket "Cloud Storage"
+  }
+  subscription azure "Azure サブスクリプション" {
+    group resources "リソースグループ" region="japaneast" {
+      network azure_vnet "Virtual Network" region="japaneast" {
+        subnet azure_subnet "アプリ Subnet" cidr="10.30.0.0/24"
+        azure.vm vm "Virtual Machine" subnets=[azure_subnet]
+      }
+      azure.storage storage "Storage Account"
+    }
+  }
+  compute -> database kind=traffic protocol=tcp port=5432
+  compute -> bucket kind=dependency
+  vm -> storage kind=dependency
+  view overview level=overview
+  view service level=service
+  view network level=subnet
+  view security level=resource overlay=sg
+}
