@@ -115,6 +115,20 @@ for (const offline of [false, true]) {
     if (offline) await context.setOffline(true);
     await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
     await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    const userNode = page.locator('.react-flow__node[data-id="users"]');
+    await expect(userNode.locator('.service-icon')).toHaveCount(1);
+    await expect(userNode.locator('.fallback-icon')).toHaveCount(0);
+    await expect
+      .poll(() =>
+        userNode.locator('.service-icon').evaluate((element) => {
+          const image = element as HTMLImageElement;
+          return image.complete && image.naturalWidth > 0;
+        }),
+      )
+      .toBe(true);
+    await userNode.click();
+    await expect(page.locator('.detail-panel h2')).toHaveText('利用者');
+    await page.getByRole('button', { name: '選択を解除', exact: true }).click();
     const privateLabel = page.locator(
       '.react-flow__node[data-id="private_c"] .resource-text strong',
     );

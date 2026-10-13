@@ -1,4 +1,5 @@
 import cloudflare from './saas-cloudflare.svg';
+import user from './external-user.svg';
 import vercel from './saas-vercel.svg';
 import netlify from './saas-netlify.svg';
 import supabase from './saas-supabase.svg';
@@ -57,6 +58,7 @@ import azure_app from './azure-app.svg';
 import azure_sql from './azure-sql.svg';
 import azure_storage from './azure-storage.svg';
 const icons: Record<string, string> = {
+  'external.user': user,
   'saas.cloudflare': cloudflare,
   'saas.vercel': vercel,
   'saas.netlify': netlify,

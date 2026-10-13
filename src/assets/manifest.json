@@ -971,5 +971,14 @@
     "brandColor": "#BF0000",
     "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
     "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
+  },
+  {
+    "type": "external.user",
+    "title": "利用者",
+    "file": "external-user.svg",
+    "provider": "Infra Canvas",
+    "origin": "独自作成の頭と肩のシルエット",
+    "createdAt": "2026-10-13",
+    "sha256": "3a91f6ce7bcb84750f29e6e198223fb0f4e0ed3f75d0b57eb1b85b58cbc4a98a"
   }
 ]
