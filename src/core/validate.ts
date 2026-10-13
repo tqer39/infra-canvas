@@ -1,4 +1,5 @@
 import { resourceContent } from './content.js';
+import { validateConfiguration } from './configuration.js';
 import { validateComputeAttributes } from './resource-metadata.js';
 import { isBoundary, isTelemetrySignals } from './model.js';
 import type { Diagram, Resource } from './model.js';
@@ -61,6 +62,7 @@ export function validateDiagram(value: unknown): Diagram {
       throw new Error('リソースの ID・種別・ラベル・有限値属性・ソース位置を確認してください。');
     resourceContent(resource);
     validateComputeAttributes(resource);
+    validateConfiguration(resource);
     if (ids.has(resource.id)) throw new Error(`ID が重複しています: ${resource.id}`);
     ids.add(resource.id);
     if (resource.provenance !== undefined) {

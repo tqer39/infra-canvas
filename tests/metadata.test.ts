@@ -76,7 +76,15 @@ test('ECSのリソース定義をDSL/JSONで検証して単位付き表示を往
       undefined,
     );
   }
-  for (const attrs of [{ cpu: -1 }, { memory: 0 }, { desiredCount: 0.5 }, { launchType: 'TYPO' }]) {
+  for (const attrs of [
+    { cpu: -1 },
+    { memory: 0 },
+    { desiredCount: 0.5 },
+    { launchType: 'TYPO' },
+    { replicas: -1 },
+    { cpuRequest: 1 },
+    { memoryLimit: true },
+  ]) {
     assert.throws(() =>
       validateDiagram({
         ...d,

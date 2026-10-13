@@ -30,8 +30,9 @@ export function serializeDSL(diagram: Diagram): string {
       if (visited.has(resource.id)) throw new Error(`所属が循環しています: ${resource.id}`);
       visited.add(resource.id);
       const attributes = { ...resource.attributes };
-      if (resource.provenance && resource.provenance.kind !== 'design') {
-        attributes.sourceKind = resource.provenance.kind;
+      if (resource.provenance) {
+        if (resource.provenance.kind !== 'design' || Object.keys(resource.provenance).length > 1)
+          attributes.sourceKind = resource.provenance.kind;
         for (const key of ['repository', 'commit', 'root', 'address', 'file', 'line'] as const)
           if (resource.provenance[key] !== undefined) attributes[key] = resource.provenance[key]!;
       }

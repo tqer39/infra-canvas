@@ -1,6 +1,14 @@
 import { resourceMetadata } from '../core/resource-metadata';
 import { resourceContent } from '../core/content';
-import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  StrictMode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   ReactFlow,
@@ -37,6 +45,8 @@ import { getResourceIconType } from '../assets/resource-icons';
 import { getCountryFlag } from '../assets/flags';
 import { getRegionCountry, getResourceRegion } from '../assets/regions';
 import defaultSource from '../../examples/aws.infra?raw';
+import { PropertyEditor } from './property-editor';
+import type { Attributes, Connection } from '../core/model';
 
 declare global {
   interface Window {
@@ -66,6 +76,7 @@ const kindColors: Record<string, string> = {
   deploy: '#8165b0',
   association: '#258d81',
 };
+const activeEdgeZ = 10;
 const viewLabels: Record<string, string> = {
   overview: '概要',
   service: 'サービス',
@@ -281,6 +292,7 @@ const edgeTypes = { routed: RoutedConnection };
 function App() {
   const initial = useMemo(() => window.__INFRA_CANVAS__ ?? parseDSL(defaultSource).diagram, []);
   const [diagram, setDiagram] = useState<Diagram | undefined>(initial);
+  const [documentVersion, setDocumentVersion] = useState(0);
   const [source, setSource] = useState(() => (initial ? serializeDSL(initial) : defaultSource));
   const [editorOpen, setEditorOpen] = useState(false);
   const [diagnostics, setDiagnostics] = useState<string[]>([]);
@@ -297,6 +309,7 @@ function App() {
   const [edges, setEdges] = useState<Edge[]>([]);
   const [graph, setGraph] = useState<DisplayGraph>();
   const [layoutTime, setLayoutTime] = useState(0);
+  const [labelLayer, setLabelLayer] = useState(activeEdgeZ + 2);
   const [busy, setBusy] = useState(false);
   const autoFitContext = useRef<{ diagram?: Diagram; view: string; scope?: string } | undefined>(
     undefined,
@@ -431,6 +444,8 @@ function App() {
           return count;
         };
         sorted.sort((a, b) => depth(a) - depth(b));
+        // 入れ子の深度が接続の z-index に加算されるため、ラベル層にも反映する。
+        setLabelLayer(activeEdgeZ + Math.max(0, ...sorted.map(depth)) + 2);
         setNodes(
           sorted.map((resource) => {
             const placement = placements.get(resource.id)!;
@@ -586,7 +601,7 @@ function App() {
             onSelect: selectConnection,
             accessibleLabel: `${graph?.resources.find((resource) => resource.id === edge.source)?.label ?? edge.source} → ${graph?.resources.find((resource) => resource.id === edge.target)?.label ?? edge.target}: ${edge.label}`,
           },
-          zIndex: match ? 10 : 1,
+          zIndex: match ? activeEdgeZ : 1,
           style: {
             ...edge.style,
             strokeWidth: match ? 3.5 : 1.7,
@@ -649,6 +664,7 @@ function App() {
     const nextSource = serializeDSL(next);
     setSource(nextSource);
     setDiagram(next);
+    setDocumentVersion((current) => current + 1);
     setCollapsed([]);
     setExpanded([]);
     setScope(undefined);
@@ -660,6 +676,59 @@ function App() {
     const result = parseDSL(source);
     setDiagnostics(result.diagnostics.map((item) => `${item.line}:${item.column} ${item.message}`));
     if (result.diagram) acceptDiagram(result.diagram);
+  };
+  const editItem = (
+    id: string,
+    value: { label: string; kind: Connection['kind']; attributes: Attributes },
+    resource: boolean,
+  ) => {
+    if (!diagram) return;
+    if (source !== serializeDSL(diagram))
+      throw new Error('DSL エディターに未反映の変更があります。先に解析して反映してください。');
+    const next: Diagram = {
+      ...diagram,
+      resources: diagram.resources.map((item) =>
+        resource && item.id === id
+          ? {
+              ...item,
+              label: value.label,
+              attributes: value.attributes,
+              provenance: item.provenance ? { ...item.provenance, kind: 'design' } : undefined,
+              unresolved:
+                item.provenance && item.provenance.kind !== 'design'
+                  ? [
+                      ...new Set([
+                        ...(item.unresolved ?? []),
+                        'ビューアで編集した設計値です。取り込み元には反映していません。',
+                      ]),
+                    ]
+                  : item.unresolved,
+            }
+          : item,
+      ),
+      connections: diagram.connections.map((item) =>
+        !resource && item.id === id
+          ? { ...item, kind: value.kind, attributes: value.attributes }
+          : item,
+      ),
+    };
+    validateDiagram(next);
+    const nextSource = serializeDSL(next);
+    const parsed = parseDSL(nextSource);
+    if (!parsed.diagram) throw new Error(parsed.diagnostics.map((item) => item.message).join('\n'));
+    // 正規化した DSL の位置を同期し、接続の ID と取り込み根拠は保持する。
+    next.resources = next.resources.map((item) => ({
+      ...item,
+      location: parsed.diagram!.resources.find((r) => r.id === item.id)?.location,
+    }));
+    next.connections = next.connections.map((item, index) => ({
+      ...item,
+      location: parsed.diagram!.connections[index]?.location,
+    }));
+    autoFitContext.current = { diagram: next, view, scope };
+    setDiagram(next);
+    setSource(nextSource);
+    setDiagnostics([]);
   };
   const importFile = async (file?: File) => {
     if (!file) return;
@@ -730,7 +799,11 @@ function App() {
             <p className="editor-hint">構文エラーがある場合は、現在の図を保持します。</p>
           </aside>
         )}
-        <div className="canvas-area" ref={canvas}>
+        <div
+          className="canvas-area"
+          ref={canvas}
+          style={{ '--edge-label-z-index': labelLayer } as CSSProperties}
+        >
           <div className="canvas-toolbar">
             <div className="view-tabs" aria-label="表示の切り替え">
               {Object.entries(viewLabels).map(([id, label]) => (
@@ -770,17 +843,19 @@ function App() {
                 すべて展開する
               </button>
             </div>
-            <label className="edge-shape-control toolbar-button">
-              矢印
-              <select
-                aria-label="矢印の形状"
-                value={edgeShape}
-                onChange={(event) => setEdgeShape(event.target.value as 'orthogonal' | 'bezier')}
-              >
-                <option value="orthogonal">直角</option>
-                <option value="bezier">曲線</option>
-              </select>
-            </label>
+            <button
+              className="edge-shape-control toolbar-button"
+              role="switch"
+              aria-label="矢印を曲線にする"
+              aria-checked={edgeShape === 'bezier'}
+              onClick={() =>
+                setEdgeShape((current) => (current === 'bezier' ? 'orthogonal' : 'bezier'))
+              }
+              title="直線（直角）と曲線を切り替える"
+            >
+              矢印 {edgeShape === 'bezier' ? '曲線' : '直線'}{' '}
+              <span aria-hidden="true">{edgeShape === 'bezier' ? '●' : '○'}</span>
+            </button>
             <button
               className="toolbar-button clear-selection"
               disabled={!selectionActive}
@@ -841,6 +916,8 @@ function App() {
             maxZoom={2.5}
             nodesDraggable={false}
             nodesConnectable={false}
+            elevateNodesOnSelect={false}
+            elevateEdgesOnSelect={false}
           >
             <Background gap={24} size={1} color="#d9e1ea" />
             <Controls showInteractive={false} />
@@ -935,6 +1012,21 @@ function App() {
               <h3>
                 元の接続 <span>{selectedConnection.originalIds.length}</span>
               </h3>
+              {selectedConnection.originalIds.map((id) => {
+                const original = diagram?.connections.find((edge) => edge.id === id);
+                return original ? (
+                  <details className="connection-editor" key={id}>
+                    <summary>
+                      {original.source} → {original.target} を編集
+                    </summary>
+                    <PropertyEditor
+                      key={`${documentVersion}-${id}`}
+                      connection={original}
+                      onSave={(value) => editItem(id, value, false)}
+                    />
+                  </details>
+                ) : null;
+              })}
               <dl>
                 {selectedConnection.originalIds.map((id) => {
                   const original = diagram?.connections.find((edge) => edge.id === id);
@@ -979,18 +1071,11 @@ function App() {
                 </div>
               )}
               <h3>属性</h3>
-              {Object.entries(selectedResource.attributes).length ? (
-                <dl>
-                  {Object.entries(selectedResource.attributes).map(([key, value]) => (
-                    <div key={key}>
-                      <dt>{key}</dt>
-                      <dd>{Array.isArray(value) ? value.join(', ') : String(value)}</dd>
-                    </div>
-                  ))}
-                </dl>
-              ) : (
-                <p className="muted-copy">追加属性なし</p>
-              )}
+              <PropertyEditor
+                key={`${documentVersion}-${selectedResource.id}`}
+                resource={selectedResource}
+                onSave={(value) => editItem(selectedResource.id, value, true)}
+              />
               <h3>
                 関係 <span>{selectedRelations.length}</span>
               </h3>

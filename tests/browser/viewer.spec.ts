@@ -1,72 +1,195 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-test.beforeAll(() => {
-  mkdirSync('artifacts', { recursive: true });
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'html',
-    'examples/observability.infra',
-    '--out',
-    'artifacts/observability.html',
-  ]);
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'html',
-    'examples/organizations.infra',
-    '--out',
-    'artifacts/organizations.html',
-  ]);
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'html',
-    'examples/aws.infra',
-    '--out',
-    'artifacts/aws.html',
-  ]);
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'html',
-    'examples/ecs-beanstalk.infra',
-    '--out',
-    'artifacts/ecs-beanstalk.html',
-  ]);
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'html',
-    'examples/transit-vpn.infra',
-    '--out',
-    'artifacts/transit-vpn.html',
-  ]);
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'html',
-    'examples/saas.infra',
-    '--out',
-    'artifacts/saas.html',
-  ]);
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'html',
-    'examples/service-catalog.infra',
-    '--out',
-    'artifacts/service-catalog.html',
-  ]);
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'import',
-    'examples/terraform',
-    '--json',
-    'fixture-plan.json',
-    '--out',
-    'artifacts/terraform-model.json',
-    '--dsl',
-    'artifacts/terraform.infra',
-  ]);
-});
+async function setArrowShape(page: Page, shape: string): Promise<void> {
+  const toggle = page.getByRole('switch', { name: '矢印を曲線にする', exact: true });
+  if ((await toggle.getAttribute('aria-checked')) !== String(shape === 'bezier'))
+    await toggle.click();
+}
+
 for (const offline of [false, true]) {
+  test(`右ペインで属性と接続を編集し、検証・DSL同期・画面位置の保持ができる (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    const node = (id: string) => page.locator(`.react-flow__node[data-id="${id}"]`);
+    await expect(node('api')).toBeVisible();
+    await node('api').locator('.resource-label').click();
+    const form = page.getByRole('form', { name: 'リソース情報の編集' });
+    const add = async (key: string) => {
+      await form.getByLabel('追加する属性', { exact: true }).fill(key);
+      await form.getByRole('button', { name: '属性を追加', exact: true }).click();
+    };
+    await form.getByLabel('名前', { exact: true }).fill('編集したAPI');
+    await add('cpu');
+    await form.getByLabel('CPU (units)', { exact: true }).fill('2048');
+    await add('memory');
+    await form.getByLabel('メモリ (MiB)', { exact: true }).fill('-1');
+    await form.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await expect(form.getByRole('alert')).toContainText('memory');
+    await expect(node('api')).toContainText('ECS API');
+    await form.getByLabel('メモリ (MiB)', { exact: true }).fill('4096');
+    await form.getByLabel('Subnet の ID', { exact: true }).fill('missing');
+    await form.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await expect(form.getByRole('alert')).toContainText('存在しない参照');
+    await form.getByLabel('Subnet の ID', { exact: true }).fill('private_a\nprivate_c');
+    const viewport = page.locator('.react-flow__viewport');
+    const before = await viewport.getAttribute('style');
+    await form.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await expect(form.getByRole('status')).toHaveText('変更を反映しました');
+    await expect(node('api')).toContainText('編集したAPI');
+    await expect(node('api')).toContainText('2048 units (2 vCPU)');
+    await expect(node('api')).toContainText('4096 MiB (4 GiB)');
+    await expect(viewport).toHaveAttribute('style', before!);
+    await form.getByLabel('CPU (units)', { exact: true }).fill('1024');
+    await form.getByRole('button', { name: '変更を取り消す', exact: true }).click();
+    await expect(form.getByLabel('CPU (units)', { exact: true })).toHaveValue('2048');
+    await form.getByRole('button', { name: 'memory を削除', exact: true }).click();
+    await form.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await expect(node('api')).not.toContainText('4096 MiB');
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    const dsl = page.getByRole('textbox', { name: 'DSL 入力' });
+    expect(await dsl.inputValue()).toContain('cpu=2048');
+    expect(await dsl.inputValue()).toContain('"編集したAPI"');
+    await dsl.fill((await dsl.inputValue()) + '\n# 未反映の下書き');
+    await form.getByLabel('名前', { exact: true }).fill('上書きしない');
+    await form.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await expect(form.getByRole('alert')).toContainText('未反映');
+    await page.getByRole('button', { name: '解析して反映', exact: true }).click();
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    const edge = page.getByRole('button', {
+      name: '編集したAPI → PostgreSQL: 通信 · tcp · 5432',
+      exact: true,
+    });
+    await edge.click();
+    await page.locator('.connection-editor summary').click();
+    const edgeForm = page.locator('.connection-editor form');
+    await edgeForm.getByLabel('ポート', { exact: true }).fill('70000');
+    await edgeForm.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await expect(edgeForm.getByRole('alert')).toContainText('65535');
+    await edgeForm.getByLabel('ポート', { exact: true }).fill('6432');
+    await edgeForm.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await expect(
+      page.getByRole('button', {
+        name: '編集したAPI → PostgreSQL: 通信 · tcp · 6432',
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page.locator('input[type=file]').setInputFiles({
+      name: 'state-model.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(
+        JSON.stringify({
+          version: 1,
+          title: '取り込み済み',
+          resources: [
+            {
+              id: 'task',
+              type: 'aws.ecs-task-definition',
+              label: 'Task',
+              attributes: { cpu: 512, memory: 1024 },
+              provenance: {
+                kind: 'state',
+                repository: 'example/repo',
+                address: 'aws_ecs_task_definition.main',
+                file: 'main.tf',
+                line: 8,
+              },
+            },
+          ],
+          connections: [],
+          views: [],
+          diagnostics: [],
+        }),
+      ),
+    });
+    await expect(node('task')).toBeVisible();
+    await node('task').locator('.resource-label').click();
+    await form.getByLabel('CPU (units)', { exact: true }).fill('1024');
+    await form.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await expect(page.locator('.detail-panel')).toContainText('design');
+    await expect(page.locator('.detail-panel')).toContainText('取り込み元には反映していません');
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    expect(await dsl.inputValue()).toContain('sourceKind="design"');
+    expect(await dsl.inputValue()).toContain('address="aws_ecs_task_definition.main"');
+    await page.getByRole('button', { name: '解析して反映', exact: true }).click();
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    await node('task').locator('.resource-label').click();
+    await expect(page.locator('.detail-panel')).toContainText('aws_ecs_task_definition.main');
+    await expect(form.getByLabel('CPU (units)', { exact: true })).toHaveValue('1024');
+  });
+  test(`IAM Role・境界の選択後も矢印ラベルが前面で操作でき、AWS境界アイコンを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    const node = (id: string) => page.locator(`.react-flow__node[data-id="${id}"]`);
+    for (const [id, name] of [
+      ['prod', 'AWS-Account'],
+      ['dev', 'AWS-Account'],
+      ['tokyo', 'Region'],
+    ]) {
+      const icon = node(id).locator('.service-icon');
+      await expect
+        .poll(() => icon.evaluate((e) => (e as HTMLImageElement).naturalWidth))
+        .toBeGreaterThan(0);
+      expect(
+        await icon.evaluate(async (e) => (await fetch((e as HTMLImageElement).src)).text()),
+      ).toContain(name + '_32');
+    }
+    await expect(node('tokyo').locator('.resource-label')).toContainText('東京');
+    await expect(node('tokyo').locator('.region-flag')).toHaveAttribute('width', '20');
+    const label = page.getByRole('button', {
+      name: 'デプロイ IAM Role → ECS API: サービス更新',
+      exact: true,
+    });
+    const inFront = () =>
+      label.evaluate((element) => {
+        const r = element.getBoundingClientRect();
+        const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return top === element || (top !== null && element.contains(top));
+      });
+    for (const shape of ['orthogonal', 'bezier']) {
+      await setArrowShape(page, shape);
+      for (const id of ['deploy_role', 'prod', 'tokyo']) {
+        await node(id).locator('.resource-label').click();
+        await expect(page.locator('.detail-panel > h2')).toHaveText(
+          id === 'deploy_role' ? 'デプロイ IAM Role' : id === 'prod' ? '本番アカウント' : '東京',
+        );
+        await expect.poll(inFront).toBe(true);
+        await label.click();
+        await expect(label).toHaveAttribute('aria-pressed', 'true');
+        await expect.poll(inFront).toBe(true);
+        await page.getByRole('button', { name: '選択を解除', exact: true }).click();
+        await label.focus();
+        await expect(label).toHaveAttribute('aria-pressed', 'true');
+        await expect.poll(inFront).toBe(true);
+      }
+    }
+    // 固定の z-index に戻すと、深い入れ子で再発することも検証する。
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    const groups = Array.from({ length: 20 }, (_, i) => `group nested_${i} "階層${i}" {`).join(
+      '\n',
+    );
+    await page
+      .getByRole('textbox', { name: 'DSL 入力' })
+      .fill(
+        `diagram "深い入れ子" {\n${groups}\naws.iam deploy_role "デプロイ IAM Role"\n${'}\n'.repeat(20)}aws.ecs api "ECS API"\ndeploy_role -> api kind=deploy label="サービス更新"\n}`,
+      );
+    await page.getByRole('button', { name: '解析して反映', exact: true }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('22 要素');
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    await node('deploy_role').locator('.resource-label').click();
+    await expect.poll(inFront).toBe(true);
+    await label.click();
+    await expect(label).toHaveAttribute('aria-pressed', 'true');
+  });
   test(`Datadog・New Relicへの送信種類と公式アイコンを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
     context,
@@ -100,7 +223,7 @@ for (const offline of [false, true]) {
     await metric.focus();
     await expect(metric).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('.detail-panel')).toContainText('送信データメトリクス');
-    await page.getByRole('combobox', { name: '矢印の形状' }).selectOption('bezier');
+    await setArrowShape(page, 'bezier');
     expect(await metric.getAttribute('style')).not.toBe(await logs.getAttribute('style'));
     await logs.click();
     await expect(logs).toHaveAttribute('aria-pressed', 'true');
@@ -139,8 +262,8 @@ for (const offline of [false, true]) {
         .locator('.react-flow__node')
         .evaluateAll((nodes) => nodes.map((n) => n.getAttribute('style')));
     const nodesBefore = await positions();
-    const shape = page.getByRole('combobox', { name: '矢印の形状', exact: true });
-    await shape.selectOption('bezier');
+    const shape = page.getByRole('switch', { name: '矢印を曲線にする', exact: true });
+    await setArrowShape(page, 'bezier');
     await expect.poll(async () => (await paths()).every((p) => p?.includes('C'))).toBe(true);
     expect(await viewport()).toBe(viewBefore);
     expect(await positions()).toEqual(nodesBefore);
@@ -150,15 +273,15 @@ for (const offline of [false, true]) {
     await page.getByRole('button', { name: '選択を解除', exact: true }).click();
     await label.focus();
     await expect(label).toHaveAttribute('aria-pressed', 'true');
-    await shape.selectOption('orthogonal');
+    await setArrowShape(page, 'orthogonal');
     await expect.poll(paths).toEqual(original);
     await expect(label).toHaveAttribute('aria-pressed', 'true');
     expect(await viewport()).toBe(viewBefore);
-    await shape.selectOption('bezier');
+    await setArrowShape(page, 'bezier');
     await page.getByRole('button', { name: 'すべて折りたたむ', exact: true }).click();
     await expect(page.locator('.canvas-footer')).toContainText('5 要素');
     await expect.poll(async () => (await paths()).every((p) => p?.includes('C'))).toBe(true);
-    await expect(shape).toHaveValue('bezier');
+    await expect(shape).toHaveAttribute('aria-checked', 'true');
   });
   test(`画面外にある折りたたみ境界を一覧から展開して表示する (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
@@ -536,7 +659,7 @@ for (const offline of [false, true]) {
     await expect(page.locator('.detail-panel')).toContainText('a → target');
     await expect(page.locator('.detail-panel')).toContainText('b → target');
   });
-  test(`主要59サービスのアイコンとブランドカラーを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
+  test(`主要61サービスのアイコンとブランドカラーを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
     context,
   }) => {
@@ -550,9 +673,9 @@ for (const offline of [false, true]) {
     );
     if (!offline)
       await page.locator('input[type=file]').setInputFiles('examples/service-catalog.infra');
-    await expect(page.locator('.canvas-footer')).toContainText('59 要素');
+    await expect(page.locator('.canvas-footer')).toContainText('61 要素');
     const images = page.locator('.service-icon');
-    await expect(images).toHaveCount(59);
+    await expect(images).toHaveCount(61);
     await expect
       .poll(() =>
         images.evaluateAll((images) =>
@@ -601,7 +724,7 @@ for (const offline of [false, true]) {
         }),
       brandColors,
     );
-    expect(renderedColors).toHaveLength(53);
+    expect(renderedColors).toHaveLength(55);
     expect(renderedColors.filter((brand) => !brand.matches)).toEqual([]);
     if (offline) expect(requests).toEqual([]);
   });
@@ -727,7 +850,9 @@ test('表示切替・集約復元・検索・強調・ドリルダウン', async
   await page.getByRole('button', { name: 'ECS API aws.ecs · api' }).click();
   await expect(page.locator('.detail-panel > h2')).toHaveText('ECS API');
   await expect(page.locator('.react-flow__node[data-id="api"]')).toHaveClass(/selected/);
-  await expect(page.locator('.detail-panel')).toContainText('private_a, private_c');
+  await expect(page.getByLabel('Subnet の ID', { exact: true })).toHaveValue(
+    'private_a\nprivate_c',
+  );
   await expect(page.locator('.react-flow__node[data-id="api"] .related')).toHaveCount(1);
   await page.getByRole('textbox', { name: 'リソース検索' }).fill('本番 VPC');
   await page.getByRole('button', { name: '本番 VPC vpc · main' }).click();
@@ -812,7 +937,7 @@ for (const offline of [false, true]) {
     if (!offline)
       await page.locator('input[type=file]').setInputFiles('examples/ecs-beanstalk.infra');
     await expect(page.locator('.document-title')).toHaveText('ECS と Elastic Beanstalk の詳細構成');
-    await expect(page.locator('.service-icon')).toHaveCount(15);
+    await expect(page.locator('.service-icon')).toHaveCount(17);
     await expect
       .poll(() =>
         page
@@ -883,7 +1008,7 @@ for (const offline of [false, true]) {
     if (!offline)
       await page.locator('input[type=file]').setInputFiles('examples/transit-vpn.infra');
     await expect(page.locator('.canvas-footer')).toContainText('28 要素');
-    await expect(page.locator('.service-icon')).toHaveCount(18);
+    await expect(page.locator('.service-icon')).toHaveCount(24);
     await expect(
       page.locator('.react-flow__node[data-id="prod_subnet"] .fallback-icon'),
     ).toHaveCount(1);
@@ -938,7 +1063,9 @@ for (const offline of [false, true]) {
     await page.getByRole('textbox', { name: 'リソース検索' }).fill('ワークロード向け SCP');
     await page.locator('.search-results button').click();
     await expect(page.locator('.detail-panel > h2')).toHaveText('ワークロード向け SCP');
-    await expect(page.locator('.detail-panel')).toContainText('SERVICE_CONTROL_POLICY');
+    await expect(page.getByLabel('meta.policyType', { exact: true })).toHaveValue(
+      'SERVICE_CONTROL_POLICY',
+    );
     await expect
       .poll(() =>
         page
@@ -956,12 +1083,46 @@ for (const offline of [false, true]) {
   });
 }
 
+for (const offline of [false, true]) {
+  test(`Nginx・Envoy のアイコンと設定を安全に表示・編集する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(
+      offline ? 'file://' + resolve('artifacts/proxies.html') : 'http://127.0.0.1:5188',
+    );
+    if (!offline) await page.locator('input[type=file]').setInputFiles('examples/proxies.infra');
+    await expect(page.locator('.canvas-footer')).toContainText('4 要素');
+    for (const id of ['nginx', 'envoy']) {
+      const node = page.locator(`.react-flow__node[data-id="${id}"]`);
+      await expect(node.locator('.service-icon')).toHaveCount(1);
+      await node.locator('.resource-label').click();
+      await expect(page.getByLabel('サービス設定', { exact: true })).toHaveValue(/\n/);
+    }
+    const content = 'static_resources:\n# <script>window.configExecuted=true</script>\n';
+    await page.getByLabel('サービス設定', { exact: true }).fill(content);
+    await page.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await expect(page.getByLabel('サービス設定', { exact: true })).toHaveValue(content);
+    await expect(page.locator('.detail-panel script')).toHaveCount(0);
+    expect(
+      await page.evaluate(() => (window as unknown as Record<string, unknown>).configExecuted),
+    ).toBeUndefined();
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    expect(await page.getByLabel('DSL 入力').inputValue()).toContain(JSON.stringify(content));
+  });
+}
+
 for (const reference of [
   'aws-web',
   'gcp-delivery',
   'azure-private-link',
   'classmethod-websocket',
   'serverworks-inspection',
+  'eks-single-account-single-cluster',
+  'eks-single-account-multi-cluster',
+  'eks-multi-account-single-cluster',
+  'eks-multi-account-multi-cluster',
 ]) {
   test(`公開構成図 ${reference}: オフラインHTMLと折りたたみ後の導線`, async ({ page, context }) => {
     const output = `artifacts/reference-${reference}.html`;
@@ -997,6 +1158,10 @@ for (const reference of [
       await page.getByRole('table', { name: 'Inspection TGW routes' }).click();
       await expect(page.locator('.detail-panel')).toContainText('Inspection TGW routes');
     }
+    await page.getByRole('button', { name: 'Fit View', exact: true }).click();
+    await page.locator('.react-flow__viewport').evaluate(async () => {
+      for (let i = 0; i < 35; i++) await new Promise(requestAnimationFrame);
+    });
     await page.screenshot({ path: `artifacts/reference-${reference}.png`, fullPage: true });
     await page.getByRole('button', { name: 'すべて折りたたむ', exact: true }).click();
     await page.getByRole('button', { name: 'Fit View' }).click();
@@ -1039,13 +1204,6 @@ for (const offline of [false, true]) {
     context,
   }) => {
     const output = 'artifacts/identity.html';
-    execFileSync(process.execPath, [
-      'dist/cli.js',
-      'html',
-      'examples/identity.infra',
-      '--out',
-      output,
-    ]);
     if (offline) {
       await context.setOffline(true);
       await page.goto('file://' + resolve(output));

@@ -16,6 +16,10 @@ const samples = [
   'azure-private-link',
   'classmethod-websocket',
   'serverworks-inspection',
+  'eks-single-account-single-cluster',
+  'eks-single-account-multi-cluster',
+  'eks-multi-account-single-cluster',
+  'eks-multi-account-multi-cluster',
 ];
 const read = (name: string) => {
   const parsed = parseDSL(readFileSync(`examples/reference/${name}.infra`, 'utf8'));
@@ -120,4 +124,57 @@ test('表・リスト: malformed DSLと外部JSONを拒否、HTML文字列はテ
   const layout = await layoutGraph(buildDisplayGraph(d));
   assert.ok(layout.nodes[0]!.height > 150);
   assert.ok(serializeDSL(d).includes('<script>'));
+});
+
+test('EKS の4パターンはクラスターの所有アカウントと Namespace の所属を保持する', () => {
+  const names = [
+    'eks-single-account-single-cluster',
+    'eks-single-account-multi-cluster',
+    'eks-multi-account-single-cluster',
+    'eks-multi-account-multi-cluster',
+  ];
+  for (const [index, name] of names.entries()) {
+    const d = read(name);
+    const clusters = d.resources.filter((r) => r.type === 'aws.eks');
+    assert.equal(clusters.length, [1, 2, 1, 2][index]);
+    for (const ns of d.resources.filter((r) => r.type === 'k8s.namespace'))
+      assert.ok(clusters.some((c) => c.id === ns.parentId));
+    const owner = (id: string): string | undefined => {
+      let r = d.resources.find((r) => r.id === id);
+      while (r && r.type !== 'account') r = d.resources.find((parent) => parent.id === r!.parentId);
+      return r?.id;
+    };
+    if (name === 'eks-multi-account-single-cluster') {
+      assert.equal(owner('shared_a_pod'), 'platform');
+      assert.equal(owner('primary'), 'platform');
+      assert.equal(owner('target_a'), 'workload_a');
+      assert.ok(
+        d.connections.some(
+          (e) => e.source === 'primary' && e.target === 'target_a' && e.kind === 'auth',
+        ),
+      );
+      assert.ok(
+        d.connections.filter((e) => e.source === 'share').every((e) => e.kind === 'association'),
+      );
+    }
+    const graph = buildDisplayGraph(d, { collapsed: clusters.map((c) => c.id) });
+    assert.ok(!graph.resources.some((r) => r.type === 'k8s.pod'));
+    assert.ok(graph.connections.some((e) => clusters.some((c) => c.id === e.source)));
+    assert.equal(d.resources.filter((r) => r.type === 'k8s.pod').length, 2);
+  }
+});
+
+test('Nginx・Envoy 設定は改行や変数を変更せず往復し、不正な型と形式を拒否する', () => {
+  const d = validateDiagram(parseDSL(readFileSync('examples/proxies.infra', 'utf8')).diagram);
+  const next = validateDiagram(parseDSL(serializeDSL(d)).diagram);
+  assert.deepEqual(
+    next.resources.map((r) => r.attributes),
+    d.resources.map((r) => r.attributes),
+  );
+  assert.match(String(next.resources[1]!.attributes.config), /\$host/);
+  for (const attrs of ['config=[x]', 'configFormat=unknown config="x"', 'configFormat=nginx']) {
+    assert.ok(!parseDSL(`diagram "x" { software.nginx n ${attrs} }`).diagram);
+  }
+  d.resources[1]!.attributes.configFormat = 'unknown';
+  assert.throws(() => validateDiagram(d));
 });

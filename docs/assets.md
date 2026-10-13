@@ -74,6 +74,10 @@ Fly.io のカードのアイコンと名前には、条件に従って公式ホ�
 
 ## 仕様の確認先
 
+AWS の `account` と AWS の所属・リージョンコードが明示された `region` は、
+公式配布物の `AWS-Account_32.svg`、`Region_32.svg` を使います。
+リージョンの国旗と表示名は併記します。Google Cloud・Azure の境界には流用しません。
+
 - [React Flow の Sub Flows](https://reactflow.dev/learn/layouting/sub-flows)：親 ID、相対座標、親を先に並べる規則。
 - [ELK.js](https://github.com/kieler/elkjs)：compound graph と自動配置。版は lockfile に固定しています。
 - [AWS Subnets](https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html)：Subnet は単一 AZ、Public は Internet Gateway へのルートが根拠です。

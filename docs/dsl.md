@@ -336,3 +336,34 @@ AZ名だけでアカウント間の同じ物理ゾーンを示すとは扱いま
 [AWSのアカウント識別子](https://docs.aws.amazon.com/general/latest/gr/acct-identifiers.html) と
 [AZ IDの説明](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dh-sharing.html) を参照してください。
 [identity.infra](../examples/identity.infra) は架空IDを使った表示例です。
+
+## EKS と Kubernetes の境界
+
+`aws.eks` / `aws.eks-cluster`、`aws.eks-node-group`、`aws.eks-fargate-profile`、
+`k8s.namespace`、`k8s.deployment` は入れ子を持ち、個別・一括で展開できます。
+Pod、Service、Ingress、ServiceAccount、Node、Role、RoleBinding、NetworkPolicy は
+`k8s.pod`、`k8s.service`、`k8s.ingress`、`k8s.service-account`、`k8s.node`、
+`k8s.role`、`k8s.role-binding`、`k8s.network-policy` として表現できます。
+Namespace と Node の所属は同じ意味ではありません。Namespace 内の Pod と Node は関連線で結びます。
+EKS の VPC 内の囲みはネットワークとの論理的な関係であり、AWS 管理コントロールプレーンの物理配置を断定しません。
+
+`replicas` は非負整数、`cpuRequest` / `cpuLimit` / `memoryRequest` / `memoryLimit` は Kubernetes quantity の文字列です。
+quantity は表示用に保持し、Kubernetes の全構文・単位の妥当性は評価しません。
+ECS の `cpu`（units）・`memory`（MiB）とは別の属性を使います。
+Pod Identity や Access Entry は専用カードと `auth` / `association` の接続で表現します。
+認証設定や Namespace の囲みだけでは、通信成立・分離・実効権限を保証しません。
+
+## サービスの設定文字列
+
+`config` に設定の全文を JSON 形式で引用し、改行を `\n` として記述できます。
+`configFormat` は `nginx`、`yaml`、`json`、`text` のいずれかで、`config` と合わせて使います。
+省略時は通常のテキストです。右ペインから複数行で編集できます。
+
+```text
+software.nginx proxy "NGINX" configFormat=nginx config="events {}\nhttp { server { listen 8080; } }\n"
+software.envoy mesh "Envoy" configFormat=yaml config="static_resources: {}\n"
+```
+
+設定内容は不活性な文字列として保持します。Nginx・Envoy の構文検査・デプロイ・設定からの通信線生成は行いません。
+ファイル参照、シェル、テンプレート、HTML は実行せず、往復と単一HTMLで同じテキストを保ちます。
+共有用HTMLに含まれるため、秘密鍵・トークン・パスワードを埋め込まないでください。

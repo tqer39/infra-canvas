@@ -27,7 +27,7 @@ test('同梱アイコンは記録したハッシュと一致し、外部資産�
   }
 });
 
-test('Simple Icons の53種はブランドカラーを適用し、原本の形状を保持する', () => {
+test('Simple Icons の55種はブランドカラーを適用し、原本の形状を保持する', () => {
   const manifest = JSON.parse(readFileSync('src/assets/manifest.json', 'utf8')) as {
     type: string;
     file: string;
@@ -36,7 +36,7 @@ test('Simple Icons の53種はブランドカラーを適用し、原本の形�
     originalSha256?: string;
   }[];
   const colored = manifest.filter((icon) => icon.provider === 'Simple Icons');
-  assert.equal(colored.length, 53);
+  assert.equal(colored.length, 55);
   for (const icon of colored) {
     assert.match(icon.brandColor ?? '', /^#[0-9A-F]{6}$/);
     const svg = readFileSync(`src/assets/${icon.file}`, 'utf8');
@@ -127,4 +127,27 @@ test('AWS境界アイコンは明示的な公開区分と所属を使い、他�
     'explicit_google',
   ])
     assert.equal(icon(id), 'subnet', id);
+});
+test('AWSのアカウントとリージョンに公式境界アイコンを使い、他クラウドへ流用しない', () => {
+  const d = parseDSL(`diagram "regions" {
+account aws "AWS アカウント" {
+ region tokyo "東京" region="ap-northeast-1"
+ region planned "未確定リージョン"
+}
+region standalone "Virginia" region="us-east-1"
+project google "Google" {
+ region gcp "東京" region="asia-northeast1"
+}
+subscription azure "Azure" {
+ region azure_region "東京" region="japaneast"
+}
+region unknown "AWS 東京"
+region explicit_google "東京" region="ap-northeast-1" provider=google
+}`).diagram!;
+  const byId = new Map(d.resources.map((r) => [r.id, r]));
+  const icon = (id: string) => getResourceIconType(byId.get(id)!, byId);
+  assert.equal(icon('aws'), 'aws.account');
+  for (const id of ['tokyo', 'planned', 'standalone']) assert.equal(icon(id), 'aws.region');
+  for (const id of ['gcp', 'azure_region', 'unknown', 'explicit_google'])
+    assert.equal(icon(id), 'region');
 });

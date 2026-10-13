@@ -1,6 +1,89 @@
+[tools]
+node = "24.21.0"
+python = "3.14.7"
+
+[env]
+_.path = ["./node_modules/.bin"]
+
+[tasks.bootstrap]
+description = "依存・AIルール・ブラウザー・ビルドを準備する"
+run = ["mise run install", "mise run rules:generate", "mise run browser:install", "mise run build"]
+
+[tasks.install]
+description = "lockfile 通りに npm 依存を導入する"
+run = "npm ci --ignore-scripts"
+
+[tasks.dev]
+description = "ローカルビューアーを起動する"
+run = "vite --host 127.0.0.1"
+
+[tasks.cli]
+description = "Infra Canvas CLI"
+run = "node --import tsx src/cli.ts"
+
+[tasks.typecheck]
+run = "tsc --noEmit"
+
 [tasks.lint]
 description = "型・Oxlint・Markdown・Oxfmt を検証する"
-run = "npm run typecheck && npm run lint && npm run fmt:check"
+run = [
+  "mise run typecheck",
+  "oxlint --deny-warnings .",
+  "node scripts/lint-markdown.mjs",
+  "mise run fmt:check",
+]
+
+[tasks.fmt]
+run = "oxfmt --write ."
+
+[tasks."fmt:check"]
+run = "oxfmt --check ."
+
+[tasks.test]
+run = "node --import tsx --test tests/*.test.ts"
+
+[tasks."test:icons"]
+run = "python tests/update-icons.test.py"
+
+[tasks.build]
+run = "node scripts/build.mjs"
+
+[tasks."check:static"]
+description = "静的検証・単体テスト・ルール同期を並列に検証する"
+depends = ["lint", "test", "test:icons", "rules:check"]
+
 [tasks.check]
-description = "全検証とビルド"
-run = "npm run check"
+description = "静的検証とビルド"
+depends = ["check:static", "build"]
+
+[tasks."test:browser"]
+run = "playwright test"
+
+[tasks."browser:install"]
+run = "playwright install --only-shell chromium"
+
+[tasks."browser:install-ci"]
+run = "playwright install --with-deps --only-shell chromium"
+
+[tasks."icons:update"]
+run = "python scripts/update-icons.py"
+
+[tasks."icons:check"]
+run = "python scripts/update-icons.py --check"
+
+[tasks."icons:publish"]
+description = "GitHub Actions の Linux ランナーで更新PRを公開する"
+run = "bash scripts/publish-icon-update.sh"
+
+[tasks."rules:generate"]
+description = "共通ルールから各AIの設定を生成する"
+run = ["rulesync generate", "node -e \"require('node:fs').copyFileSync('AGENTS.md','GEMINI.md')\""]
+tools = { "npm:rulesync" = "33.0.0" }
+
+[tasks."rules:check"]
+description = "各AI設定と共通ルールの同期を検証する"
+run = [
+  "rulesync generate --check",
+  "node -e \"const f=require('node:fs');if(f.readFileSync('AGENTS.md','utf8')!==f.readFileSync('GEMINI.md','utf8')){throw new Error('GEMINI.md is out of sync')}\"",
+]
+tools = { "npm:rulesync" = "33.0.0" }
