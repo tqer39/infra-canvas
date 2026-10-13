@@ -95,6 +95,27 @@ for (const offline of [false, true]) {
     await expect(
       page.getByRole('button', { name: '西アカウント → 東アカウント: 通信', exact: true }),
     ).toHaveCount(1);
+    // 一括で閉じた境界も、親から順に個別の＋で再展開できる。
+    await page.getByRole('button', { name: '西アカウントを展開', exact: true }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('4 要素');
+    await expect(page.getByRole('button', { name: '入れ子を展開', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: '入れ子を展開', exact: true }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('6 要素');
+    const controlGap = await page.locator('.react-flow__node[data-id="west"]').evaluate((node) => {
+      const label = node.querySelector('.resource-label')!.getBoundingClientRect();
+      const button = node.querySelector('.boundary-toggle')!.getBoundingClientRect();
+      return (button.left - label.right) / (button.width / 22);
+    });
+    expect(controlGap).toBeLessThanOrEqual(24);
+
+    await expect(
+      page.getByRole('button', { name: 'A → 東アカウント: 通信', exact: true }),
+    ).toHaveCount(1);
+    await page.getByRole('button', { name: '東アカウントを展開', exact: true }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('7 要素 ·  2 接続');
+    expect(await viewport()).toBe(before);
+    await fold.click();
+    await expect(page.locator('.canvas-footer')).toContainText('3 要素');
     await expand.click();
     await expect(page.locator('.canvas-footer')).toContainText('7 要素 ·  2 接続');
     await expect(expand).toBeDisabled();

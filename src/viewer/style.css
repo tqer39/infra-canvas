@@ -473,6 +473,7 @@ textarea:focus-visible {
   font-size: 23px;
 }
 .boundary-card .resource-text {
+  flex: 0 1 auto;
   flex-direction: row;
   align-items: baseline;
   gap: 9px;
@@ -496,6 +497,9 @@ textarea:focus-visible {
   height: 22px;
   padding: 0;
   line-height: 1;
+}
+.boundary-card .boundary-toggle {
+  margin-left: 0;
 }
 .resource-card.related {
   border-color: #218f82;
