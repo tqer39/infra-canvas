@@ -20,7 +20,11 @@ Google の ZIP に独立した OSS ライセンスや版番号はありません
 同梱はこの構成図表示の用途に限定します。別用途への転用は提供元の条件を確認してください。
 
 `src/assets/icons.ts` の型名と資産の対応表は拡張できます。
-AWS ALB は Elastic Load Balancing アイコンです。未対応の種別は代替記号と種別名を表示します。
+AWS ALB は Elastic Load Balancing アイコンです。
+`vpc` はAWS公式のVPCグループアイコンを表示します。AWSの所属・明示provider・取り込み元が分かる
+`subnet` は `public`／`private` 指定に応じて公式Public／Private Subnetグループアイコンを表示します。
+公開区分が不明なSubnetと、Google Cloud・AzureのSubnetは汎用記号のままです。
+名前に「Public」「Private」が含まれるだけでは公開区分を推測しません。3資産も月次更新の対象です。未対応の種別は代替記号と種別名を表示します。
 
 `external.user`（利用者）は、人の頭と肩を表した独自 SVG を表示します。
 Infra Canvas の色に合わせて作成した素材で、外部ライブラリやブランド素材への依存はありません。

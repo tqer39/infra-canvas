@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { getResourceIconType } from '../src/assets/resource-icons.js';
 import { parseDSL, validateDiagram } from '../src/core/index.js';
 
 test('同梱アイコンは記録したハッシュと一致し、外部資産や実行コードを含まない', () => {
@@ -88,4 +89,42 @@ test('LLMカタログと全サービスカタログは有効で、同梱資産�
   );
   assert.equal(catalogs[1].length, 17);
   for (const type of catalogs[1]) assert.ok(catalogs[0].includes(type), type);
+});
+
+test('AWS境界アイコンは明示的な公開区分と所属を使い、他クラウドや未知の区分を推測しない', () => {
+  const parsed = parseDSL(`diagram "境界アイコン" {
+    vpc vpc "VPC" {
+      subnet public_net "名前には区分なし" public
+      subnet private_net "名前には区分なし" private
+      subnet unknown_net "Public と書いても未確定" unknown
+    }
+    project google "Google" {
+      network gcp "Network" {
+        subnet google_net "Private AWS という名前" private
+      }
+    }
+    subscription azure "Azure" {
+      subnet azure_net "Public" public
+    }
+    subnet orphan "Private" private
+    subnet imported "Public" provider="aws.secondary" subnetVisibility="public"
+    subnet unknown_imported "Private" provider="aws" subnetVisibility="unknown"
+    subnet explicit_google "Public" public provider="google"
+  }`);
+  assert.ok(parsed.diagram, JSON.stringify(parsed.diagnostics));
+  const resources = new Map(parsed.diagram.resources.map((resource) => [resource.id, resource]));
+  const icon = (id: string) => getResourceIconType(resources.get(id)!, resources);
+  assert.equal(icon('vpc'), 'aws.vpc');
+  assert.equal(icon('public_net'), 'aws.subnet-public');
+  assert.equal(icon('private_net'), 'aws.subnet-private');
+  assert.equal(icon('imported'), 'aws.subnet-public');
+  for (const id of [
+    'unknown_net',
+    'google_net',
+    'azure_net',
+    'orphan',
+    'unknown_imported',
+    'explicit_google',
+  ])
+    assert.equal(icon(id), 'subnet', id);
 });

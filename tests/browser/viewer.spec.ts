@@ -67,6 +67,29 @@ for (const offline of [false, true]) {
     if (offline) await context.setOffline(true);
     await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
     await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    const boundaryIcon = (id: string) =>
+      page.locator(`.react-flow__node[data-id="${id}"] .service-icon`);
+    for (const [id, title] of [
+      ['main', 'Virtual-private-cloud-VPC'],
+      ['public_a', 'Public-subnet'],
+      ['private_a', 'Private-subnet'],
+    ]) {
+      const icon = boundaryIcon(id);
+      await expect(icon).toHaveCount(1);
+      await expect
+        .poll(() => icon.evaluate((element) => (element as HTMLImageElement).naturalWidth))
+        .toBeGreaterThan(0);
+      const svg = await icon.evaluate(
+        async (element) => await (await fetch((element as HTMLImageElement).src)).text(),
+      );
+      expect(svg).toContain(title + '_32');
+    }
+    await page.getByRole('button', { name: 'Public AZ-aを展開', exact: true }).click();
+    await expect(
+      page.getByRole('button', { name: 'Public AZ-aを折りたたむ', exact: true }),
+    ).toBeVisible();
+    await expect(boundaryIcon('public_a')).toHaveCount(1);
+
     await page.getByRole('button', { name: 'DSL を編集' }).click();
     await page
       .getByRole('textbox', { name: 'DSL 入力' })
@@ -698,7 +721,13 @@ for (const offline of [false, true]) {
     if (!offline)
       await page.locator('input[type=file]').setInputFiles('examples/transit-vpn.infra');
     await expect(page.locator('.canvas-footer')).toContainText('28 要素');
-    await expect(page.locator('.service-icon')).toHaveCount(16);
+    await expect(page.locator('.service-icon')).toHaveCount(18);
+    await expect(
+      page.locator('.react-flow__node[data-id="prod_subnet"] .fallback-icon'),
+    ).toHaveCount(1);
+    await expect(
+      page.locator('.react-flow__node[data-id="google_vpc"] .fallback-icon'),
+    ).toHaveCount(1);
     await expect
       .poll(() =>
         page

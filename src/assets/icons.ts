@@ -1,3 +1,6 @@
+import aws_vpc from './aws-vpc.svg';
+import aws_public_subnet from './aws-public-subnet.svg';
+import aws_private_subnet from './aws-private-subnet.svg';
 import claude from './saas-claude.svg';
 import claudecode from './saas-claudecode.svg';
 import googlegemini from './saas-googlegemini.svg';
@@ -86,6 +89,9 @@ import azure_app from './azure-app.svg';
 import azure_sql from './azure-sql.svg';
 import azure_storage from './azure-storage.svg';
 const icons: Record<string, string> = {
+  'aws.vpc': aws_vpc,
+  'aws.subnet-public': aws_public_subnet,
+  'aws.subnet-private': aws_private_subnet,
   'saas.claude': claude,
   'saas.claudecode': claudecode,
   'saas.googlegemini': googlegemini,

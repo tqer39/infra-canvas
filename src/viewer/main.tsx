@@ -29,6 +29,7 @@ import { buildDisplayGraph } from '../core/display';
 import { layoutGraph } from '../core/layout';
 import { isBoundary, type Diagram, type Resource, type DisplayGraph } from '../core/model';
 import { getIcon, getIconHomepage } from '../assets/icons';
+import { getResourceIconType } from '../assets/resource-icons';
 import { getCountryFlag } from '../assets/flags';
 import { getRegionCountry, getResourceRegion } from '../assets/regions';
 import defaultSource from '../../examples/aws.infra?raw';
@@ -41,6 +42,7 @@ declare global {
 type ResourceData = Record<string, unknown> & {
   resource: Resource;
   collapsed: boolean;
+  iconType: string;
   onToggle: (id: string) => void;
   related: boolean;
   muted: boolean;
@@ -86,7 +88,7 @@ function RegionFlag({ resource }: { resource: Resource }) {
 function ResourceCard({ data }: NodeProps<ResourceNode>) {
   const { resource, collapsed, onToggle, related, muted } = data;
   const boundary = isBoundary(resource);
-  const icon = getIcon(resource.type);
+  const icon = getIcon(data.iconType);
   const homepage = getIconHomepage(resource.type);
   return (
     <div
@@ -333,6 +335,9 @@ function App() {
     })
       .then((layout) => {
         if (!active) return;
+        const originalResources = new Map(
+          diagram?.resources.map((resource) => [resource.id, resource]),
+        );
         const placements = new Map(layout.nodes.map((node) => [node.id, node]));
         const routes = new Map((layout.edges ?? []).map((edge) => [edge.id, edge]));
         const sorted = [...display.resources];
@@ -367,6 +372,7 @@ function App() {
               style: { width: placement.width, height: placement.height },
               data: {
                 resource,
+                iconType: getResourceIconType(resource, originalResources),
                 collapsed: display.collapsed.includes(resource.id),
                 onToggle: toggle,
                 related: false,
@@ -420,7 +426,7 @@ function App() {
     return () => {
       active = false;
     };
-  }, [visibleDiagram, view, collapsed, expanded, toggle]);
+  }, [diagram, visibleDiagram, view, collapsed, expanded, toggle]);
   useEffect(() => {
     if (!graph || !nodes.length) return;
     const previous = autoFitContext.current;

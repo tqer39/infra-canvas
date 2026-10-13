@@ -472,6 +472,10 @@ textarea:focus-visible {
   color: #6e9aa7;
   font-size: 23px;
 }
+.boundary-card:not(.detail-boundary-card) .service-icon {
+  width: 24px;
+  height: 24px;
+}
 .boundary-card .resource-text {
   flex: 0 1 auto;
   flex-direction: row;
