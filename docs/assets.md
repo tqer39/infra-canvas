@@ -114,7 +114,7 @@ npm run test:browser
 専用 App `infra-canvas-icon-updater` は private、Webhook無効で登録します。
 Repository permissions は Contents と Pull requests の Read and write、Metadata の Read-onlyだけです。
 インストール対象は `tqer39/infra-canvas` だけに限定します。
-1Password の `infra-canvas` Vault に `Icon Update GitHub App` を作成し、`client_id` と `private_key` を保存します。
+1Password の `infra-canvas-secrets` Vault に `Icon Update GitHub App` を作成し、`client_id` と `private_key` を保存します。
 ワークフローは公式 `1Password/load-secrets-action` と `actions/create-github-app-token` を固定SHAで使い、
 このリポジトリと必要な権限だけに限定した短期トークンを発行します。
 

@@ -61,8 +61,8 @@ jobs:
           export-env: false
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          APP_CLIENT_ID: op://infra-canvas/Icon Update GitHub App/client_id
-          APP_PRIVATE_KEY: op://infra-canvas/Icon Update GitHub App/private_key
+          APP_CLIENT_ID: op://infra-canvas-secrets/Icon Update GitHub App/client_id
+          APP_PRIVATE_KEY: op://infra-canvas-secrets/Icon Update GitHub App/private_key
       - name: このリポジトリだけに有効なAppトークンを発行
         if: steps.diff.outputs.changed == 'true' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false))
         id: app
