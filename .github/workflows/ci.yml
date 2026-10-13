@@ -5,8 +5,11 @@ on:
     branches: [main]
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
-  workflow-result:
+  checks:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -17,7 +20,30 @@ jobs:
         with:
           node-version: '24'
       - run: npm ci --ignore-scripts
-      - name: 型検査・Oxlint・markdownlint・Oxfmt・テスト・ビルド
-        run: npm run check
-      - run: npx playwright install --with-deps chromium
+      - name: 型検査・Oxlint・markdownlint・Oxfmt・単体テスト
+        run: npm run check:static
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '24'
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - run: npx playwright install --with-deps --only-shell chromium
       - run: npm run test:browser
+  workflow-result:
+    needs: [checks, browser]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: 全検証の成功を確認
+        env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
+          BROWSER_RESULT: ${{ needs.browser.result }}
+        run: test "$CHECKS_RESULT" = success && test "$BROWSER_RESULT" = success

@@ -1,71 +1,8 @@
 import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-test.beforeAll(() => {
-  mkdirSync('artifacts', { recursive: true });
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'html',
-    'examples/observability.infra',
-    '--out',
-    'artifacts/observability.html',
-  ]);
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'html',
-    'examples/organizations.infra',
-    '--out',
-    'artifacts/organizations.html',
-  ]);
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'html',
-    'examples/aws.infra',
-    '--out',
-    'artifacts/aws.html',
-  ]);
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'html',
-    'examples/ecs-beanstalk.infra',
-    '--out',
-    'artifacts/ecs-beanstalk.html',
-  ]);
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'html',
-    'examples/transit-vpn.infra',
-    '--out',
-    'artifacts/transit-vpn.html',
-  ]);
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'html',
-    'examples/saas.infra',
-    '--out',
-    'artifacts/saas.html',
-  ]);
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'html',
-    'examples/service-catalog.infra',
-    '--out',
-    'artifacts/service-catalog.html',
-  ]);
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'import',
-    'examples/terraform',
-    '--json',
-    'fixture-plan.json',
-    '--out',
-    'artifacts/terraform-model.json',
-    '--dsl',
-    'artifacts/terraform.infra',
-  ]);
-});
 for (const offline of [false, true]) {
   test(`IAM Role・境界の選択後も矢印ラベルが前面で操作でき、AWS境界アイコンを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
@@ -1107,13 +1044,6 @@ for (const offline of [false, true]) {
     context,
   }) => {
     const output = 'artifacts/identity.html';
-    execFileSync(process.execPath, [
-      'dist/cli.js',
-      'html',
-      'examples/identity.infra',
-      '--out',
-      output,
-    ]);
     if (offline) {
       await context.setOffline(true);
       await page.goto('file://' + resolve(output));
