@@ -67,19 +67,24 @@ npm 公開はしていません。ビルド後、ローカルのパス依存と�
 
 ## サンプルと仕様
 
-| 入力 | 内容 |
-| --- | --- |
-| [aws.infra](examples/aws.infra) | AWS 2 アカウント、2 AZ、ALB・ECS・RDS、重複 SG、GitHub Actions・OIDC |
-| [gcp-azure.infra](examples/gcp-azure.infra) | Google Cloud と Azure の小規模構成 |
-| [multicloud.infra](examples/multicloud.infra) | 複数クラウドと外部サービス |
-| [large.infra](examples/large.infra) | 300 サービスと18境界 |
-| [terraform](examples/terraform) | module、count、for_each、複数 provider、未確定値を含む合成入力 |
+| 入力                                          | 内容                                                                 |
+| --------------------------------------------- | -------------------------------------------------------------------- |
+| [aws.infra](examples/aws.infra)               | AWS 2 アカウント、2 AZ、ALB・ECS・RDS、重複 SG、GitHub Actions・OIDC |
+| [gcp-azure.infra](examples/gcp-azure.infra)   | Google Cloud と Azure の小規模構成                                   |
+| [multicloud.infra](examples/multicloud.infra) | 複数クラウドと外部サービス                                           |
+| [large.infra](examples/large.infra)           | 300 サービスと18境界                                                 |
+| [terraform](examples/terraform)               | module、count、for_each、複数 provider、未確定値を含む合成入力       |
 
 [DSL 仕様](docs/dsl.md) に LLM 向け生成指示、例、修正例を用意しています。
 [アイコンと一次資料](docs/assets.md) に取得元、版、利用条件を記録しています。
 [検証結果](docs/verification.md) にブラウザ操作、配置計測、制約を記録しています。
 
 ## 検証
+
+コードの検査は Oxlint、整形は Oxfmt、型検査は `tsc --noEmit`、文書規約の検査は markdownlint を使います。
+`npm run fmt` で整形し、`npm run fmt:check` は書き換えず差分を検査します。
+独自 DSL・Terraform のサンプル、公式 SVG・資産 manifest、生成物、lockfile は整形対象から除外します。
+Markdown 内のサンプルコードも自動整形しません。
 
 ```bash
 npm run check
@@ -88,7 +93,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-CI は同じ型検査・lint・回帰テスト・ビルド・ブラウザテストを実行します。
+CI は同じ型検査・lint・整形チェック・回帰テスト・ビルド・ブラウザテストを実行します。
 読み取り権限だけを持ち、シークレットを必要としません。
 将来シークレット設定が必要になった場合は、kazokubi の運用を参照し、1Password から取得します。
 値をコード、モデル、ログへ出力する手順は使用しません。

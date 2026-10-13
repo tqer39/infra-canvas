@@ -1,6 +1,6 @@
 [tasks.lint]
-description = "型とソースコード、Markdown を検証する"
-run = "npm run typecheck && npm run lint"
+description = "型・Oxlint・Markdown・Oxfmt を検証する"
+run = "npm run typecheck && npm run lint && npm run fmt:check"
 [tasks.check]
 description = "全検証とビルド"
 run = "npm run check"

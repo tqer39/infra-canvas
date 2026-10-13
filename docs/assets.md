@@ -6,11 +6,11 @@
 
 ## 配布物
 
-| ベンダー | 版と取得元 | 配布 ZIP の SHA-256 |
-| --- | --- | --- |
-| AWS | [公式ページ](https://aws.amazon.com/architecture/icons/) の Icon package、2026-07-31 | `d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526` |
-| Google Cloud | [公式ページ](https://cloud.google.com/icons) の Core product icons、取得日時点 | `6531a10f58bc599c24d9a455d81dd757c1a03c3c43da9cddf639b859c1c1eece` |
-| Azure | [公式ページ](https://learn.microsoft.com/en-us/azure/architecture/icons/) の Azure_Public_Service_Icons_V24 | `921594ccd1bf3d9c0a1bd7b6d924e050551a59342f2b353bb74bdcf761c35141` |
+| ベンダー     | 版と取得元                                                                                                  | 配布 ZIP の SHA-256                                                |
+| ------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| AWS          | [公式ページ](https://aws.amazon.com/architecture/icons/) の Icon package、2026-07-31                        | `d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526` |
+| Google Cloud | [公式ページ](https://cloud.google.com/icons) の Core product icons、取得日時点                              | `6531a10f58bc599c24d9a455d81dd757c1a03c3c43da9cddf639b859c1c1eece` |
+| Azure        | [公式ページ](https://learn.microsoft.com/en-us/azure/architecture/icons/) の Azure_Public_Service_Icons_V24 | `921594ccd1bf3d9c0a1bd7b6d924e050551a59342f2b353bb74bdcf761c35141` |
 
 AWS は公式ページで構成図・資料への利用を許容しています。代表サービスの元 SVG を同梱します。
 Microsoft は構成図・教育資料・文書の用途に限った複製、配布、表示を許容し、切り抜き・反転・変形を禁止しています。
