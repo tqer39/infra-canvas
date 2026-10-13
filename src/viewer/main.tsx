@@ -14,6 +14,7 @@ import {
   BaseEdge,
   EdgeLabelRenderer,
   getSmoothStepPath,
+  getBezierPath,
   applyNodeChanges,
   useReactFlow,
   type Node,
@@ -28,7 +29,8 @@ import { parseDSL } from '../core/parser';
 import { validateDiagram } from '../core/validate.js';
 import { serializeDSL } from '../core/serialize';
 import { buildDisplayGraph } from '../core/display';
-import { layoutGraph } from '../core/layout';
+import { layoutGraph, connectionLabel } from '../core/layout';
+import { telemetrySignalLabels as signalLabels } from '../core/model';
 import { isBoundary, type Diagram, type Resource, type DisplayGraph } from '../core/model';
 import { getIcon, getIconHomepage } from '../assets/icons';
 import { getResourceIconType } from '../assets/resource-icons';
@@ -204,10 +206,44 @@ const nodeTypes = { resource: ResourceCard };
 type RouteData = { points: { x: number; y: number }[]; label?: { x: number; y: number } };
 function RoutedConnection(props: EdgeProps) {
   const route = props.data?.route as RouteData | undefined;
-  const fallback = getSmoothStepPath(props);
-  const path = route?.points.length
-    ? route.points.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ')
-    : fallback[0];
+  const curved = props.data?.edgeShape === 'bezier';
+  let fallback = curved ? getBezierPath(props) : getSmoothStepPath(props);
+  const parallelOffset = Number(props.data?.parallelOffset ?? 0);
+  if (curved && parallelOffset) {
+    // 同じ端点への監視データの送信も、別の曲線・ラベルとして操作できるようにする。
+    const { sourceX: sx, sourceY: sy, targetX: tx, targetY: ty } = props;
+    const horizontal = [Position.Left, Position.Right].includes(props.sourcePosition);
+    const distance = Math.max(40, Math.abs(horizontal ? tx - sx : ty - sy) / 2);
+    const control = (x: number, y: number, position: Position): [number, number] => [
+      x +
+        (position === Position.Right
+          ? distance
+          : position === Position.Left
+            ? -distance
+            : parallelOffset),
+      y +
+        (position === Position.Bottom
+          ? distance
+          : position === Position.Top
+            ? -distance
+            : parallelOffset),
+    ];
+    const a = control(sx, sy, props.sourcePosition);
+    const b = control(tx, ty, props.targetPosition);
+    const x = (sx + tx + 3 * (a[0] + b[0])) / 8;
+    const y = (sy + ty + 3 * (a[1] + b[1])) / 8;
+    fallback = [
+      `M${sx},${sy} C${a[0]},${a[1]} ${b[0]},${b[1]} ${tx},${ty}`,
+      x,
+      y,
+      Math.abs(x - sx),
+      Math.abs(y - sy),
+    ];
+  }
+  const path =
+    !curved && route?.points.length
+      ? route.points.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ')
+      : fallback[0];
   const select = props.data?.onSelect as ((id: string) => void) | undefined;
   return (
     <>
@@ -222,7 +258,7 @@ function RoutedConnection(props: EdgeProps) {
         <button
           className="connection-label nodrag nopan"
           style={{
-            transform: `translate(-50%, -50%) translate(${route?.label?.x ?? fallback[1]}px, ${route?.label?.y ?? fallback[2]}px)`,
+            transform: `translate(-50%, -50%) translate(${!curved && route?.label ? route.label.x : fallback[1]}px, ${!curved && route?.label ? route.label.y : fallback[2]}px)`,
             opacity: props.style?.opacity,
             zIndex: props.selected ? 11 : 2,
           }}
@@ -249,6 +285,7 @@ function App() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [diagnostics, setDiagnostics] = useState<string[]>([]);
   const [view, setView] = useState('service');
+  const [edgeShape, setEdgeShape] = useState<'orthogonal' | 'bezier'>('orthogonal');
   const [collapsed, setCollapsed] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<string[]>([]);
   const [scope, setScope] = useState<string>();
@@ -427,13 +464,7 @@ function App() {
             id: edge.id,
             source: edge.source,
             target: edge.target,
-            label: [
-              edge.attributes.label ?? kindLabels[edge.kind],
-              edge.attributes.protocol,
-              edge.attributes.port,
-            ]
-              .filter((value) => value !== undefined)
-              .join(' · '),
+            label: connectionLabel(edge),
             markerEnd: { type: MarkerType.ArrowClosed, color: kindColors[edge.kind] },
             style: {
               stroke: kindColors[edge.kind],
@@ -537,6 +568,9 @@ function App() {
   const renderedEdges = useMemo(
     () =>
       edges.map((edge) => {
+        const parallel = edges.filter(
+          (other) => other.source === edge.source && other.target === edge.target,
+        );
         const match = selectedConnection
           ? edge.id === selectedConnection.id
           : edge.source === focus || edge.target === focus;
@@ -545,6 +579,10 @@ function App() {
           selected: edge.id === selectedConnection?.id,
           data: {
             ...edge.data,
+            edgeShape,
+            parallelOffset:
+              (parallel.findIndex((other) => other.id === edge.id) - (parallel.length - 1) / 2) *
+              64,
             onSelect: selectConnection,
             accessibleLabel: `${graph?.resources.find((resource) => resource.id === edge.source)?.label ?? edge.source} → ${graph?.resources.find((resource) => resource.id === edge.target)?.label ?? edge.target}: ${edge.label}`,
           },
@@ -556,7 +594,7 @@ function App() {
           },
         };
       }),
-    [edges, focus, selectedConnection, selectConnection, graph, selectionActive],
+    [edges, focus, selectedConnection, selectConnection, graph, selectionActive, edgeShape],
   );
   const selectedResource = diagram?.resources.find((resource) => resource.id === selected);
   const selectedRelations = [
@@ -732,6 +770,17 @@ function App() {
                 すべて展開する
               </button>
             </div>
+            <label className="edge-shape-control toolbar-button">
+              矢印
+              <select
+                aria-label="矢印の形状"
+                value={edgeShape}
+                onChange={(event) => setEdgeShape(event.target.value as 'orthogonal' | 'bezier')}
+              >
+                <option value="orthogonal">直角</option>
+                <option value="bezier">曲線</option>
+              </select>
+            </label>
             <button
               className="toolbar-button clear-selection"
               disabled={!selectionActive}
@@ -826,6 +875,31 @@ function App() {
           </div>
         </div>
         <aside className="detail-panel">
+          {graph?.resources.some((resource) => graph.collapsed.includes(resource.id)) && (
+            <section className="collapsed-navigation" aria-label="折りたたみ中の境界">
+              <h2>折りたたみ中</h2>
+              <p>一覧から展開して表示できます。</p>
+              {graph.resources
+                .filter((resource) => graph.collapsed.includes(resource.id))
+                .map((resource) => (
+                  <button
+                    key={resource.id}
+                    disabled={busy}
+                    aria-label={`${resource.label}を展開して表示`}
+                    onClick={() => {
+                      pendingFocus.current = { id: resource.id, previousGraph: graph };
+                      setSelected(resource.id);
+                      setSelectedEdge(undefined);
+                      setHovered(undefined);
+                      toggle(resource.id);
+                    }}
+                  >
+                    <span>{resource.label}</span>
+                    <span>＋ 展開</span>
+                  </button>
+                ))}
+            </section>
+          )}
           {selectedConnection ? (
             <>
               <div className="detail-type">接続 · {kindLabels[selectedConnection.kind]}</div>
@@ -847,8 +921,14 @@ function App() {
               <dl>
                 {Object.entries(selectedConnection.attributes).map(([key, value]) => (
                   <div key={key}>
-                    <dt>{key}</dt>
-                    <dd>{Array.isArray(value) ? value.join(', ') : String(value)}</dd>
+                    <dt>{key === 'signals' ? '送信データ' : key}</dt>
+                    <dd>
+                      {Array.isArray(value)
+                        ? key === 'signals'
+                          ? value.map((signal) => signalLabels[signal] ?? signal).join(' / ')
+                          : value.join(', ')
+                        : String(value)}
+                    </dd>
                   </div>
                 ))}
               </dl>

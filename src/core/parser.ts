@@ -1,5 +1,6 @@
 import { resourceContent } from './content.js';
-import { boundaryTypes } from './model.js';
+import { validateComputeAttributes } from './resource-metadata.js';
+import { boundaryTypes, isTelemetrySignals } from './model.js';
 import type {
   Attribute,
   Attributes,
@@ -19,6 +20,7 @@ interface Token extends SourceLocation {
 }
 const edgeKinds = new Set(['traffic', 'dependency', 'auth', 'deploy', 'association']);
 const textAttributes = new Set([
+  'launchType',
   'display',
   'description',
   'region',
@@ -57,6 +59,8 @@ const textAttributes = new Set([
   'subnetVisibility',
 ]);
 const arrayAttributes = new Set([
+  'capacityProviders',
+  'requiresCompatibilities',
   'columns',
   'rows',
   'items',
@@ -67,7 +71,17 @@ const arrayAttributes = new Set([
   'unresolved',
   'dependsOn',
 ]);
-const numberAttributes = new Set(['port', 'width', 'height', 'x', 'y', 'line']);
+const numberAttributes = new Set([
+  'cpu',
+  'memory',
+  'desiredCount',
+  'port',
+  'width',
+  'height',
+  'x',
+  'y',
+  'line',
+]);
 const boolAttributes = new Set(['public', 'unknown', 'fixed']);
 class ParseFailure extends Error {}
 
@@ -246,13 +260,15 @@ export function parseDSL(source: string): ParseResult {
               ? typeof val === 'string' && ['RIGHT', 'DOWN'].includes(val)
               : val === 'sg';
       } else if (context === 'edge') {
-        supported = ['kind', 'protocol', 'port', 'label', 'description'].includes(key);
+        supported = ['kind', 'protocol', 'port', 'label', 'description', 'signals'].includes(key);
         valid =
           key === 'kind'
             ? typeof val === 'string' && edgeKinds.has(val)
-            : key === 'port'
-              ? typeof val === 'number' && Number.isInteger(val) && val >= 0 && val <= 65535
-              : typeof val === 'string';
+            : key === 'signals'
+              ? isTelemetrySignals(val)
+              : key === 'port'
+                ? typeof val === 'number' && Number.isInteger(val) && val >= 0 && val <= 65535
+                : typeof val === 'string';
       } else {
         supported =
           textAttributes.has(key) ||
@@ -384,6 +400,7 @@ export function parseDSL(source: string): ParseResult {
           if (Array.isArray(attributes.unresolved)) resource.unresolved = attributes.unresolved;
           try {
             resourceContent(resource);
+            validateComputeAttributes(resource);
           } catch (error) {
             report(
               parsed.positions.get('display') ?? first,

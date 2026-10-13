@@ -47,6 +47,7 @@ import kubernetes from './saas-kubernetes.svg';
 import terraform from './saas-terraform.svg';
 import sentry from './saas-sentry.svg';
 import datadog from './saas-datadog.svg';
+import newrelic from './saas-newrelic.svg';
 import grafana from './saas-grafana.svg';
 import prometheus from './saas-prometheus.svg';
 import circleci from './saas-circleci.svg';
@@ -148,6 +149,7 @@ const icons: Record<string, string> = {
   'saas.terraform': terraform,
   'saas.sentry': sentry,
   'saas.datadog': datadog,
+  'saas.newrelic': newrelic,
   'saas.grafana': grafana,
   'saas.prometheus': prometheus,
   'saas.circleci': circleci,

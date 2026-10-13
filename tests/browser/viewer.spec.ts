@@ -8,6 +8,13 @@ test.beforeAll(() => {
   execFileSync(process.execPath, [
     'dist/cli.js',
     'html',
+    'examples/observability.infra',
+    '--out',
+    'artifacts/observability.html',
+  ]);
+  execFileSync(process.execPath, [
+    'dist/cli.js',
+    'html',
     'examples/organizations.infra',
     '--out',
     'artifacts/organizations.html',
@@ -60,6 +67,147 @@ test.beforeAll(() => {
   ]);
 });
 for (const offline of [false, true]) {
+  test(`Datadog・New Relicへの送信種類と公式アイコンを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(
+      offline ? 'file://' + resolve('artifacts/observability.html') : 'http://127.0.0.1:5188',
+    );
+    if (!offline)
+      await page.locator('input[type=file]').setInputFiles('examples/observability.infra');
+    await expect(page.locator('.canvas-footer')).toContainText('5 要素 ·  4 接続');
+    for (const id of ['datadog', 'newrelic']) {
+      const icon = page.locator(`.react-flow__node[data-id="${id}"] .service-icon`);
+      await expect(icon).toHaveCount(1);
+      await expect
+        .poll(() => icon.evaluate((e) => (e as HTMLImageElement).naturalWidth))
+        .toBeGreaterThan(0);
+    }
+    const metric = page.getByRole('button', {
+      name: 'OpenTelemetry Collector → Datadog: 通信 · メトリクス · https · 443',
+      exact: true,
+    });
+    const logs = page.getByRole('button', {
+      name: 'OpenTelemetry Collector → Datadog: 通信 · ログ · https · 443',
+      exact: true,
+    });
+    await expect(metric).toBeVisible();
+    await logs.click();
+    await expect(logs).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.detail-panel')).toContainText('送信データログ');
+    await metric.focus();
+    await expect(metric).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.detail-panel')).toContainText('送信データメトリクス');
+    await page.getByRole('combobox', { name: '矢印の形状' }).selectOption('bezier');
+    expect(await metric.getAttribute('style')).not.toBe(await logs.getAttribute('style'));
+    await logs.click();
+    await expect(logs).toHaveAttribute('aria-pressed', 'true');
+    await metric.click();
+    await expect(metric).toHaveAttribute('aria-pressed', 'true');
+    await expect(
+      page.getByRole('button', {
+        name: /OpenTelemetry Collector → New Relic: 通信 · メトリクス \/ ログ \/ トレース/,
+      }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'すべて折りたたむ', exact: true }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('4 要素 ·  4 接続');
+    await expect(metric).toBeVisible();
+    await expect(logs).toBeVisible();
+  });
+  test(`矢印を曲線へ切り替えても配置・視点・ラベルの選択を保持する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    const paths = () =>
+      page
+        .locator('.react-flow__edge-path')
+        .evaluateAll((paths) => paths.map((p) => p.getAttribute('d')));
+    const original = await paths();
+    const viewport = () =>
+      page.locator('.react-flow__viewport').evaluate(async (element) => {
+        for (let i = 0; i < 35; i++) await new Promise(requestAnimationFrame);
+        return getComputedStyle(element).transform;
+      });
+    const viewBefore = await viewport();
+    const positions = () =>
+      page
+        .locator('.react-flow__node')
+        .evaluateAll((nodes) => nodes.map((n) => n.getAttribute('style')));
+    const nodesBefore = await positions();
+    const shape = page.getByRole('combobox', { name: '矢印の形状', exact: true });
+    await shape.selectOption('bezier');
+    await expect.poll(async () => (await paths()).every((p) => p?.includes('C'))).toBe(true);
+    expect(await viewport()).toBe(viewBefore);
+    expect(await positions()).toEqual(nodesBefore);
+    const label = page.getByRole('button', { name: /利用者 → Application Load Balancer/ });
+    await label.click();
+    await expect(label).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: '選択を解除', exact: true }).click();
+    await label.focus();
+    await expect(label).toHaveAttribute('aria-pressed', 'true');
+    await shape.selectOption('orthogonal');
+    await expect.poll(paths).toEqual(original);
+    await expect(label).toHaveAttribute('aria-pressed', 'true');
+    expect(await viewport()).toBe(viewBefore);
+    await shape.selectOption('bezier');
+    await page.getByRole('button', { name: 'すべて折りたたむ', exact: true }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('5 要素');
+    await expect.poll(async () => (await paths()).every((p) => p?.includes('C'))).toBe(true);
+    await expect(shape).toHaveValue('bezier');
+  });
+  test(`画面外にある折りたたみ境界を一覧から展開して表示する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    await page.mouse.move(400, 250);
+    await page.mouse.wheel(5000, 0);
+    await page.getByRole('button', { name: 'すべて折りたたむ', exact: true }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('5 要素');
+    const navigation = page.getByRole('region', { name: '折りたたみ中の境界', exact: true });
+    await expect(navigation.getByRole('button')).toHaveCount(2);
+    await navigation
+      .getByRole('button', { name: '本番アカウントを展開して表示', exact: true })
+      .click();
+    await expect(
+      page.getByRole('button', { name: '本番アカウントを折りたたむ', exact: true }),
+    ).toBeVisible();
+    await expect(
+      navigation.getByRole('button', { name: '東京を展開して表示', exact: true }),
+    ).toBeVisible();
+    await navigation.getByRole('button', { name: '東京を展開して表示', exact: true }).click();
+    await expect(
+      navigation.getByRole('button', { name: '本番 VPCを展開して表示', exact: true }),
+    ).toBeVisible();
+    await navigation.getByRole('button', { name: '本番 VPCを展開して表示', exact: true }).click();
+    await expect(
+      page.getByRole('button', { name: 'Public AZ-aを展開', exact: true }),
+    ).toBeVisible();
+    await expect
+      .poll(async () =>
+        page.locator('.react-flow__node[data-id="main"]').evaluate((node) => {
+          const rect = node.getBoundingClientRect();
+          const canvas = node.closest('.canvas-area')!.getBoundingClientRect();
+          return (
+            rect.left >= canvas.left &&
+            rect.right <= canvas.right &&
+            rect.top >= canvas.top &&
+            rect.bottom <= canvas.bottom
+          );
+        }),
+      )
+      .toBe(true);
+    await page.getByRole('button', { name: 'すべて展開する', exact: true }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    await expect(navigation).toHaveCount(0);
+  });
   test(`境界を一括で折りたたみ・展開し、詳細範囲とパン・ズームを維持する (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
     context,
@@ -192,7 +340,7 @@ for (const offline of [false, true]) {
       )
       .toBe(true);
     await userNode.click();
-    await expect(page.locator('.detail-panel h2')).toHaveText('利用者');
+    await expect(page.locator('.detail-panel > h2')).toHaveText('利用者');
     await page.getByRole('button', { name: '選択を解除', exact: true }).click();
     const privateLabel = page.locator(
       '.react-flow__node[data-id="private_c"] .resource-text strong',
@@ -307,9 +455,9 @@ for (const offline of [false, true]) {
       'title',
       '日本 · asia-northeast1',
     );
-    await expect(page.locator('.detail-panel h2')).toHaveText('Google Cloud 東京');
+    await expect(page.locator('.detail-panel > h2')).toHaveText('Google Cloud 東京');
     await expect
-      .poll(() => page.locator('.detail-panel h2 .resource-label').evaluate(flagBesideName))
+      .poll(() => page.locator('.detail-panel > h2 .resource-label').evaluate(flagBesideName))
       .toBe(true);
     await clear.click();
     await page.getByRole('button', { name: 'DSL を編集' }).click();
@@ -367,7 +515,7 @@ for (const offline of [false, true]) {
     await deployment.focus();
     await expect(deployment).toBeFocused();
     await deployment.press('Enter');
-    await expect(page.locator('.detail-panel h2')).toHaveText('デプロイ');
+    await expect(page.locator('.detail-panel > h2')).toHaveText('デプロイ');
     await deployment.press('Space');
     await expect(deployment).toHaveAttribute('aria-pressed', 'true');
     await page.screenshot({ path: `artifacts/connection-${offline ? 'offline' : 'dev'}.png` });
@@ -388,7 +536,7 @@ for (const offline of [false, true]) {
     await expect(page.locator('.detail-panel')).toContainText('a → target');
     await expect(page.locator('.detail-panel')).toContainText('b → target');
   });
-  test(`主要58サービスのアイコンとブランドカラーを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
+  test(`主要59サービスのアイコンとブランドカラーを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
     context,
   }) => {
@@ -402,9 +550,9 @@ for (const offline of [false, true]) {
     );
     if (!offline)
       await page.locator('input[type=file]').setInputFiles('examples/service-catalog.infra');
-    await expect(page.locator('.canvas-footer')).toContainText('58 要素');
+    await expect(page.locator('.canvas-footer')).toContainText('59 要素');
     const images = page.locator('.service-icon');
-    await expect(images).toHaveCount(58);
+    await expect(images).toHaveCount(59);
     await expect
       .poll(() =>
         images.evaluateAll((images) =>
@@ -453,7 +601,7 @@ for (const offline of [false, true]) {
         }),
       brandColors,
     );
-    expect(renderedColors).toHaveLength(52);
+    expect(renderedColors).toHaveLength(53);
     expect(renderedColors.filter((brand) => !brand.matches)).toEqual([]);
     if (offline) expect(requests).toEqual([]);
   });
@@ -577,7 +725,7 @@ test('表示切替・集約復元・検索・強調・ドリルダウン', async
   await expect(page.locator('.canvas-footer')).toContainText('22 要素');
   await page.getByRole('textbox', { name: 'リソース検索' }).fill('ECS API');
   await page.getByRole('button', { name: 'ECS API aws.ecs · api' }).click();
-  await expect(page.locator('.detail-panel h2')).toHaveText('ECS API');
+  await expect(page.locator('.detail-panel > h2')).toHaveText('ECS API');
   await expect(page.locator('.react-flow__node[data-id="api"]')).toHaveClass(/selected/);
   await expect(page.locator('.detail-panel')).toContainText('private_a, private_c');
   await expect(page.locator('.react-flow__node[data-id="api"] .related')).toHaveCount(1);
@@ -628,7 +776,7 @@ test('単一 HTML は file URL でネットワークなしに操作できる', a
   await expect(page.locator('.canvas-footer')).toContainText('5 要素');
   await page.getByRole('textbox', { name: 'リソース検索' }).fill('PostgreSQL');
   await page.locator('.search-results button').click();
-  await expect(page.locator('.detail-panel h2')).toHaveText('PostgreSQL');
+  await expect(page.locator('.detail-panel > h2')).toHaveText('PostgreSQL');
   await expect(page.locator('.react-flow__node[data-id="db"]')).toBeVisible();
   await page.screenshot({ path: 'artifacts/offline-html.png' });
   expect(requests).toEqual([]);
@@ -647,7 +795,7 @@ test('大規模・GCP Azure・複数クラウドの入力が実際に描画さ�
   await page.getByRole('textbox', { name: 'リソース検索' }).fill('service_299');
   await expect(page.locator('.search-results button')).toHaveCount(1);
   await page.locator('.search-results button').click();
-  await expect(page.locator('.detail-panel h2')).toBeVisible();
+  await expect(page.locator('.detail-panel > h2')).toBeVisible();
   await page.getByRole('button', { name: 'Fit View' }).click();
   await page.screenshot({ path: 'artifacts/large.png' });
 });
@@ -679,6 +827,17 @@ for (const offline of [false, true]) {
       )
       .toBe(true);
     const node = (id: string) => page.locator(`.react-flow__node[data-id="${id}"]`);
+    await expect(node('cluster').locator('.resource-metadata')).toContainText(
+      'FARGATE / FARGATE_SPOT',
+    );
+    await expect(node('definition').locator('.resource-metadata')).toContainText(
+      '512 units (0.5 vCPU)',
+    );
+    await expect(node('definition').locator('.resource-metadata')).toContainText(
+      '1024 MiB (1 GiB)',
+    );
+    await expect(node('service').locator('.resource-metadata')).toContainText('FARGATE');
+    await expect(node('service').locator('.resource-metadata')).toContainText('希望タスク数2');
     await expect
       .poll(() =>
         page
@@ -692,6 +851,9 @@ for (const offline of [false, true]) {
     await page.getByRole('button', { name: 'ECS クラスターを折りたたむ', exact: true }).click();
     await expect(node('task_a')).toHaveCount(0);
     await expect(node('definition')).toHaveCount(1);
+    await expect(node('cluster').locator('.resource-metadata')).toContainText(
+      'FARGATE / FARGATE_SPOT',
+    );
     await page.getByRole('button', { name: 'ECS クラスターを展開', exact: true }).click();
     await expect(node('task_a')).toHaveCount(1);
     await expect(node('service').locator('.resource-type')).toHaveText('aws.ecs-service');
@@ -747,7 +909,7 @@ for (const offline of [false, true]) {
     await expect(page.locator('.canvas-footer')).toContainText('28 要素');
     await page.getByRole('textbox', { name: 'リソース検索' }).fill('共有 Transit Gateway');
     await page.locator('.search-results button').click();
-    await expect(page.locator('.detail-panel h2')).toHaveText('共有 Transit Gateway');
+    await expect(page.locator('.detail-panel > h2')).toHaveText('共有 Transit Gateway');
     await expect(page.locator('.react-flow__node[data-id="prod_attachment"]')).toHaveCount(1);
     await page.getByRole('button', { name: '選択を解除', exact: true }).click();
     await page.getByRole('button', { name: 'Fit View' }).click();
@@ -775,7 +937,7 @@ for (const offline of [false, true]) {
     await expect(page.locator('.react-flow__node[data-id="prod"]')).toBeVisible();
     await page.getByRole('textbox', { name: 'リソース検索' }).fill('ワークロード向け SCP');
     await page.locator('.search-results button').click();
-    await expect(page.locator('.detail-panel h2')).toHaveText('ワークロード向け SCP');
+    await expect(page.locator('.detail-panel > h2')).toHaveText('ワークロード向け SCP');
     await expect(page.locator('.detail-panel')).toContainText('SERVICE_CONTROL_POLICY');
     await expect
       .poll(() =>

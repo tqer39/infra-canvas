@@ -1,5 +1,6 @@
 import { resourceContent } from './content.js';
-import { isBoundary } from './model.js';
+import { validateComputeAttributes } from './resource-metadata.js';
+import { isBoundary, isTelemetrySignals } from './model.js';
 import type { Diagram, Resource } from './model.js';
 
 const idPattern = /^[A-Za-z_][A-Za-z0-9_.:-]*$/;
@@ -59,6 +60,7 @@ export function validateDiagram(value: unknown): Diagram {
     )
       throw new Error('リソースの ID・種別・ラベル・有限値属性・ソース位置を確認してください。');
     resourceContent(resource);
+    validateComputeAttributes(resource);
     if (ids.has(resource.id)) throw new Error(`ID が重複しています: ${resource.id}`);
     ids.add(resource.id);
     if (resource.provenance !== undefined) {
@@ -109,6 +111,8 @@ export function validateDiagram(value: unknown): Diagram {
     for (const key of ['label', 'protocol', 'description'])
       if (edge.attributes[key] !== undefined && typeof edge.attributes[key] !== 'string')
         throw new Error(`接続の ${key} は文字列で指定してください。`);
+    if (edge.attributes.signals !== undefined && !isTelemetrySignals(edge.attributes.signals))
+      throw new Error('接続の signals は metrics・logs・traces の空でない配列で指定してください。');
     const port = edge.attributes.port;
     if (
       port !== undefined &&

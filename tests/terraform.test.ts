@@ -968,3 +968,56 @@ test('明示されたOrganizationsアカウントID・AZ IDだけを取り込み
   assert.equal(attrs('aws_subnet.secret').availability_zone_id, undefined);
   assert.equal(attrs('aws_subnet.pending').availability_zone_id, undefined);
 });
+
+test('ECSのCPU・メモリ・実行方式・希望タスク数は安全な確定値だけを取り込む', () => {
+  const resources = [
+    {
+      address: 'aws_ecs_task_definition.api',
+      type: 'aws_ecs_task_definition',
+      values: {
+        cpu: '512',
+        memory: '1024',
+        requires_compatibilities: ['FARGATE'],
+        container_definitions: 'SECRET_SENTINEL',
+      },
+    },
+    {
+      address: 'aws_ecs_service.api',
+      type: 'aws_ecs_service',
+      values: { launch_type: 'FARGATE', desired_count: 0 },
+    },
+  ];
+  const state = importTerraformJSON({
+    format_version: '1.0',
+    values: { root_module: { resources } },
+  });
+  const definition = state.resources.find((r) => r.type === 'aws.ecs-task-definition')!;
+  assert.equal(definition.attributes.cpu, 512);
+  assert.equal(definition.attributes.memory, 1024);
+  assert.deepEqual(definition.attributes.requiresCompatibilities, ['FARGATE']);
+  const service = state.resources.find((r) => r.type === 'aws.ecs-service')!;
+  assert.equal(service.attributes.launchType, 'FARGATE');
+  assert.equal(service.attributes.desiredCount, 0);
+  assert.ok(!JSON.stringify(state).includes('SECRET_SENTINEL'));
+  const hidden = importTerraformJSON({
+    format_version: '1.0',
+    planned_values: { root_module: { resources } },
+    resource_changes: [
+      {
+        address: resources[0]!.address,
+        change: {
+          after_sensitive: { cpu: true, requires_compatibilities: [true] },
+          after_unknown: { memory: true },
+        },
+      },
+      {
+        address: resources[1]!.address,
+        change: { after_sensitive: { launch_type: true }, after_unknown: { desired_count: true } },
+      },
+    ],
+  });
+  for (const resource of hidden.resources) {
+    for (const key of ['cpu', 'memory', 'requiresCompatibilities', 'launchType', 'desiredCount'])
+      assert.equal(resource.attributes[key], undefined);
+  }
+});

@@ -1,11 +1,11 @@
 diagram "ECS と Elastic Beanstalk の詳細構成" version=1 {
   account prod "本番アカウント" {
     region tokyo "東京" region="ap-northeast-1" {
-      aws.ecs-task-definition definition "API タスク定義 v12" meta.cpu="512" meta.memory="1024" {
-        aws.ecs-container container_definition "API コンテナ定義" meta.image="example/api:v12"
+      aws.ecs-task-definition definition "API タスク定義 v12" cpu=512 memory=1024 requiresCompatibilities=[FARGATE] {
+        aws.ecs-container container_definition "API コンテナ定義" cpu=512 memory=1024 meta.image="example/api:v12"
       }
-      aws.ecs-cluster cluster "ECS クラスター" {
-        aws.ecs-service service "API サービス" meta.desiredCount="2" {
+      aws.ecs-cluster cluster "ECS クラスター" capacityProviders=[FARGATE,FARGATE_SPOT] {
+        aws.ecs-service service "API サービス" launchType=FARGATE desiredCount=2 {
           aws.ecs-task task_a "実行タスク A（設計例）" {
             aws.ecs-container container_a "API コンテナ A"
           }

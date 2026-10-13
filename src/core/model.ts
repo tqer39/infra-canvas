@@ -30,6 +30,22 @@ export interface Resource {
   unresolved?: string[];
 }
 export type EdgeKind = 'traffic' | 'dependency' | 'auth' | 'deploy' | 'association';
+export const telemetrySignals = ['metrics', 'logs', 'traces'] as const;
+export const telemetrySignalLabels: Record<string, string> = {
+  metrics: 'メトリクス',
+  logs: 'ログ',
+  traces: 'トレース',
+};
+export function isTelemetrySignals(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every(
+      (signal) =>
+        typeof signal === 'string' && (telemetrySignals as readonly string[]).includes(signal),
+    )
+  );
+}
 export interface Connection {
   id: string;
   source: string;

@@ -203,6 +203,45 @@ function build(items: Item[], kind: Provenance['kind'], context: TerraformContex
     const parent = modulePrefix(item.address);
     if (parent) addModule(parent);
     const attributes = clean(item.values, item.sensitive);
+    if (['aws_ecs_task_definition', 'aws_ecs_service'].includes(item.type)) {
+      const numeric =
+        item.type === 'aws_ecs_task_definition' ? ['cpu', 'memory'] : ['desired_count'];
+      for (const key of numeric) {
+        const raw = item.values[key];
+        const value =
+          typeof raw === 'number'
+            ? raw
+            : typeof raw === 'string' && /^\d+$/.test(raw)
+              ? Number(raw)
+              : undefined;
+        if (
+          !hasSensitive(item.sensitive[key]) &&
+          !hasSensitive(item.unknown[key]) &&
+          value !== undefined &&
+          Number.isSafeInteger(value) &&
+          value >= (key === 'memory' ? 1 : 0)
+        )
+          attributes[key === 'desired_count' ? 'desiredCount' : key] = value;
+      }
+      const launchType = item.values.launch_type;
+      if (
+        !hasSensitive(item.sensitive.launch_type) &&
+        !hasSensitive(item.unknown.launch_type) &&
+        typeof launchType === 'string' &&
+        ['FARGATE', 'EC2', 'EXTERNAL'].includes(launchType)
+      )
+        attributes.launchType = launchType;
+      const compatibility = item.values.requires_compatibilities;
+      if (
+        !hasSensitive(item.sensitive.requires_compatibilities) &&
+        !hasSensitive(item.unknown.requires_compatibilities) &&
+        Array.isArray(compatibility) &&
+        compatibility.every(
+          (value) => typeof value === 'string' && ['FARGATE', 'EC2', 'EXTERNAL'].includes(value),
+        )
+      )
+        attributes.requiresCompatibilities = compatibility;
+    }
     for (const key of Object.keys(safe))
       if (hasSensitive(item.unknown[key])) delete attributes[key];
     if (

@@ -1,0 +1,12 @@
+diagram "Datadog・New Relic へのメトリクスとログ送信（設計例）" {
+  aws.ecs-cluster cluster "ECS クラスター" capacityProviders=[FARGATE] {
+    aws.ecs-service api "API サービス" launchType=FARGATE desiredCount=2
+  }
+  observability.collector collector "OpenTelemetry Collector"
+  saas.datadog datadog "Datadog"
+  saas.newrelic newrelic "New Relic"
+  api -> collector kind=traffic signals=[metrics,logs,traces] protocol="OTLP/HTTP" port=4318
+  collector -> datadog kind=traffic signals=[metrics] protocol=https port=443
+  collector -> datadog kind=traffic signals=[logs] protocol=https port=443
+  collector -> newrelic kind=traffic signals=[metrics,logs,traces] protocol="OTLP/HTTP" port=443
+}
