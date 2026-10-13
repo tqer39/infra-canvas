@@ -1,0 +1,165 @@
+{
+  "format_version": "1.0",
+  "terraform_version": "1.14.5",
+  "values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_security_group.app",
+          "mode": "managed",
+          "type": "aws_security_group",
+          "name": "app",
+          "values": {
+            "id": "sg-demo",
+            "vpc_id": "vpc-demo"
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_instance.worker[0]",
+          "mode": "managed",
+          "type": "aws_instance",
+          "name": "worker[0]",
+          "values": {
+            "instance_type": "t3.micro",
+            "subnet_id": "subnet-private",
+            "vpc_security_group_ids": [
+              "sg-demo"
+            ]
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_instance.worker[1]",
+          "mode": "managed",
+          "type": "aws_instance",
+          "name": "worker[1]",
+          "values": {
+            "instance_type": "t3.micro",
+            "subnet_id": "subnet-private",
+            "vpc_security_group_ids": [
+              "sg-demo"
+            ]
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_lb.web",
+          "mode": "managed",
+          "type": "aws_lb",
+          "name": "web",
+          "values": {
+            "subnets": [
+              "subnet-public-a",
+              "subnet-public-c"
+            ],
+            "security_groups": [
+              "sg-demo"
+            ]
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_s3_bucket.logs",
+          "mode": "managed",
+          "type": "aws_s3_bucket",
+          "name": "logs",
+          "values": {},
+          "sensitive_values": {}
+        }
+      ],
+      "child_modules": [
+        {
+          "address": "module.network",
+          "resources": [
+            {
+              "address": "module.network.aws_vpc.main",
+              "mode": "managed",
+              "type": "aws_vpc",
+              "name": "main",
+              "values": {
+                "id": "vpc-demo",
+                "cidr_block": "10.0.0.0/16"
+              },
+              "sensitive_values": {}
+            },
+            {
+              "address": "module.network.aws_subnet.public[\"a\"]",
+              "mode": "managed",
+              "type": "aws_subnet",
+              "name": "public[\"a\"]",
+              "values": {
+                "id": "subnet-public-a",
+                "vpc_id": "vpc-demo",
+                "availability_zone": "ap-northeast-1a"
+              },
+              "sensitive_values": {}
+            },
+            {
+              "address": "module.network.aws_subnet.public[\"c\"]",
+              "mode": "managed",
+              "type": "aws_subnet",
+              "name": "public[\"c\"]",
+              "values": {
+                "id": "subnet-public-c",
+                "vpc_id": "vpc-demo",
+                "availability_zone": "ap-northeast-1c"
+              },
+              "sensitive_values": {}
+            },
+            {
+              "address": "module.network.aws_subnet.private",
+              "mode": "managed",
+              "type": "aws_subnet",
+              "name": "private",
+              "values": {
+                "id": "subnet-private",
+                "vpc_id": "vpc-demo"
+              },
+              "sensitive_values": {}
+            },
+            {
+              "address": "module.network.aws_internet_gateway.main",
+              "mode": "managed",
+              "type": "aws_internet_gateway",
+              "name": "main",
+              "values": {
+                "id": "igw-demo",
+                "vpc_id": "vpc-demo"
+              },
+              "sensitive_values": {}
+            },
+            {
+              "address": "module.network.aws_route_table.public",
+              "mode": "managed",
+              "type": "aws_route_table",
+              "name": "public",
+              "values": {
+                "id": "rtb-demo",
+                "vpc_id": "vpc-demo",
+                "route": [
+                  {
+                    "cidr_block": "0.0.0.0/0",
+                    "gateway_id": "igw-demo"
+                  }
+                ]
+              },
+              "sensitive_values": {}
+            },
+            {
+              "address": "module.network.aws_route_table_association.public",
+              "mode": "managed",
+              "type": "aws_route_table_association",
+              "name": "public",
+              "values": {
+                "subnet_id": "subnet-public-a",
+                "route_table_id": "rtb-demo"
+              },
+              "sensitive_values": {}
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

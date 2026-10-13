@@ -1,0 +1,12 @@
+node_modules/
+dist/
+artifacts/
+.env*
+!.env.example
+*.tfstate*
+*.tfplan
+.terraform/
+plan.json
+state.json
+*.log
+.DS_Store
