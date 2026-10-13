@@ -208,3 +208,31 @@ BeanstalkにはEKSを使うClusterモードもあります。すべての環境�
 
 概念は [ECS公式説明](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/Welcome.html) と
 [Beanstalk公式説明](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/concepts.html) に基づきます。
+
+## Transit Gateway・RAM・Google Cloud VPN
+
+[transit-vpn.infra](../examples/transit-vpn.infra) は、AWSの所有アカウント・本番/開発の参加アカウントと
+Google Cloudプロジェクトを分けた設計例です。
+TGWを各VPCへ複製せず、所有アカウントに一つ置き、参加側のアタッチメントから関連線を結びます。
+
+| 型                                                               | 意味                                    |
+| ---------------------------------------------------------------- | --------------------------------------- |
+| `aws.transit-gateway`                                            | ネットワークの接続ハブ                  |
+| `aws.tgw-attachment`                                             | VPCアタッチメント                       |
+| `aws.tgw-route-table`                                            | TGWルートテーブル                       |
+| `aws.tgw-route-association` / `aws.tgw-route-propagation`        | 関連付け・経路伝播の設定                |
+| `aws.ram-share`                                                  | RAMリソース共有                         |
+| `aws.ram-resource-association` / `aws.ram-principal-association` | 共有リソース・共有先の設定              |
+| `aws.customer-gateway` / `aws.vpn-connection`                    | AWS側の対向定義・Site-to-Site VPN接続   |
+| `gcp.ha-vpn` / `gcp.external-vpn` / `gcp.vpn-tunnel`             | HA VPN・外部対向定義・個別トンネル      |
+| `gcp.router` / `gcp.router-interface` / `gcp.bgp-peer`           | Cloud Router・インターフェース・BGPピア |
+
+共有先は `auth`、アタッチメント・トンネル・関連付け・伝播設定は `association` の線で区別できます。
+RAMの共有やルート設定だけを、通信成立やVPN/BGPの稼働状態とみなしません。
+アカウントを折りたたむと跨る接続を集約し、展開すると元の端点とkindを復元します。
+Google VPCはglobal、HA VPNとCloud Routerは明示したリージョンに置きます。
+
+公式の [AWS共有TGW](https://docs.aws.amazon.com/vpc/latest/tgw/working-with-transit-gateways.html) と
+[Google CloudからAWSへのHA VPN](https://docs.cloud.google.com/network-connectivity/docs/vpn/how-to/connect-ha-vpn-aws-peer-gateway)
+を根拠に、構成例は所有アカウント内のAWS VPN接続2本・Customer Gateway2つ、Google側4トンネルを描きます。
+PSKや実IPは含みません。構成図の設計例であり、接続状態やSLA、ルートの到達性を検証する機能ではありません。

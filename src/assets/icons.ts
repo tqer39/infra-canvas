@@ -1,3 +1,10 @@
+import aws_transit_gateway from './aws-transit-gateway.svg';
+import aws_tgw_attachment from './aws-tgw-attachment.svg';
+import aws_ram_share from './aws-ram.svg';
+import aws_customer_gateway from './aws-customer-gateway.svg';
+import aws_vpn_connection from './aws-vpn.svg';
+import gcp_ha_vpn from './gcp-vpn.svg';
+import gcp_router from './gcp-router.svg';
 import aws_ecs_service from './aws-ecs-service.svg';
 import aws_ecs_task from './aws-ecs-task.svg';
 import aws_ecs_container from './aws-ecs-container.svg';
@@ -65,6 +72,23 @@ import azure_sql from './azure-sql.svg';
 import azure_storage from './azure-storage.svg';
 const icons: Record<string, string> = {
   'external.user': user,
+  'aws.transit-gateway': aws_transit_gateway,
+  'aws.tgw-attachment': aws_tgw_attachment,
+  'aws.ram-share': aws_ram_share,
+  'aws.customer-gateway': aws_customer_gateway,
+  'aws.vpn-connection': aws_vpn_connection,
+  'gcp.ha-vpn': gcp_ha_vpn,
+  'gcp.router': gcp_router,
+  'aws.tgw-route-table': aws_transit_gateway,
+  'aws.tgw-route-association': aws_tgw_attachment,
+  'aws.tgw-route-propagation': aws_tgw_attachment,
+  'aws.ram-resource-association': aws_ram_share,
+  'aws.ram-principal-association': aws_ram_share,
+  'gcp.external-vpn': gcp_ha_vpn,
+  'gcp.vpn-tunnel': gcp_ha_vpn,
+  'gcp.router-interface': gcp_router,
+  'gcp.bgp-peer': gcp_router,
+
   'saas.cloudflare': cloudflare,
   'saas.vercel': vercel,
   'saas.netlify': netlify,

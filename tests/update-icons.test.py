@@ -81,6 +81,28 @@ class UpdateIcons(unittest.TestCase):
             path.write_bytes(data)
         self.assertEqual(u.plan(self.root, self.fetch), {})
 
+    def test_gcp_core_and_legacy_collections_update_independently(self):
+        self.manifest.extend([
+            {'type': 'gcp.compute', 'file': 'core.svg', 'archivePath': 'core/compute.svg', 'sha256': u.digest(SVG)},
+            {'type': 'gcp.ha-vpn', 'cloudPack': 'gcp-legacy', 'file': 'vpn.svg', 'archivePath': 'cloud_vpn/cloud_vpn.svg', 'sha256': u.digest(SVG)},
+        ])
+        (self.assets / 'manifest.json').write_text(json.dumps(self.manifest))
+        for file in ['core.svg', 'vpn.svg']:
+            (self.assets / file).write_bytes(SVG)
+        page = u.CLOUDS['gcp'][0]
+        core = 'https://services.google.com/core-products-icons.zip'
+        legacy = 'https://services.google.com/google-cloud-legacy-icons.zip'
+        self.responses[page] = f'<a href="{core}">core</a><a href="{legacy}">legacy</a>'.encode()
+        self.responses[core] = pack({'core/compute.svg': SVG}, 'zip')
+        self.responses[legacy] = pack({'cloud_vpn/cloud_vpn.svg': SVG}, 'zip')
+        writes = u.plan(self.root, self.fetch)
+        manifest = json.loads(writes[self.assets / 'manifest.json'])
+        self.assertEqual(manifest[-2]['downloadURL'], core)
+        self.assertEqual(manifest[-1]['downloadURL'], legacy)
+        for path, data in writes.items():
+            path.write_bytes(data)
+        self.assertEqual(u.plan(self.root, self.fetch), {})
+
     def test_deleted_brand_aborts_without_touching_any_asset(self):
         before = (self.assets / 'manifest.json').read_bytes()
         self.simple['package/data/simple-icons.json'] = b'[]'

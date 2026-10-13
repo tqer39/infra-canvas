@@ -22,6 +22,13 @@ test.beforeAll(() => {
   execFileSync(process.execPath, [
     'dist/cli.js',
     'html',
+    'examples/transit-vpn.infra',
+    '--out',
+    'artifacts/transit-vpn.html',
+  ]);
+  execFileSync(process.execPath, [
+    'dist/cli.js',
+    'html',
     'examples/saas.infra',
     '--out',
     'artifacts/saas.html',
@@ -620,5 +627,45 @@ for (const offline of [false, true]) {
     await expect(node('instance')).toHaveCount(1);
     await page.getByRole('button', { name: 'Fit View' }).click();
     await page.screenshot({ path: `artifacts/ecs-beanstalk-${offline ? 'offline' : 'dev'}.png` });
+  });
+}
+
+for (const offline of [false, true]) {
+  test(`TGW・RAM・Google HA VPN の跨る共有とトンネルを表示・集約する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(
+      offline ? 'file://' + resolve('artifacts/transit-vpn.html') : 'http://127.0.0.1:5188',
+    );
+    if (!offline)
+      await page.locator('input[type=file]').setInputFiles('examples/transit-vpn.infra');
+    await expect(page.locator('.canvas-footer')).toContainText('28 要素');
+    await expect(page.locator('.service-icon')).toHaveCount(16);
+    await expect
+      .poll(() =>
+        page
+          .locator('.service-icon')
+          .evaluateAll((images) =>
+            images.every(
+              (element) =>
+                (element as HTMLImageElement).complete &&
+                (element as HTMLImageElement).naturalWidth > 0,
+            ),
+          ),
+      )
+      .toBe(true);
+    await page.getByRole('button', { name: '概要', exact: true }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('4 要素');
+    await page.getByRole('button', { name: 'すべて展開する', exact: true }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('28 要素');
+    await page.getByRole('textbox', { name: 'リソース検索' }).fill('共有 Transit Gateway');
+    await page.locator('.search-results button').click();
+    await expect(page.locator('.detail-panel h2')).toHaveText('共有 Transit Gateway');
+    await expect(page.locator('.react-flow__node[data-id="prod_attachment"]')).toHaveCount(1);
+    await page.getByRole('button', { name: '選択を解除', exact: true }).click();
+    await page.getByRole('button', { name: 'Fit View' }).click();
+    await page.screenshot({ path: `artifacts/transit-vpn-${offline ? 'offline' : 'dev'}.png` });
   });
 }

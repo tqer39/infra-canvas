@@ -107,3 +107,23 @@ Beanstalkの任意の `setting`、ソースバンドルの場所を表示属性�
 設定内のVPC・Subnetの解釈、管理下のEC2・ALB・ASG・EKS等の自動発見は未対応です。
 Terraformのサービス定義から実行タスクを推測して増やすこともありません。
 必要な実体はDSLで明示できます。クラウドAPIへの接続は行いません。
+
+## Transit Gateway・RAM・Google Cloud VPN
+
+AWSのTGW、VPCアタッチメント、TGWルートテーブルと関連付け・伝播、RAM共有と
+リソース/共有先関連、Customer Gateway、VPN接続を別ノードに変換します。
+設定のID・ARNから対象を一意に解決し、`association` の線で関係を表示します。
+VPN接続のTGW attachment IDもルートテーブル関連の解決に使えます。
+同一IDの候補が複数ある場合は任意の一件を選びません。
+共有先のアカウント・OU・組織は自動生成せず、principal値も表示モデルへコピーしません。
+provider aliasからアカウント所属を推定しません。
+
+Google providerは今回の限定対応として、`google_compute_network`、HA VPN、external VPN、
+VPN tunnel、Cloud Router、router interface、router peerのplan/state JSONと静的直接参照を扱います。
+self_link・ID・直接参照を完全一致で解決します。裸の名前は明示的なproject/regionの一致が必要で、
+インターフェース名はrouterも一致させます。解決できない外部参照は未解決として残します。
+別state間の自動結合やIPアドレスからのAWS/Google対向の自動発見は行いません。
+
+PSK、VPNの生成済み設定XML、実IP、BGP認証、任意の設定は取り込みません。
+トンネル/BGPの稼働状態、ルーティングの到達性、共有承認状態をクラウドAPIから確認する機能はありません。
+Terraformの参照は通信線へ変換しません。必要なクラウド間の対向・通信意図はDSLで明示できます。

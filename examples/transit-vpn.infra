@@ -1,0 +1,75 @@
+diagram "RAM共有 Transit Gateway と Google Cloud HA VPN（設計例）" version=1 {
+  account hub "AWS ネットワーク所有アカウント" {
+    region hub_tokyo "東京" region="ap-northeast-1" {
+      aws.transit-gateway tgw "共有 Transit Gateway"
+      aws.tgw-route-table routes "TGW ルートテーブル"
+      aws.ram-share share "TGW の RAM 共有"
+      aws.customer-gateway cgw0 "HA VPN IF 0 の対向定義"
+      aws.customer-gateway cgw1 "HA VPN IF 1 の対向定義"
+      aws.vpn-connection vpn_a "AWS VPN 接続 A（2トンネル）"
+      aws.vpn-connection vpn_b "AWS VPN 接続 B（2トンネル）"
+    }
+  }
+  account prod "AWS 本番参加アカウント" {
+    region prod_tokyo "東京" region="ap-northeast-1" {
+      vpc prod_vpc "本番 VPC" {
+        subnet prod_subnet "アタッチメント Subnet"
+      }
+      aws.tgw-attachment prod_attachment "本番 VPC アタッチメント"
+    }
+  }
+  account dev "AWS 開発参加アカウント" {
+    region dev_tokyo "東京" region="ap-northeast-1" {
+      vpc dev_vpc "開発 VPC"
+      aws.tgw-attachment dev_attachment "開発 VPC アタッチメント"
+    }
+  }
+  project gcp "Google Cloud プロジェクト" {
+    network google_vpc "Google Cloud VPC（global）"
+    region google_tokyo "東京" region="asia-northeast1" {
+      gcp.ha-vpn ha "HA VPN（IF 0・1）"
+      gcp.external-vpn peer "AWS側対向定義（4インターフェース）"
+      gcp.router router "Cloud Router"
+      gcp.vpn-tunnel tunnel_a0 "A-0 / HA IF 0" meta.peerInterface="0"
+      gcp.vpn-tunnel tunnel_a1 "A-1 / HA IF 0" meta.peerInterface="1"
+      gcp.vpn-tunnel tunnel_b0 "B-0 / HA IF 1" meta.peerInterface="2"
+      gcp.vpn-tunnel tunnel_b1 "B-1 / HA IF 1" meta.peerInterface="3"
+    }
+  }
+  share -> tgw kind=association label="共有するリソース"
+  share -> prod kind=auth label="RAM 共有先（通信成立を示さない）"
+  share -> dev kind=auth label="RAM 共有先（通信成立を示さない）"
+  prod_attachment -> prod_vpc kind=association label="VPC アタッチメント"
+  prod_attachment -> prod_subnet kind=association label="配置 Subnet 設定"
+  prod_attachment -> tgw kind=association label="共有 TGW へ接続"
+  dev_attachment -> dev_vpc kind=association label="VPC アタッチメント"
+  dev_attachment -> tgw kind=association label="共有 TGW へ接続"
+  routes -> tgw kind=association label="TGW のルートテーブル"
+  routes -> prod_attachment kind=association label="関連付け・伝播設定（設計）"
+  routes -> dev_attachment kind=association label="関連付け・伝播設定（設計）"
+  vpn_a -> tgw kind=association label="VPN アタッチメント"
+  vpn_b -> tgw kind=association label="VPN アタッチメント"
+  vpn_a -> cgw0 kind=association label="Customer Gateway"
+  vpn_b -> cgw1 kind=association label="Customer Gateway"
+  cgw0 -> ha kind=association label="Google IF 0 の対向設定"
+  cgw1 -> ha kind=association label="Google IF 1 の対向設定"
+  peer -> vpn_a kind=association label="AWS 対向 IF 0・1"
+  peer -> vpn_b kind=association label="AWS 対向 IF 2・3"
+  tunnel_a0 -> vpn_a kind=association label="IPsec トンネル A-0"
+  tunnel_a1 -> vpn_a kind=association label="IPsec トンネル A-1"
+  tunnel_b0 -> vpn_b kind=association label="IPsec トンネル B-0"
+  tunnel_b1 -> vpn_b kind=association label="IPsec トンネル B-1"
+  tunnel_a0 -> ha kind=association label="HA IF 0"
+  tunnel_a1 -> ha kind=association label="HA IF 0"
+  tunnel_b0 -> ha kind=association label="HA IF 1"
+  tunnel_b1 -> ha kind=association label="HA IF 1"
+  tunnel_a0 -> router kind=association label="BGP 設定（稼働状態は未検証）"
+  tunnel_a1 -> router kind=association label="BGP 設定（稼働状態は未検証）"
+  tunnel_b0 -> router kind=association label="BGP 設定（稼働状態は未検証）"
+  tunnel_b1 -> router kind=association label="BGP 設定（稼働状態は未検証）"
+  ha -> google_vpc kind=association label="VPN の VPC"
+  router -> google_vpc kind=association label="ルーターの VPC"
+  view services level=service
+  view network level=subnet
+  view overview level=overview
+}

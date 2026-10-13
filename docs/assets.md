@@ -114,7 +114,7 @@ npm run test:browser
 専用 App `infra-canvas-icon-updater` は private、Webhook無効で登録します。
 Repository permissions は Contents と Pull requests の Read and write、Metadata の Read-onlyだけです。
 インストール対象は `tqer39/infra-canvas` だけに限定します。
-1Password の `infra-canvas-secrets` Vault に `Icon Update GitHub App` を作成し、`client_id` と `private_key` を保存します。
+1Password の `infra-canvas-secrets` Vault の `GitHub` 項目に `client-id`・`app-id`・`private-key` を保存します。
 ワークフローは公式 `1Password/load-secrets-action` と `actions/create-github-app-token` を固定SHAで使い、
 このリポジトリと必要な権限だけに限定した短期トークンを発行します。
 
@@ -131,3 +131,12 @@ ECSのクラスター・サービス・タスク定義・タスク・コンテ�
 Beanstalk環境はサービスアイコン、版はDeploymentアイコンを使います。
 原本の形状・色を変更せず、出典・ZIP内パス・ハッシュをマニフェストに記録しています。
 これらも月次更新の対象です。
+
+## 共有ネットワークのアイコン
+
+TGW、アタッチメント、RAM、Customer Gateway、Site-to-Site VPNは公式AWS配布物です。
+TGWルート設定はTGW/Attachment、RAMの関連設定はRAMのアイコンを共有し、型名で区別します。
+Cloud VPNとCloud Routerは公式ページが配布するLegacy console iconsの原本です。
+Core product iconsにこの2製品の固有アイコンがないため、legacy配布物を明示して同梱しています。
+HA/外部VPN/トンネルはCloud VPN、Router interface/BGP peerはCloud Routerアイコンを共有します。
+`cloudPack=gcp-legacy` をマニフェストに記録し、月次更新ではcoreとlegacyのZIPを別々に取得します。

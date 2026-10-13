@@ -466,3 +466,284 @@ resource "aws_elastic_beanstalk_environment" "prod" {
   });
   assert.equal(diagram.resources.find((r) => r.type === 'aws.ecs-service')?.parentId, undefined);
 });
+
+const transitFixture = (): {
+  format_version: string;
+  values: {
+    root_module: {
+      resources: { address: string; type: string; values: Record<string, unknown> }[];
+    };
+  };
+} => ({
+  format_version: '1.0',
+  values: {
+    root_module: {
+      resources: [
+        {
+          address: 'aws_ec2_transit_gateway.hub',
+          type: 'aws_ec2_transit_gateway',
+          values: { id: 'tgw-1', arn: 'tgw-arn' },
+        },
+        { address: 'aws_vpc.prod', type: 'aws_vpc', values: { id: 'vpc-prod' } },
+        {
+          address: 'aws_ec2_transit_gateway_vpc_attachment.prod',
+          type: 'aws_ec2_transit_gateway_vpc_attachment',
+          values: { id: 'attach-1', transit_gateway_id: 'tgw-1', vpc_id: 'vpc-prod' },
+        },
+        {
+          address: 'aws_ec2_transit_gateway_route_table.rt',
+          type: 'aws_ec2_transit_gateway_route_table',
+          values: { id: 'rt-1', transit_gateway_id: 'tgw-1' },
+        },
+        {
+          address: 'aws_ec2_transit_gateway_route_table_association.prod',
+          type: 'aws_ec2_transit_gateway_route_table_association',
+          values: {
+            transit_gateway_route_table_id: 'rt-1',
+            transit_gateway_attachment_id: 'attach-1',
+          },
+        },
+        {
+          address: 'aws_ec2_transit_gateway_route_table_propagation.prod',
+          type: 'aws_ec2_transit_gateway_route_table_propagation',
+          values: {
+            transit_gateway_route_table_id: 'rt-1',
+            transit_gateway_attachment_id: 'attach-1',
+          },
+        },
+        {
+          address: 'aws_ram_resource_share.hub',
+          type: 'aws_ram_resource_share',
+          values: { arn: 'share-arn' },
+        },
+        {
+          address: 'aws_ram_resource_association.hub',
+          type: 'aws_ram_resource_association',
+          values: { resource_share_arn: 'share-arn', resource_arn: 'tgw-arn' },
+        },
+        {
+          address: 'aws_ram_principal_association.prod',
+          type: 'aws_ram_principal_association',
+          values: { resource_share_arn: 'share-arn', principal: 'PRINCIPAL_SENTINEL' },
+        },
+        {
+          address: 'aws_customer_gateway.google',
+          type: 'aws_customer_gateway',
+          values: { id: 'cgw-1', ip_address: 'IP_SENTINEL' },
+        },
+        {
+          address: 'aws_vpn_connection.google',
+          type: 'aws_vpn_connection',
+          values: {
+            id: 'vpn-1',
+            transit_gateway_id: 'tgw-1',
+            customer_gateway_id: 'cgw-1',
+            transit_gateway_attachment_id: 'vpn-attach-1',
+            tunnel1_preshared_key: 'SECRET_SENTINEL',
+            customer_gateway_configuration: 'SECRET_SENTINEL',
+          },
+        },
+        {
+          address: 'google_compute_network.main',
+          type: 'google_compute_network',
+          values: { self_link: 'https://compute.test/projects/p/global/networks/main' },
+        },
+        {
+          address: 'google_compute_ha_vpn_gateway.google',
+          type: 'google_compute_ha_vpn_gateway',
+          values: {
+            self_link: 'ha-link',
+            network: 'https://compute.test/projects/p/global/networks/main',
+            region: 'asia-northeast1',
+          },
+        },
+        {
+          address: 'google_compute_external_vpn_gateway.aws',
+          type: 'google_compute_external_vpn_gateway',
+          values: { self_link: 'peer-link', interface: [{ ip_address: 'IP_SENTINEL' }] },
+        },
+        {
+          address: 'google_compute_router.main',
+          type: 'google_compute_router',
+          values: {
+            name: 'main',
+            project: 'p',
+            region: 'asia-northeast1',
+            network: 'https://compute.test/projects/p/global/networks/main',
+          },
+        },
+        {
+          address: 'google_compute_vpn_tunnel.a',
+          type: 'google_compute_vpn_tunnel',
+          values: {
+            self_link: 'tunnel-link',
+            vpn_gateway: 'ha-link',
+            peer_external_gateway: 'peer-link',
+            router: 'main',
+            project: 'p',
+            region: 'asia-northeast1',
+            shared_secret: 'SECRET_SENTINEL',
+          },
+        },
+        {
+          address: 'google_compute_router_interface.a',
+          type: 'google_compute_router_interface',
+          values: {
+            name: 'if-a',
+            router: 'main',
+            vpn_tunnel: 'tunnel-link',
+            project: 'p',
+            region: 'asia-northeast1',
+          },
+        },
+        {
+          address: 'google_compute_router_peer.a',
+          type: 'google_compute_router_peer',
+          values: {
+            router: 'main',
+            interface: 'if-a',
+            project: 'p',
+            region: 'asia-northeast1',
+            peer_ip_address: 'IP_SENTINEL',
+          },
+        },
+      ],
+    },
+  },
+});
+
+test('TGW/RAM/AWS VPN/Google HA VPN の参照を解決し、共有を通信やアカウント所属と誤認しない', () => {
+  const diagram = importTerraformJSON(transitFixture());
+  const labels = diagram.connections.map((e) => e.attributes.label);
+  for (const label of [
+    'attached-transit-gateway',
+    'vpc',
+    'associated-route-table',
+    'route-table-association',
+    'route-propagation',
+    'resource-share',
+    'shared-resource',
+    'principal-share',
+    'vpn-transit-gateway',
+    'customer-gateway',
+    'vpn-network',
+    'external-vpn-peer',
+    'ha-vpn-gateway',
+    'tunnel-router',
+    'interface-router',
+    'interface-tunnel',
+    'bgp-router',
+    'bgp-interface',
+  ])
+    assert.ok(labels.includes(label), String(label));
+  assert.ok(diagram.connections.every((e) => e.kind === 'association'));
+  assert.ok(diagram.resources.every((r) => r.parentId === undefined));
+  assert.equal(diagram.resources.filter((r) => r.type === 'account').length, 0);
+  assert.equal(
+    diagram.resources.find((r) => r.type === 'gcp.ha-vpn')?.attributes.region,
+    'asia-northeast1',
+  );
+  assert.ok(!JSON.stringify(diagram).includes('SENTINEL'));
+});
+
+test('TGW/VPN の機密・未確定・曖昧な参照、別プロジェクトの同名Routerを接続しない', () => {
+  const input = transitFixture();
+  input.values.root_module.resources.push({
+    address: 'aws_vpc.other',
+    type: 'aws_vpc',
+    values: { id: 'vpc-prod' },
+  });
+  input.values.root_module.resources.push({
+    address: 'google_compute_router.other',
+    type: 'google_compute_router',
+    values: { name: 'main', project: 'q', region: 'asia-northeast1' },
+  });
+  const diagram = importTerraformJSON(input);
+  const attachment = diagram.resources.find((r) => r.type === 'aws.tgw-attachment')!;
+  assert.ok(attachment.unresolved?.includes('VPC の関連先は未解決'));
+  const tunnel = diagram.resources.find((r) => r.type === 'gcp.vpn-tunnel')!;
+  assert.equal(
+    diagram.connections.filter(
+      (e) => e.source === tunnel.id && e.attributes.label === 'tunnel-router',
+    ).length,
+    1,
+  );
+  for (const key of ['transit_gateway_id', 'customer_gateway_id']) {
+    const masked = transitFixture();
+    const vpn = masked.values.root_module.resources.find((r) => r.type === 'aws_vpn_connection')!;
+    Object.assign(vpn, { sensitive_values: { [key]: true } });
+    const result = importTerraformJSON(masked);
+    const id = result.resources.find((r) => r.type === 'aws.vpn-connection')!.id;
+    assert.equal(result.connections.filter((e) => e.source === id).length, 1);
+  }
+  const masked = transitFixture();
+  const tunnelResource = masked.values.root_module.resources.find(
+    (r) => r.type === 'google_compute_vpn_tunnel',
+  )!;
+  Object.assign(tunnelResource, {
+    sensitive_values: { vpn_gateway: true, peer_external_gateway: true, router: true },
+  });
+  const result = importTerraformJSON(masked);
+  const id = result.resources.find((r) => r.type === 'gcp.vpn-tunnel')!.id;
+  assert.equal(result.connections.filter((e) => e.source === id).length, 0);
+});
+
+test('VPNのattachment IDによる経路関連を解決し、planの未確定値では接続しない', () => {
+  const input = transitFixture();
+  const association = input.values.root_module.resources.find(
+    (r) => r.type === 'aws_ec2_transit_gateway_route_table_association',
+  )!;
+  association.values.transit_gateway_attachment_id = 'vpn-attach-1';
+  const diagram = importTerraformJSON(input);
+  const source = diagram.resources.find((r) => r.provenance?.address === association.address)!.id;
+  const target = diagram.resources.find((r) => r.type === 'aws.vpn-connection')!.id;
+  assert.ok(
+    diagram.connections.some(
+      (e) =>
+        e.source === source &&
+        e.target === target &&
+        e.attributes.label === 'route-table-association',
+    ),
+  );
+  const masked = importTerraformJSON({
+    format_version: '1.0',
+    planned_values: input.values,
+    resource_changes: [
+      {
+        address: association.address,
+        change: {
+          after_unknown: { transit_gateway_attachment_id: true },
+        },
+      },
+    ],
+  });
+  assert.ok(
+    !masked.connections.some(
+      (e) => e.source === source && e.attributes.label === 'route-table-association',
+    ),
+  );
+});
+
+test('Google VPNの静的直接参照を解決し、shared_secretを表示モデルに含めない', async () => {
+  const temporary = await mkdtemp(path.join(tmpdir(), 'infra-canvas-vpn-'));
+  try {
+    await writeFile(
+      path.join(temporary, 'main.tf'),
+      `
+resource "google_compute_ha_vpn_gateway" "main" {}
+resource "google_compute_router" "main" {}
+resource "google_compute_vpn_tunnel" "main" {
+  vpn_gateway = google_compute_ha_vpn_gateway.main.id
+  router = google_compute_router.main.name
+  shared_secret = "SECRET_SENTINEL"
+}
+`,
+    );
+    const diagram = await importTerraformRepository({ repository: temporary });
+    assert.ok(diagram.connections.some((e) => e.attributes.label === 'ha-vpn-gateway'));
+    assert.ok(diagram.connections.some((e) => e.attributes.label === 'tunnel-router'));
+    assert.ok(!JSON.stringify(diagram).includes('SECRET_SENTINEL'));
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});

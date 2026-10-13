@@ -14,6 +14,7 @@ from pathlib import Path
 from xml.etree import ElementTree as ET
 
 CLOUDS = {
+    'gcp-legacy': ('https://cloud.google.com/icons', r'https://services\.google\.com/[^"<>\s]*google-cloud-legacy-icons\.zip'),
     'aws': ('https://aws.amazon.com/architecture/icons/', r'https://d1\.awsstatic\.com/[^"<>\s]*Icon-package[^"<>\s]*\.zip'),
     'gcp': ('https://cloud.google.com/icons', r'https://services\.google\.com/[^"<>\s]*core-products-icons\.zip'),
     'azure': ('https://learn.microsoft.com/en-us/azure/architecture/icons/', r'https://arch-center\.azureedge\.net/[^"<>\s]*\.zip'),
@@ -140,7 +141,7 @@ def plan(root, fetch=download):
         writes[assets / 'SIMPLE-ICONS-DISCLAIMER.txt'] = files['package/DISCLAIMER.md']
     cloud_archives = {}
     for entry in updated:
-        provider = entry['type'].split('.')[0]
+        provider = entry.get('cloudPack', entry['type'].split('.')[0])
         if provider in CLOUDS:
             if provider not in cloud_archives:
                 page, pattern = CLOUDS[provider]

@@ -419,3 +419,26 @@ it('ECS・Beanstalk の詳細境界は折りたたみで集約し、展開で関
   const layout = await layoutGraph(full);
   assert.equal(layout.nodes.length, diagram.resources.length);
 });
+
+it('共有TGW・VPNの跨る接続は所属を変えず、折りたたみ解除で端点とkindを復元する', async () => {
+  const { readFileSync } = await import('node:fs');
+  const diagram = validateDiagram(
+    parseDSL(readFileSync('examples/transit-vpn.infra', 'utf8')).diagram,
+  );
+  assert.equal(diagram.resources.filter((r) => r.type === 'gcp.vpn-tunnel').length, 4);
+  const full = buildDisplayGraph(diagram);
+  const folded = buildDisplayGraph(diagram, { collapsed: ['hub', 'prod', 'dev', 'gcp'] });
+  assert.equal(folded.resources.length, 4);
+  assert.ok(
+    folded.connections.some((e) => e.source === 'hub' && e.target === 'prod' && e.kind === 'auth'),
+  );
+  assert.ok(
+    folded.connections.some(
+      (e) => e.source === 'gcp' && e.target === 'hub' && e.kind === 'association',
+    ),
+  );
+  assert.deepEqual(buildDisplayGraph(diagram), full);
+  assert.equal(diagram.resources.find((r) => r.id === 'prod_attachment')?.parentId, 'prod_tokyo');
+  const layout = await layoutGraph(full);
+  assert.equal(layout.nodes.length, 28);
+});
