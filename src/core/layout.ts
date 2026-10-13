@@ -14,7 +14,7 @@ import type {
 export interface LayoutOptions {
   direction?: 'RIGHT' | 'DOWN';
 }
-export const layoutVersion = 'infra-canvas-layout-2';
+export const layoutVersion = 'infra-canvas-layout-3';
 
 const kindLabels = {
   traffic: '通信',
@@ -56,10 +56,15 @@ export async function layoutGraph(
       .map((resource) => {
         const nested = makeChildren(resource.id);
         const labelWidth = textWidth(resource.label, 8, 14);
+        const collapsed = isBoundary(resource) && graph.collapsed.includes(resource.id);
+        // 折りたたみ境界にはアイコン・余白・展開ボタンの幅を確保する。
+        const headerWidth = isBoundary(resource) ? 112 : 80;
+        const width = Math.max(180, Math.min(labelWidth + headerWidth, 480));
+        const labelLines = collapsed ? Math.ceil(labelWidth / (width - headerWidth)) : 1;
         const node: ElkNode = {
           id: resource.id,
-          width: Math.max(180, Math.min(labelWidth + 60, 480)),
-          height: isBoundary(resource) ? 80 : 86,
+          width,
+          height: (isBoundary(resource) ? 80 : 86) + Math.max(0, labelLines - 1) * 18,
         };
         if (nested.length) {
           node.children = nested;

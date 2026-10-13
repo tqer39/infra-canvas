@@ -29,6 +29,8 @@ import { buildDisplayGraph } from '../core/display';
 import { layoutGraph } from '../core/layout';
 import { isBoundary, type Diagram, type Resource, type DisplayGraph } from '../core/model';
 import { getIcon, getIconHomepage } from '../assets/icons';
+import { getCountryFlag } from '../assets/flags';
+import { getRegionCountry, getResourceRegion } from '../assets/regions';
 import defaultSource from '../../examples/aws.infra?raw';
 
 declare global {
@@ -65,6 +67,20 @@ const viewLabels: Record<string, string> = {
   security: 'セキュリティ',
 };
 
+function RegionFlag({ resource }: { resource: Resource }) {
+  const region = getResourceRegion(resource);
+  const country = getRegionCountry(region);
+  if (!country) return null;
+  return (
+    <img
+      className="region-flag"
+      src={getCountryFlag(country.code)}
+      alt={`${country.name}の国旗`}
+      title={`${country.name} · ${region}`}
+    />
+  );
+}
+
 function ResourceCard({ data }: NodeProps<ResourceNode>) {
   const { resource, collapsed, onToggle, related, muted } = data;
   const boundary = isBoundary(resource);
@@ -72,7 +88,7 @@ function ResourceCard({ data }: NodeProps<ResourceNode>) {
   const homepage = getIconHomepage(resource.type);
   return (
     <div
-      className={`resource-card ${boundary && !collapsed ? 'boundary-card' : ''} ${related ? 'related' : ''} ${muted ? 'muted' : ''}`}
+      className={`resource-card ${boundary && !collapsed ? 'boundary-card' : ''} ${collapsed ? 'collapsed-card' : ''} ${related ? 'related' : ''} ${muted ? 'muted' : ''}`}
     >
       <Handle type="target" position={Position.Left} />
       <Handle type="source" position={Position.Right} />
@@ -98,7 +114,10 @@ function ResourceCard({ data }: NodeProps<ResourceNode>) {
           </span>
         )}
         <div className="resource-text">
-          <span className="resource-type">{resource.type}</span>
+          <span className="resource-type">
+            {resource.type}
+            <RegionFlag resource={resource} />
+          </span>
           {homepage ? (
             <a
               className="service-name-link nodrag nopan"
@@ -406,9 +425,15 @@ function App() {
     return () => cancelAnimationFrame(frame);
   }, [graph, flow]);
   const activeId = selected ?? hovered;
+  const clearSelection = () => {
+    setSelected(undefined);
+    setSelectedEdge(undefined);
+    setHovered(undefined);
+  };
   const selectedConnection = graph?.connections.find(
     (edge) => edge.id === selectedEdge || edge.originalIds.includes(selectedEdge ?? ''),
   );
+  const selectionActive = Boolean(selected || selectedConnection);
   const focus = activeId ? (graph?.representative[activeId] ?? activeId) : undefined;
   const related = useMemo(() => {
     const ids = new Set<string>();
@@ -437,13 +462,10 @@ function App() {
         data: {
           ...node.data,
           related: related.has(node.id),
-          muted:
-            Boolean(focus || selectedConnection) &&
-            !related.has(node.id) &&
-            !isBoundary(node.data.resource),
+          muted: selectionActive && !related.has(node.id) && !isBoundary(node.data.resource),
         },
       })),
-    [nodes, selected, related, focus, graph, selectedConnection],
+    [nodes, selected, related, selectionActive, graph],
   );
   const renderedEdges = useMemo(
     () =>
@@ -463,11 +485,11 @@ function App() {
           style: {
             ...edge.style,
             strokeWidth: match ? 3.5 : 1.7,
-            opacity: (focus || selectedConnection) && !match ? 0.14 : 1,
+            opacity: selectionActive && !match ? 0.14 : 1,
           },
         };
       }),
-    [edges, focus, selectedConnection, selectConnection, graph],
+    [edges, focus, selectedConnection, selectConnection, graph, selectionActive],
   );
   const selectedResource = diagram?.resources.find((resource) => resource.id === selected);
   const selectedRelations = [
@@ -617,6 +639,14 @@ function App() {
                 </button>
               ))}
             </div>
+            <button
+              className="toolbar-button clear-selection"
+              disabled={!selectionActive}
+              onClick={clearSelection}
+              title="全体をカラー表示に戻す（パン・ズームは維持）"
+            >
+              選択を解除
+            </button>
             <div className="search-box">
               <span aria-hidden="true">⌕</span>
               <input
@@ -664,10 +694,7 @@ function App() {
               setSelected(node.id);
             }}
             onEdgeClick={(_, edge) => selectConnection(edge.id)}
-            onPaneClick={() => {
-              setSelected(undefined);
-              setSelectedEdge(undefined);
-            }}
+            onPaneClick={clearSelection}
             minZoom={0.05}
             maxZoom={2.5}
             nodesDraggable={false}
@@ -754,7 +781,10 @@ function App() {
           ) : selectedResource ? (
             <>
               <div className="detail-type">{selectedResource.type}</div>
-              <h2>{selectedResource.label}</h2>
+              <h2>
+                <RegionFlag resource={selectedResource} />
+                {selectedResource.label}
+              </h2>
               <code className="resource-id">{selectedResource.id}</code>
               {isBoundary(selectedResource) && (
                 <div className="detail-actions">

@@ -1,0 +1,211 @@
+{
+  "JP": {
+    "name": "日本",
+    "regions": [
+      "ap-northeast-1",
+      "ap-northeast-3",
+      "asia-northeast1",
+      "asia-northeast2",
+      "japaneast",
+      "japanwest"
+    ]
+  },
+  "US": {
+    "name": "アメリカ合衆国",
+    "regions": [
+      "us-east-1",
+      "us-east-2",
+      "us-west-1",
+      "us-west-2",
+      "us-central1",
+      "us-east1",
+      "us-east4",
+      "us-east5",
+      "us-south1",
+      "us-west1",
+      "us-west2",
+      "us-west3",
+      "us-west4",
+      "centralus",
+      "eastus",
+      "eastus2",
+      "northcentralus",
+      "southcentralus",
+      "westcentralus",
+      "westus",
+      "westus2",
+      "westus3"
+    ]
+  },
+  "CA": {
+    "name": "カナダ",
+    "regions": [
+      "ca-central-1",
+      "ca-west-1",
+      "northamerica-northeast1",
+      "northamerica-northeast2",
+      "canadacentral",
+      "canadaeast"
+    ]
+  },
+  "BR": {
+    "name": "ブラジル",
+    "regions": ["sa-east-1", "southamerica-east1", "brazilsouth", "brazilsoutheast"]
+  },
+  "MX": {
+    "name": "メキシコ",
+    "regions": ["mx-central-1", "northamerica-south1", "mexicocentral"]
+  },
+  "CL": {
+    "name": "チリ",
+    "regions": ["southamerica-west1", "chilecentral"]
+  },
+  "GB": {
+    "name": "イギリス",
+    "regions": ["eu-west-2", "europe-west2", "uksouth", "ukwest"]
+  },
+  "DE": {
+    "name": "ドイツ",
+    "regions": [
+      "eu-central-1",
+      "europe-west3",
+      "europe-west10",
+      "germanynorth",
+      "germanywestcentral"
+    ]
+  },
+  "IE": {
+    "name": "アイルランド",
+    "regions": ["eu-west-1", "northeurope"]
+  },
+  "FR": {
+    "name": "フランス",
+    "regions": ["eu-west-3", "europe-west9", "francecentral", "francesouth"]
+  },
+  "IT": {
+    "name": "イタリア",
+    "regions": ["eu-south-1", "europe-west8", "europe-west12", "italynorth"]
+  },
+  "ES": {
+    "name": "スペイン",
+    "regions": ["eu-south-2", "europe-southwest1", "spaincentral"]
+  },
+  "SE": {
+    "name": "スウェーデン",
+    "regions": ["eu-north-1", "europe-north2", "swedencentral"]
+  },
+  "CH": {
+    "name": "スイス",
+    "regions": ["eu-central-2", "europe-west6", "switzerlandnorth", "switzerlandwest"]
+  },
+  "BE": {
+    "name": "ベルギー",
+    "regions": ["europe-west1", "belgiumcentral"]
+  },
+  "NL": {
+    "name": "オランダ",
+    "regions": ["europe-west4", "westeurope"]
+  },
+  "FI": {
+    "name": "フィンランド",
+    "regions": ["europe-north1"]
+  },
+  "PL": {
+    "name": "ポーランド",
+    "regions": ["europe-central2", "polandcentral"]
+  },
+  "NO": {
+    "name": "ノルウェー",
+    "regions": ["norwayeast", "norwaywest"]
+  },
+  "AT": {
+    "name": "オーストリア",
+    "regions": ["austriaeast"]
+  },
+  "DK": {
+    "name": "デンマーク",
+    "regions": ["denmarkeast"]
+  },
+  "AU": {
+    "name": "オーストラリア",
+    "regions": [
+      "ap-southeast-2",
+      "ap-southeast-4",
+      "australia-southeast1",
+      "australia-southeast2",
+      "australiacentral",
+      "australiacentral2",
+      "australiaeast",
+      "australiasoutheast"
+    ]
+  },
+  "NZ": {
+    "name": "ニュージーランド",
+    "regions": ["ap-southeast-6", "newzealandnorth"]
+  },
+  "IN": {
+    "name": "インド",
+    "regions": [
+      "ap-south-1",
+      "ap-south-2",
+      "asia-south1",
+      "asia-south2",
+      "centralindia",
+      "southindia",
+      "westindia",
+      "indiasouthcentral"
+    ]
+  },
+  "KR": {
+    "name": "韓国",
+    "regions": ["ap-northeast-2", "asia-northeast3", "koreacentral", "koreasouth"]
+  },
+  "SG": {
+    "name": "シンガポール",
+    "regions": ["ap-southeast-1", "asia-southeast1", "southeastasia"]
+  },
+  "ID": {
+    "name": "インドネシア",
+    "regions": ["ap-southeast-3", "asia-southeast2", "indonesiacentral"]
+  },
+  "MY": {
+    "name": "マレーシア",
+    "regions": ["ap-southeast-5", "malaysiawest"]
+  },
+  "TH": {
+    "name": "タイ",
+    "regions": ["ap-southeast-7", "asia-southeast3"]
+  },
+  "TW": {
+    "name": "台湾",
+    "regions": ["ap-east-2", "asia-east1", "taiwannorth"]
+  },
+  "HK": {
+    "name": "香港",
+    "regions": ["ap-east-1", "asia-east2", "eastasia"]
+  },
+  "ZA": {
+    "name": "南アフリカ",
+    "regions": ["af-south-1", "africa-south1", "southafricanorth", "southafricawest"]
+  },
+  "BH": {
+    "name": "バーレーン",
+    "regions": ["me-south-1"]
+  },
+  "AE": {
+    "name": "アラブ首長国連邦",
+    "regions": ["me-central-1", "uaecentral", "uaenorth"]
+  },
+  "IL": {
+    "name": "イスラエル",
+    "regions": ["il-central-1", "me-west1", "israelcentral"]
+  },
+  "QA": {
+    "name": "カタール",
+    "regions": ["me-central1", "qatarcentral"]
+  },
+  "SA": {
+    "name": "サウジアラビア",
+    "regions": ["me-central2"]
+  }
+}

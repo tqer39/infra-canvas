@@ -39,6 +39,116 @@ test.beforeAll(() => {
   ]);
 });
 for (const offline of [false, true]) {
+  test(`未選択の全体カラー・選択解除・リージョン国旗 (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    const requests: string[] = [];
+    page.on('request', (request) => {
+      if (/^https?:/.test(request.url())) requests.push(request.url());
+    });
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    const privateLabel = page.locator(
+      '.react-flow__node[data-id="private_c"] .resource-text strong',
+    );
+    await expect(privateLabel).toHaveText('Private AZ-c');
+    expect(await privateLabel.evaluate((label) => label.scrollWidth <= label.clientWidth)).toBe(
+      true,
+    );
+    const headingFits = await privateLabel.evaluate((label) => {
+      const heading = label.closest('.resource-heading')!;
+      const button = heading.querySelector('button')!;
+      return label.getBoundingClientRect().right <= button.getBoundingClientRect().left;
+    });
+    expect(headingFits).toBe(true);
+    const clear = page.getByRole('button', { name: '選択を解除', exact: true });
+    const api = page.locator('.react-flow__node[data-id="api"]');
+    await api.hover();
+    await expect(page.locator('.resource-card.muted')).toHaveCount(0);
+    expect(
+      await page
+        .locator('.react-flow__edge-path')
+        .evaluateAll((paths) => paths.every((path) => getComputedStyle(path).opacity === '1')),
+    ).toBe(true);
+    await expect(clear).toBeDisabled();
+    await api.click();
+    await expect(page.locator('.resource-card.muted').first()).toBeVisible();
+    await expect(clear).toBeEnabled();
+    const viewport = () => page.locator('.react-flow__viewport').getAttribute('style');
+    const before = await viewport();
+    await clear.click();
+    await expect(page.locator('.resource-card.muted')).toHaveCount(0);
+    await expect(clear).toBeDisabled();
+    expect(await viewport()).toBe(before);
+    const label = page.getByRole('button', { name: /Application Load Balancer → ECS API/ });
+    await label.focus();
+    await expect(clear).toBeEnabled();
+    await clear.click();
+    await expect(page.locator('.connection-label[aria-pressed="true"]')).toHaveCount(0);
+    await expect(page.locator('.resource-card.muted')).toHaveCount(0);
+    await expect(page.locator('.react-flow__node[data-id="tokyo"] .region-flag')).toHaveAttribute(
+      'alt',
+      '日本の国旗',
+    );
+    await page.getByRole('button', { name: 'DSL を編集' }).click();
+    const longLabel = '東京と名付けた国を特定できない未知のリージョンの非常に長い表示名';
+    await page
+      .getByRole('textbox', { name: 'DSL 入力' })
+      .fill(
+        `diagram "リージョン国旗" {\nregion tokyo "東京" region="ap-northeast-1"\nregion virginia "Virginia" region="us-east-1"\nregion google "Google Cloud 東京" region="asia-northeast1"\nregion azure "Azure 東京" region="japaneast"\nregion unknown "${longLabel}" region="unknown"\nregion global "グローバル" region="global"\n}`,
+      );
+    await page.getByRole('button', { name: '解析して反映' }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('6 要素');
+    await expect(page.locator('.resource-card .region-flag')).toHaveCount(4);
+    await expect(
+      page.locator('.react-flow__node[data-id="virginia"] .region-flag'),
+    ).toHaveAttribute('alt', 'アメリカ合衆国の国旗');
+    await expect(page.locator('.react-flow__node[data-id="unknown"] .region-flag')).toHaveCount(0);
+    await page.getByRole('button', { name: `${longLabel}を折りたたむ`, exact: true }).click();
+    const longName = page.locator('.react-flow__node[data-id="unknown"] .resource-text strong');
+    await expect(longName).toHaveText(longLabel);
+    await expect
+      .poll(() =>
+        longName.evaluate((label) => {
+          const card = label.closest('.resource-card')!;
+          const hint = card.querySelector('.collapsed-hint')!;
+          return (
+            label.scrollWidth <= label.clientWidth &&
+            label.getBoundingClientRect().bottom < hint.getBoundingClientRect().top
+          );
+        }),
+      )
+      .toBe(true);
+    await expect
+      .poll(() =>
+        page
+          .locator('.resource-card .region-flag')
+          .evaluateAll((images) =>
+            images.every(
+              (image) =>
+                (image as HTMLImageElement).complete &&
+                (image as HTMLImageElement).naturalWidth > 0,
+            ),
+          ),
+      )
+      .toBe(true);
+    await page.locator('.react-flow__node[data-id="google"]').click();
+    await expect(page.locator('.detail-panel .region-flag')).toHaveAttribute(
+      'title',
+      '日本 · asia-northeast1',
+    );
+    await clear.click();
+    await page.getByRole('button', { name: 'DSL を編集' }).click();
+    await page.screenshot({ path: `artifacts/regions-${offline ? 'offline' : 'dev'}.png` });
+    if (offline) {
+      expect(requests).toEqual([]);
+      expect(readFileSync('artifacts/aws.html', 'utf8')).toContain(
+        'Copyright (c) 2013 Panayiotis Lipiridis',
+      );
+    }
+  });
   test(`横ホイールでパンし、接続ラベルをマウス・キーボードで選択する (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
     context,
