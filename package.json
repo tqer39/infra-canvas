@@ -27,10 +27,13 @@
     "test": "node --import tsx --test tests/*.test.ts",
     "build": "node scripts/build.mjs",
     "cli": "node --import tsx src/cli.ts",
-    "check": "npm run typecheck && npm run lint && npm run fmt:check && npm test && npm run build",
+    "check": "npm run typecheck && npm run lint && npm run fmt:check && npm test && npm run test:icons && npm run build",
     "test:browser": "playwright test",
     "fmt": "oxfmt --write .",
-    "fmt:check": "oxfmt --check ."
+    "fmt:check": "oxfmt --check .",
+    "icons:update": "python3 scripts/update-icons.py",
+    "icons:check": "python3 scripts/update-icons.py --check",
+    "test:icons": "python3 tests/update-icons.test.py"
   },
   "dependencies": {
     "@xyflow/react": "12.12.0",

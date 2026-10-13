@@ -16,6 +16,6 @@
 表示名、リソース ID、親のリージョンからの推測や所属の継承は行いません。
 旗は国・地域の所在地を示す補助表示であり、サービスの利用可否やデータ保管の保証を意味しません。
 
-国旗 SVG は [flag-icons](https://github.com/lipis/flag-icons) 7.5.0 の `flags/4x3` から必要なものを変更せず同梱しています。
+国旗 SVG は [flag-icons](https://github.com/lipis/flag-icons) の `flags/4x3`（版は国旗マニフェスト参照） から必要なものを変更せず同梱しています。
 [MIT ライセンス](../src/assets/flags/LICENSE.txt) と [取得元・SHA-256](../src/assets/flags/manifest.json) を保存しています。
 外部 CDN や追加の実行時依存はなく、単一 HTML にも SVG とライセンスを含めます。

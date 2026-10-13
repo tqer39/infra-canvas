@@ -1,10 +1,10 @@
 # アイコンと参照資料
 
-取得日は2026年10月13日です。`src/assets/manifest.json` に元パスと SHA-256 を記録しています。
+初回取得日は2026年10月13日です。最新版の取得日・配布元はマニフェストを参照してください。`src/assets/manifest.json` に元パスと SHA-256 を記録しています。
 アイコンはサービス識別用です。各社の商標・アイコンの権利は各社に帰属します。
 元の形状と配色を保ち、縮尺を保って表示します。
 
-## 配布物
+## 初回のクラウド配布物
 
 | ベンダー     | 版と取得元                                                                                                  | 配布 ZIP の SHA-256                                                |
 | ------------ | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
@@ -31,17 +31,17 @@ Infra Canvas の色に合わせて作成した素材で、外部ライブラリ�
 指定された9サービスをローカル SVG として同梱しています。外部 CDN や認証情報は不要です。
 単一 HTML にも埋め込みます。対応する型は次のとおりです。
 
-| サービス      | DSL の型                                             | 配布元・利用条件                                                                    |
-| ------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| GitHub        | `saas.github`、`github.repository`、`github.actions` | [公式ブランドキット](https://brand.github.com/foundations/logo) の Invertocat Black |
-| 1Password     | `saas.1password`                                     | Simple Icons 16.35.0。[公式メディアキット](https://1password.com/press)             |
-| Linear        | `saas.linear`                                        | [公式ブランドキット](https://linear.app/brand) の logo-dark.svg                     |
-| GitLab        | `saas.gitlab`、`gitlab.repository`、`gitlab.ci`      | [公式プレスキット](https://about.gitlab.com/press/press-kit/) の RGB logomark       |
-| Neon          | `saas.neon`                                          | [公式ブランドキット](https://neon.com/brand) のカラー logomark                      |
-| Fly.io        | `saas.fly`                                           | [公式ブランドキット・利用条件](https://docs.fly.io/about/brand) の Dark Brandmark   |
-| Resend        | `saas.resend`                                        | [公式ブランドキット](https://resend.com/brand) の Black icon                        |
-| Elasticsearch | `saas.elasticsearch`                                 | Simple Icons 16.35.0。[Elastic 商標規約](https://www.elastic.co/legal/trademarks)   |
-| Kibana        | `saas.kibana`                                        | Simple Icons 16.35.0。[Elastic 商標規約](https://www.elastic.co/legal/trademarks)   |
+| サービス      | DSL の型                                             | 配布元・利用条件                                                                                  |
+| ------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| GitHub        | `saas.github`、`github.repository`、`github.actions` | [公式ブランドキット](https://brand.github.com/foundations/logo) の Invertocat Black               |
+| 1Password     | `saas.1password`                                     | Simple Icons（版はマニフェスト参照）。[公式メディアキット](https://1password.com/press)           |
+| Linear        | `saas.linear`                                        | [公式ブランドキット](https://linear.app/brand) の logo-dark.svg                                   |
+| GitLab        | `saas.gitlab`、`gitlab.repository`、`gitlab.ci`      | [公式プレスキット](https://about.gitlab.com/press/press-kit/) の RGB logomark                     |
+| Neon          | `saas.neon`                                          | [公式ブランドキット](https://neon.com/brand) のカラー logomark                                    |
+| Fly.io        | `saas.fly`                                           | [公式ブランドキット・利用条件](https://docs.fly.io/about/brand) の Dark Brandmark                 |
+| Resend        | `saas.resend`                                        | [公式ブランドキット](https://resend.com/brand) の Black icon                                      |
+| Elasticsearch | `saas.elasticsearch`                                 | Simple Icons（版はマニフェスト参照）。[Elastic 商標規約](https://www.elastic.co/legal/trademarks) |
+| Kibana        | `saas.kibana`                                        | Simple Icons（版はマニフェスト参照）。[Elastic 商標規約](https://www.elastic.co/legal/trademarks) |
 
 公式6サービスの SVG は取得したファイルを変更せずに保存しています。
 1Password・Elasticsearch・Kibana は [Simple Icons](https://github.com/simple-icons/simple-icons) が提供する
@@ -77,3 +77,47 @@ Fly.io のカードのアイコンと名前には、条件に従って公式ホ�
 - [Azure Virtual Network](https://learn.microsoft.com/en-us/azure/virtual-network/virtual-networks-overview)：Virtual Network のスコープと Subnet の扱い。
 
 DSL は図の宣言です。これらの制約を全面的に検証するクラウド設計検証器ではありません。
+
+## 月次の自動更新
+
+`.github/workflows/update-icons.yml` は毎月1日09:17 JSTに実行します。
+GitHub のスケジュール実行は既定ブランチへのマージ後に有効となり、実行時刻に遅延が生じる場合があります。
+Actions の「Update icons」から手動実行もできます。`dry_run` は既定で有効です。
+
+同梱済みのサービスと国旗を更新します。未対応サービスの自動追加やリージョン対応表の変更はしません。
+AWS・Google Cloud・Azure の公式ページから最新 ZIP のリンクを解決し、公式6サービスは記録した配布URLを確認します。
+Simple Icons・flag-icons は npm の最新安定版を取得し、レジストリの integrity を確認します。
+Simple Icons は同じ配布物の slug と hex で形状とブランドカラーを適用します。
+ライセンス・免責事項・出典・版・SHA-256 も更新します。独自の利用者アイコンは保持します。
+全取得・SVG検証が成功してから書き込むため、取得失敗やブランド削除・曖昧なパスでは部分的な更新を適用しません。
+変更がない場合、取得日だけの差分や新しいPRを作りません。
+
+型検査・lint・単体テスト・更新処理の回帰テスト・ビルド・通常画面とオフラインHTMLのブラウザーテストを実行します。
+検証後に専用の `codex/update-icons` ブランチと更新PRを作成し、同じ内容の既存PRは更新しません。
+このブランチは自動処理専用です。人の変更は別ブランチで行ってください。
+PR は自動マージしません。ブランド利用条件と見た目の差分を確認してマージすると、ライブラリと単一HTMLに反映されます。
+App が作成したPRでは通常のPR CIも実行されます。
+
+ローカルでは Python 3 と curl が必要です。外部パッケージをインストール・実行せずに配布物を読み取ります。
+
+```bash
+npm run icons:check  # 取得・検証・差分一覧だけ（書き込まない）
+npm run icons:update
+npm run fmt
+npm run check
+npm run test:browser
+```
+
+### GitHub App と1Passwordの初期設定
+
+専用 App `infra-canvas-icon-updater` は private、Webhook無効で登録します。
+Repository permissions は Contents と Pull requests の Read and write、Metadata の Read-onlyだけです。
+インストール対象は `tqer39/infra-canvas` だけに限定します。
+1Password の `infra-canvas` Vault に `Icon Update GitHub App` を作成し、`client_id` と `private_key` を保存します。
+ワークフローは公式 `1Password/load-secrets-action` と `actions/create-github-app-token` を固定SHAで使い、
+このリポジトリと必要な権限だけに限定した短期トークンを発行します。
+
+Vaultを読み取り可能な1Passwordサービスアカウントを作成し、そのトークンを
+リポジトリのActions secret `OP_SERVICE_ACCOUNT_TOKEN` に設定します。秘密鍵自体はGitHubに保存しません。
+シークレット値はログ・ソース・PR本文に出力しないでください。
+初期設定後に `dry_run=false` で手動実行し、更新PRとCIを確認します。

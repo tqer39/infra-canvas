@@ -47,14 +47,6 @@ test('Simple Icons の37種はブランドカラーを適用し、原本の形�
       icon.type,
     );
   }
-  for (const [type, color] of Object.entries({
-    'saas.line': '#00C300',
-    'saas.zenn': '#3EA8FF',
-    'saas.cloudflare': '#F38020',
-    'saas.stripe': '#635BFF',
-    'saas.vercel': '#000000',
-  }))
-    assert.equal(colored.find((icon) => icon.type === type)?.brandColor, color);
 });
 
 test('SaaS の実例は9サービスの有効な DSL で、すべて同梱アイコンに対応する', () => {

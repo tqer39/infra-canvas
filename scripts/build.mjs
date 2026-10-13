@@ -31,13 +31,16 @@ await build({
 });
 const js = await readFile('dist/viewer.js', 'utf8');
 const css = await readFile('dist/viewer.css', 'utf8');
+const flagManifest = JSON.parse(await readFile('src/assets/flags/manifest.json', 'utf8'));
 const flagLicense = await readFile('src/assets/flags/LICENSE.txt', 'utf8');
 const template =
   '<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Infra Canvas</title><style>' +
   css +
   '</style></head><body><div id="root"></div><script>window.__INFRA_CANVAS__=__INFRA_CANVAS_MODEL__;</script><script>' +
   js.replace(/<\/script/gi, '<\\/script') +
-  '</script><!-- flag-icons 7.5.0\n' +
+  '</script><!-- flag-icons ' +
+  flagManifest.version +
+  '\n' +
   flagLicense +
   '--></body></html>';
 await writeFile('dist/template.html', template);
