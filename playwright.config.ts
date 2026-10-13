@@ -4,7 +4,7 @@ export default defineConfig({
   timeout: 30_000,
   globalSetup: './tests/browser/global-setup.ts',
   fullyParallel: true,
-  workers: 2,
+  workers: process.env.CI ? 1 : 2,
   use: { viewport: { width: 1440, height: 900 }, trace: 'retain-on-failure' },
   outputDir: 'artifacts/browser-results',
   webServer: {
