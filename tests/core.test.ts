@@ -395,3 +395,50 @@ describe('外部 JSON の共通検証', () => {
     await assert.rejects(layoutGraph(graph), /循環/);
   });
 });
+
+it('ECS・Beanstalk の詳細境界は折りたたみで集約し、展開で関係を復元する', async () => {
+  const { readFileSync } = await import('node:fs');
+  const parsed = parseDSL(readFileSync('examples/ecs-beanstalk.infra', 'utf8'));
+  assert.deepEqual(parsed.diagnostics, []);
+  const diagram = validateDiagram(parsed.diagram);
+  const full = buildDisplayGraph(diagram);
+  const folded = buildDisplayGraph(diagram, { collapsed: ['cluster', 'web', 'definition'] });
+  assert.equal(folded.representative.task_a, 'cluster');
+  assert.equal(folded.representative.instance, 'web');
+  assert.equal(folded.representative.container_definition, 'definition');
+  assert.ok(
+    folded.connections.some((edge) => edge.source === 'cluster' && edge.target === 'definition'),
+  );
+  assert.deepEqual(
+    buildDisplayGraph(diagram, { expanded: ['cluster', 'web', 'definition'] }),
+    full,
+  );
+  const restored = parseDSL(serializeDSL(diagram));
+  assert.deepEqual(restored.diagnostics, []);
+  assert.equal(restored.diagram?.resources.length, diagram.resources.length);
+  const layout = await layoutGraph(full);
+  assert.equal(layout.nodes.length, diagram.resources.length);
+});
+
+it('共有TGW・VPNの跨る接続は所属を変えず、折りたたみ解除で端点とkindを復元する', async () => {
+  const { readFileSync } = await import('node:fs');
+  const diagram = validateDiagram(
+    parseDSL(readFileSync('examples/transit-vpn.infra', 'utf8')).diagram,
+  );
+  assert.equal(diagram.resources.filter((r) => r.type === 'gcp.vpn-tunnel').length, 4);
+  const full = buildDisplayGraph(diagram);
+  const folded = buildDisplayGraph(diagram, { collapsed: ['hub', 'prod', 'dev', 'gcp'] });
+  assert.equal(folded.resources.length, 4);
+  assert.ok(
+    folded.connections.some((e) => e.source === 'hub' && e.target === 'prod' && e.kind === 'auth'),
+  );
+  assert.ok(
+    folded.connections.some(
+      (e) => e.source === 'gcp' && e.target === 'hub' && e.kind === 'association',
+    ),
+  );
+  assert.deepEqual(buildDisplayGraph(diagram), full);
+  assert.equal(diagram.resources.find((r) => r.id === 'prod_attachment')?.parentId, 'prod_tokyo');
+  const layout = await layoutGraph(full);
+  assert.equal(layout.nodes.length, 28);
+});

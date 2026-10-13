@@ -291,3 +291,459 @@ test('Git ref traversal is rejected even when target contents look like a commit
     await rm(temporary, { recursive: true, force: true });
   }
 });
+
+test('ECS の cluster/service/task definition と Beanstalk の application/environment/version を分離する', () => {
+  const resources = [
+    {
+      address: 'aws_ecs_cluster.main',
+      type: 'aws_ecs_cluster',
+      values: { id: 'cluster-id', arn: 'cluster-arn' },
+    },
+    {
+      address: 'aws_ecs_task_definition.api',
+      type: 'aws_ecs_task_definition',
+      values: { arn: 'definition-arn', container_definitions: 'SECRET_SENTINEL' },
+    },
+    {
+      address: 'aws_ecs_service.api',
+      type: 'aws_ecs_service',
+      values: { cluster: 'cluster-arn', task_definition: 'definition-arn' },
+    },
+    {
+      address: 'aws_elastic_beanstalk_application.web',
+      type: 'aws_elastic_beanstalk_application',
+      values: { name: 'web' },
+    },
+    {
+      address: 'aws_elastic_beanstalk_application_version.v3',
+      type: 'aws_elastic_beanstalk_application_version',
+      values: { application: 'web', name: 'v3', bucket: 'SECRET_SENTINEL' },
+    },
+    {
+      address: 'aws_elastic_beanstalk_environment.prod',
+      type: 'aws_elastic_beanstalk_environment',
+      values: { application: 'web', version_label: 'v3', setting: [{ value: 'SECRET_SENTINEL' }] },
+    },
+  ];
+  const input = { format_version: '1.0', values: { root_module: { resources } } };
+  const diagram = importTerraformJSON(input);
+  const by = (type: string) => diagram.resources.find((r) => r.type === type)!;
+  assert.equal(by('aws.ecs-service').parentId, by('aws.ecs-cluster').id);
+  assert.equal(by('aws.ecs-task-definition').parentId, undefined);
+  assert.equal(by('aws.beanstalk-environment').parentId, by('aws.beanstalk-application').id);
+  assert.equal(by('aws.beanstalk-version').parentId, by('aws.beanstalk-application').id);
+  assert.ok(
+    diagram.connections.some(
+      (e) =>
+        e.source === by('aws.ecs-service').id &&
+        e.target === by('aws.ecs-task-definition').id &&
+        e.kind === 'dependency',
+    ),
+  );
+  assert.ok(
+    diagram.connections.some(
+      (e) =>
+        e.source === by('aws.beanstalk-environment').id &&
+        e.target === by('aws.beanstalk-version').id,
+    ),
+  );
+  assert.ok(diagram.connections.every((e) => e.kind !== 'traffic'));
+  assert.ok(!JSON.stringify(diagram).includes('SECRET_SENTINEL'));
+  assert.equal(diagram.resources.length, resources.length); // 稼働タスク・管理下EC2を推測生成しない。
+  resources.push({
+    address: 'aws_ecs_cluster.other',
+    type: 'aws_ecs_cluster',
+    values: { id: 'cluster-id', arn: 'cluster-arn' },
+  });
+  const ambiguous = importTerraformJSON(input).resources.find((r) => r.type === 'aws.ecs-service')!;
+  assert.equal(ambiguous.parentId, undefined);
+  assert.ok(ambiguous.unresolved?.includes('cluster の関連先は候補が複数あり未解決'));
+});
+
+test('ECS 関連先の機密・未確定値を使わず、異なる版やアプリに誤接続しない', () => {
+  for (const mask of ['sensitive_values', 'after_unknown']) {
+    const address = 'aws_ecs_service.api';
+    const resources = [
+      { address: 'aws_ecs_cluster.main', type: 'aws_ecs_cluster', values: { arn: 'cluster-arn' } },
+      {
+        address: 'aws_ecs_task_definition.api',
+        type: 'aws_ecs_task_definition',
+        values: { arn: 'definition:12' },
+      },
+      {
+        address,
+        type: 'aws_ecs_service',
+        values: { cluster: 'cluster-arn', task_definition: 'definition:13' },
+        ...(mask === 'sensitive_values' ? { sensitive_values: { cluster: true } } : {}),
+      },
+    ];
+    const diagram = importTerraformJSON({
+      format_version: '1.0',
+      planned_values: { root_module: { resources } },
+      resource_changes: [
+        { address, change: { after_unknown: mask === 'after_unknown' ? { cluster: true } : {} } },
+      ],
+    });
+    const service = diagram.resources.find((r) => r.type === 'aws.ecs-service')!;
+    assert.equal(service.parentId, undefined);
+    assert.ok(service.unresolved?.includes('task_definition の関連先は未解決'));
+    assert.equal(diagram.connections.length, 0);
+  }
+  const diagram = importTerraformJSON({
+    format_version: '1.0',
+    values: {
+      root_module: {
+        resources: [
+          {
+            address: 'aws_elastic_beanstalk_application_version.other',
+            type: 'aws_elastic_beanstalk_application_version',
+            values: { name: 'v3', application: 'other' },
+          },
+          {
+            address: 'aws_elastic_beanstalk_environment.web',
+            type: 'aws_elastic_beanstalk_environment',
+            values: { application: 'web', version_label: 'v3' },
+          },
+        ],
+      },
+    },
+  });
+  assert.equal(diagram.connections.length, 0);
+});
+
+test('ECS・Beanstalk の静的直接参照を解決し、全体未確定のplanを関連解決に使わない', async () => {
+  const temporary = await mkdtemp(path.join(tmpdir(), 'infra-canvas-ecs-'));
+  try {
+    await writeFile(
+      path.join(temporary, 'main.tf'),
+      `
+resource "aws_ecs_cluster" "main" {}
+resource "aws_ecs_task_definition" "api" {}
+resource "aws_ecs_service" "api" {
+  cluster = aws_ecs_cluster.main.id
+  task_definition = aws_ecs_task_definition.api.arn
+}
+resource "aws_elastic_beanstalk_application" "web" {}
+resource "aws_elastic_beanstalk_environment" "prod" {
+  application = aws_elastic_beanstalk_application.web.name
+}
+`,
+    );
+    const diagram = await importTerraformRepository({ repository: temporary });
+    const by = (type: string) => diagram.resources.find((r) => r.type === type)!;
+    assert.equal(by('aws.ecs-service').parentId, by('aws.ecs-cluster').id);
+    assert.equal(by('aws.beanstalk-environment').parentId, by('aws.beanstalk-application').id);
+    assert.ok(
+      diagram.connections.some(
+        (e) =>
+          e.source === by('aws.ecs-service').id &&
+          e.target === by('aws.ecs-task-definition').id &&
+          e.attributes.label === 'task-definition',
+      ),
+    );
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+  const diagram = importTerraformJSON({
+    format_version: '1.0',
+    planned_values: {
+      root_module: {
+        resources: [
+          {
+            address: 'aws_ecs_cluster.main',
+            type: 'aws_ecs_cluster',
+            values: { arn: 'cluster-arn' },
+          },
+          {
+            address: 'aws_ecs_service.api',
+            type: 'aws_ecs_service',
+            values: { cluster: 'cluster-arn' },
+          },
+        ],
+      },
+    },
+    resource_changes: [{ address: 'aws_ecs_service.api', change: { after_unknown: true } }],
+  });
+  assert.equal(diagram.resources.find((r) => r.type === 'aws.ecs-service')?.parentId, undefined);
+});
+
+const transitFixture = (): {
+  format_version: string;
+  values: {
+    root_module: {
+      resources: { address: string; type: string; values: Record<string, unknown> }[];
+    };
+  };
+} => ({
+  format_version: '1.0',
+  values: {
+    root_module: {
+      resources: [
+        {
+          address: 'aws_ec2_transit_gateway.hub',
+          type: 'aws_ec2_transit_gateway',
+          values: { id: 'tgw-1', arn: 'tgw-arn' },
+        },
+        { address: 'aws_vpc.prod', type: 'aws_vpc', values: { id: 'vpc-prod' } },
+        {
+          address: 'aws_ec2_transit_gateway_vpc_attachment.prod',
+          type: 'aws_ec2_transit_gateway_vpc_attachment',
+          values: { id: 'attach-1', transit_gateway_id: 'tgw-1', vpc_id: 'vpc-prod' },
+        },
+        {
+          address: 'aws_ec2_transit_gateway_route_table.rt',
+          type: 'aws_ec2_transit_gateway_route_table',
+          values: { id: 'rt-1', transit_gateway_id: 'tgw-1' },
+        },
+        {
+          address: 'aws_ec2_transit_gateway_route_table_association.prod',
+          type: 'aws_ec2_transit_gateway_route_table_association',
+          values: {
+            transit_gateway_route_table_id: 'rt-1',
+            transit_gateway_attachment_id: 'attach-1',
+          },
+        },
+        {
+          address: 'aws_ec2_transit_gateway_route_table_propagation.prod',
+          type: 'aws_ec2_transit_gateway_route_table_propagation',
+          values: {
+            transit_gateway_route_table_id: 'rt-1',
+            transit_gateway_attachment_id: 'attach-1',
+          },
+        },
+        {
+          address: 'aws_ram_resource_share.hub',
+          type: 'aws_ram_resource_share',
+          values: { arn: 'share-arn' },
+        },
+        {
+          address: 'aws_ram_resource_association.hub',
+          type: 'aws_ram_resource_association',
+          values: { resource_share_arn: 'share-arn', resource_arn: 'tgw-arn' },
+        },
+        {
+          address: 'aws_ram_principal_association.prod',
+          type: 'aws_ram_principal_association',
+          values: { resource_share_arn: 'share-arn', principal: 'PRINCIPAL_SENTINEL' },
+        },
+        {
+          address: 'aws_customer_gateway.google',
+          type: 'aws_customer_gateway',
+          values: { id: 'cgw-1', ip_address: 'IP_SENTINEL' },
+        },
+        {
+          address: 'aws_vpn_connection.google',
+          type: 'aws_vpn_connection',
+          values: {
+            id: 'vpn-1',
+            transit_gateway_id: 'tgw-1',
+            customer_gateway_id: 'cgw-1',
+            transit_gateway_attachment_id: 'vpn-attach-1',
+            tunnel1_preshared_key: 'SECRET_SENTINEL',
+            customer_gateway_configuration: 'SECRET_SENTINEL',
+          },
+        },
+        {
+          address: 'google_compute_network.main',
+          type: 'google_compute_network',
+          values: { self_link: 'https://compute.test/projects/p/global/networks/main' },
+        },
+        {
+          address: 'google_compute_ha_vpn_gateway.google',
+          type: 'google_compute_ha_vpn_gateway',
+          values: {
+            self_link: 'ha-link',
+            network: 'https://compute.test/projects/p/global/networks/main',
+            region: 'asia-northeast1',
+          },
+        },
+        {
+          address: 'google_compute_external_vpn_gateway.aws',
+          type: 'google_compute_external_vpn_gateway',
+          values: { self_link: 'peer-link', interface: [{ ip_address: 'IP_SENTINEL' }] },
+        },
+        {
+          address: 'google_compute_router.main',
+          type: 'google_compute_router',
+          values: {
+            name: 'main',
+            project: 'p',
+            region: 'asia-northeast1',
+            network: 'https://compute.test/projects/p/global/networks/main',
+          },
+        },
+        {
+          address: 'google_compute_vpn_tunnel.a',
+          type: 'google_compute_vpn_tunnel',
+          values: {
+            self_link: 'tunnel-link',
+            vpn_gateway: 'ha-link',
+            peer_external_gateway: 'peer-link',
+            router: 'main',
+            project: 'p',
+            region: 'asia-northeast1',
+            shared_secret: 'SECRET_SENTINEL',
+          },
+        },
+        {
+          address: 'google_compute_router_interface.a',
+          type: 'google_compute_router_interface',
+          values: {
+            name: 'if-a',
+            router: 'main',
+            vpn_tunnel: 'tunnel-link',
+            project: 'p',
+            region: 'asia-northeast1',
+          },
+        },
+        {
+          address: 'google_compute_router_peer.a',
+          type: 'google_compute_router_peer',
+          values: {
+            router: 'main',
+            interface: 'if-a',
+            project: 'p',
+            region: 'asia-northeast1',
+            peer_ip_address: 'IP_SENTINEL',
+          },
+        },
+      ],
+    },
+  },
+});
+
+test('TGW/RAM/AWS VPN/Google HA VPN の参照を解決し、共有を通信やアカウント所属と誤認しない', () => {
+  const diagram = importTerraformJSON(transitFixture());
+  const labels = diagram.connections.map((e) => e.attributes.label);
+  for (const label of [
+    'attached-transit-gateway',
+    'vpc',
+    'associated-route-table',
+    'route-table-association',
+    'route-propagation',
+    'resource-share',
+    'shared-resource',
+    'principal-share',
+    'vpn-transit-gateway',
+    'customer-gateway',
+    'vpn-network',
+    'external-vpn-peer',
+    'ha-vpn-gateway',
+    'tunnel-router',
+    'interface-router',
+    'interface-tunnel',
+    'bgp-router',
+    'bgp-interface',
+  ])
+    assert.ok(labels.includes(label), String(label));
+  assert.ok(diagram.connections.every((e) => e.kind === 'association'));
+  assert.ok(diagram.resources.every((r) => r.parentId === undefined));
+  assert.equal(diagram.resources.filter((r) => r.type === 'account').length, 0);
+  assert.equal(
+    diagram.resources.find((r) => r.type === 'gcp.ha-vpn')?.attributes.region,
+    'asia-northeast1',
+  );
+  assert.ok(!JSON.stringify(diagram).includes('SENTINEL'));
+});
+
+test('TGW/VPN の機密・未確定・曖昧な参照、別プロジェクトの同名Routerを接続しない', () => {
+  const input = transitFixture();
+  input.values.root_module.resources.push({
+    address: 'aws_vpc.other',
+    type: 'aws_vpc',
+    values: { id: 'vpc-prod' },
+  });
+  input.values.root_module.resources.push({
+    address: 'google_compute_router.other',
+    type: 'google_compute_router',
+    values: { name: 'main', project: 'q', region: 'asia-northeast1' },
+  });
+  const diagram = importTerraformJSON(input);
+  const attachment = diagram.resources.find((r) => r.type === 'aws.tgw-attachment')!;
+  assert.ok(attachment.unresolved?.includes('VPC の関連先は未解決'));
+  const tunnel = diagram.resources.find((r) => r.type === 'gcp.vpn-tunnel')!;
+  assert.equal(
+    diagram.connections.filter(
+      (e) => e.source === tunnel.id && e.attributes.label === 'tunnel-router',
+    ).length,
+    1,
+  );
+  for (const key of ['transit_gateway_id', 'customer_gateway_id']) {
+    const masked = transitFixture();
+    const vpn = masked.values.root_module.resources.find((r) => r.type === 'aws_vpn_connection')!;
+    Object.assign(vpn, { sensitive_values: { [key]: true } });
+    const result = importTerraformJSON(masked);
+    const id = result.resources.find((r) => r.type === 'aws.vpn-connection')!.id;
+    assert.equal(result.connections.filter((e) => e.source === id).length, 1);
+  }
+  const masked = transitFixture();
+  const tunnelResource = masked.values.root_module.resources.find(
+    (r) => r.type === 'google_compute_vpn_tunnel',
+  )!;
+  Object.assign(tunnelResource, {
+    sensitive_values: { vpn_gateway: true, peer_external_gateway: true, router: true },
+  });
+  const result = importTerraformJSON(masked);
+  const id = result.resources.find((r) => r.type === 'gcp.vpn-tunnel')!.id;
+  assert.equal(result.connections.filter((e) => e.source === id).length, 0);
+});
+
+test('VPNのattachment IDによる経路関連を解決し、planの未確定値では接続しない', () => {
+  const input = transitFixture();
+  const association = input.values.root_module.resources.find(
+    (r) => r.type === 'aws_ec2_transit_gateway_route_table_association',
+  )!;
+  association.values.transit_gateway_attachment_id = 'vpn-attach-1';
+  const diagram = importTerraformJSON(input);
+  const source = diagram.resources.find((r) => r.provenance?.address === association.address)!.id;
+  const target = diagram.resources.find((r) => r.type === 'aws.vpn-connection')!.id;
+  assert.ok(
+    diagram.connections.some(
+      (e) =>
+        e.source === source &&
+        e.target === target &&
+        e.attributes.label === 'route-table-association',
+    ),
+  );
+  const masked = importTerraformJSON({
+    format_version: '1.0',
+    planned_values: input.values,
+    resource_changes: [
+      {
+        address: association.address,
+        change: {
+          after_unknown: { transit_gateway_attachment_id: true },
+        },
+      },
+    ],
+  });
+  assert.ok(
+    !masked.connections.some(
+      (e) => e.source === source && e.attributes.label === 'route-table-association',
+    ),
+  );
+});
+
+test('Google VPNの静的直接参照を解決し、shared_secretを表示モデルに含めない', async () => {
+  const temporary = await mkdtemp(path.join(tmpdir(), 'infra-canvas-vpn-'));
+  try {
+    await writeFile(
+      path.join(temporary, 'main.tf'),
+      `
+resource "google_compute_ha_vpn_gateway" "main" {}
+resource "google_compute_router" "main" {}
+resource "google_compute_vpn_tunnel" "main" {
+  vpn_gateway = google_compute_ha_vpn_gateway.main.id
+  router = google_compute_router.main.name
+  shared_secret = "SECRET_SENTINEL"
+}
+`,
+    );
+    const diagram = await importTerraformRepository({ repository: temporary });
+    assert.ok(diagram.connections.some((e) => e.attributes.label === 'ha-vpn-gateway'));
+    assert.ok(diagram.connections.some((e) => e.attributes.label === 'tunnel-router'));
+    assert.ok(!JSON.stringify(diagram).includes('SECRET_SENTINEL'));
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});

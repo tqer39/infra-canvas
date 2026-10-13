@@ -1,0 +1,37 @@
+diagram "ECS と Elastic Beanstalk の詳細構成" version=1 {
+  account prod "本番アカウント" {
+    region tokyo "東京" region="ap-northeast-1" {
+      aws.ecs-task-definition definition "API タスク定義 v12" meta.cpu="512" meta.memory="1024" {
+        aws.ecs-container container_definition "API コンテナ定義" meta.image="example/api:v12"
+      }
+      aws.ecs-cluster cluster "ECS クラスター" {
+        aws.ecs-service service "API サービス" meta.desiredCount="2" {
+          aws.ecs-task task_a "実行タスク A（設計例）" {
+            aws.ecs-container container_a "API コンテナ A"
+          }
+          aws.ecs-task task_c "実行タスク C（設計例）"
+        }
+        aws.ecs-task batch "単発バッチ（設計例）"
+      }
+      aws.beanstalk-application application "Beanstalk アプリケーション" {
+        aws.beanstalk-version version "アプリケーション版 v3"
+        aws.beanstalk-environment web "Web 環境（Standard・設計例）" meta.tier="WebServer" {
+          aws.alb balancer "環境の ALB"
+          aws.ec2 instance "環境の EC2"
+        }
+        aws.beanstalk-environment worker "Worker 環境（設計例）" meta.tier="Worker" {
+          aws.ec2 worker_instance "Worker EC2"
+        }
+      }
+    }
+  }
+  service -> definition kind=dependency label="使用するタスク定義"
+  task_a -> definition kind=association label="定義から起動"
+  task_c -> definition kind=association label="定義から起動"
+  batch -> definition kind=association label="単発起動"
+  web -> version kind=deploy label="配備する版"
+  worker -> version kind=deploy label="配備する版"
+  balancer -> instance kind=traffic protocol=http port=8080
+  view services level=service
+  view overview level=overview
+}

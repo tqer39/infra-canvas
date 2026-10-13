@@ -1,0 +1,83 @@
+name: Update icons
+on:
+  schedule:
+    # 毎月1日 09:17 JST（00:17 UTC）。混雑する正時を避ける。
+    - cron: '17 0 1 * *'
+  pull_request:
+    paths:
+      - '.github/workflows/update-icons.yml'
+      - 'scripts/update-icons.py'
+      - 'scripts/publish-icon-update.sh'
+      - 'tests/update-icons.test.py'
+      - 'src/assets/**'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '取得と検証だけを行い、更新PRを作成しない'
+        type: boolean
+        default: true
+permissions:
+  contents: read
+concurrency:
+  group: update-icons
+  cancel-in-progress: false
+jobs:
+  update:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.sha || github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '24'
+      - run: npm ci --ignore-scripts
+      - name: 最新版の収集・ブランドカラー適用・出典とハッシュの更新
+        run: npm run icons:update
+      - run: npm run fmt
+      - name: 型検査・lint・更新処理の回帰テスト・ビルド
+        run: npm run check
+      - run: npx playwright install --with-deps chromium
+      - name: 通常画面とオフラインHTMLの表示検証
+        run: npm run test:browser
+      - name: 差分の記録
+        id: diff
+        run: |
+          git diff --check
+          git diff --stat >> "$GITHUB_STEP_SUMMARY"
+          if git diff --quiet; then
+            echo 'changed=false' >> "$GITHUB_OUTPUT"
+            echo '更新なし' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'changed=true' >> "$GITHUB_OUTPUT"
+          fi
+      - name: 1PasswordからApp認証情報を取得
+        if: steps.diff.outputs.changed == 'true' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false))
+        id: secrets
+        uses: 1Password/load-secrets-action@0f7285a1c0907145ff20deb48335ccc41244817a
+        with:
+          export-env: false
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          APP_CLIENT_ID: op://infra-canvas-secrets/GitHub/client-id
+          APP_PRIVATE_KEY: op://infra-canvas-secrets/GitHub/private-key
+      - name: このリポジトリだけに有効なAppトークンを発行
+        if: steps.diff.outputs.changed == 'true' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false))
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510
+        with:
+          client-id: ${{ steps.secrets.outputs.APP_CLIENT_ID }}
+          private-key: ${{ steps.secrets.outputs.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: infra-canvas
+          permission-contents: write
+          permission-pull-requests: write
+      - name: 更新ブランチとPRを作成・更新
+        if: steps.diff.outputs.changed == 'true' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false))
+        run: bash scripts/publish-icon-update.sh
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}

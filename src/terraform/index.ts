@@ -24,8 +24,12 @@ const types: Record<string, string> = {
   aws_lb: 'aws.alb',
   aws_alb: 'aws.alb',
   aws_instance: 'aws.ec2',
-  aws_ecs_cluster: 'aws.ecs',
-  aws_ecs_service: 'aws.ecs',
+  aws_ecs_cluster: 'aws.ecs-cluster',
+  aws_ecs_service: 'aws.ecs-service',
+  aws_ecs_task_definition: 'aws.ecs-task-definition',
+  aws_elastic_beanstalk_application: 'aws.beanstalk-application',
+  aws_elastic_beanstalk_environment: 'aws.beanstalk-environment',
+  aws_elastic_beanstalk_application_version: 'aws.beanstalk-version',
   aws_db_instance: 'aws.rds',
   aws_security_group: 'sg',
   aws_internet_gateway: 'aws.igw',
@@ -38,10 +42,27 @@ const types: Record<string, string> = {
   aws_iam_role: 'aws.iam-role',
   aws_iam_openid_connect_provider: 'aws.oidc',
   aws_db_subnet_group: 'aws.db-subnet-group',
+  aws_ec2_transit_gateway: 'aws.transit-gateway',
+  aws_ec2_transit_gateway_vpc_attachment: 'aws.tgw-attachment',
+  aws_ec2_transit_gateway_route_table: 'aws.tgw-route-table',
+  aws_ec2_transit_gateway_route_table_association: 'aws.tgw-route-association',
+  aws_ec2_transit_gateway_route_table_propagation: 'aws.tgw-route-propagation',
+  aws_ram_resource_share: 'aws.ram-share',
+  aws_ram_resource_association: 'aws.ram-resource-association',
+  aws_ram_principal_association: 'aws.ram-principal-association',
+  aws_customer_gateway: 'aws.customer-gateway',
+  aws_vpn_connection: 'aws.vpn-connection',
+  google_compute_network: 'network',
+  google_compute_ha_vpn_gateway: 'gcp.ha-vpn',
+  google_compute_external_vpn_gateway: 'gcp.external-vpn',
+  google_compute_vpn_tunnel: 'gcp.vpn-tunnel',
+  google_compute_router: 'gcp.router',
+  google_compute_router_interface: 'gcp.router-interface',
+  google_compute_router_peer: 'gcp.bgp-peer',
 };
 const safe: Record<string, RegExp> = {
   availability_zone: /^[a-z]{2}(?:-gov)?-[a-z]+-\d[a-z]$/,
-  region: /^[a-z]{2}(?:-gov)?-[a-z]+-\d$/,
+  region: /^(?:[a-z]{2}(?:-gov)?-[a-z]+-\d|[a-z]+-[a-z]+\d)$/,
   cidr_block: /^[\d.:a-f]+\/\d{1,3}$/,
   instance_type: /^[a-z]\d[a-z]*\.[a-z\d]+$/,
   engine:
@@ -97,6 +118,7 @@ function modulePrefix(address: string): string | undefined {
 function build(items: Item[], kind: Provenance['kind'], context: TerraformContext): Diagram {
   const d = empty();
   const ids = new Map<string, string>();
+  const ambiguousIds = new Set<string>();
   const raw = new Map(items.map((i) => [i.address, i]));
   const provenance = (address: string): Provenance => {
     const source = context.sources?.definitions.get(definitionAddress(address));
@@ -158,8 +180,12 @@ function build(items: Item[], kind: Provenance['kind'], context: TerraformContex
       !hasSensitive(item.sensitive.id) &&
       !hasSensitive(item.unknown.id) &&
       typeof item.values.id === 'string'
-    )
-      ids.set(item.values.id, item.address);
+    ) {
+      if (ids.has(item.values.id)) {
+        ambiguousIds.add(item.values.id);
+        ids.delete(item.values.id);
+      } else if (!ambiguousIds.has(item.values.id)) ids.set(item.values.id, item.address);
+    }
   }
   const get = (id: string) => d.resources.find((r) => r.id === id)!;
   const resolve = (value: unknown): string[] =>
@@ -193,8 +219,139 @@ function build(items: Item[], kind: Provenance['kind'], context: TerraformContex
     }
     return targets;
   };
+  // 関連先の ID/ARN/名前は解決だけに使用し、機密値・未確定値・曖昧な候補は公開しない。
+  const semanticTarget = (
+    item: Item,
+    key: string,
+    type: string | string[],
+    fields = ['id', 'arn', 'name', 'self_link'],
+  ): string | undefined => {
+    const input = value(item, key);
+    if (typeof input !== 'string') return;
+    const candidates = items.filter(
+      (candidate) =>
+        (Array.isArray(type) ? type : [type]).includes(get(candidate.address).type) &&
+        (candidate.address === input ||
+          fields.some(
+            (field) =>
+              value(candidate, field) === input &&
+              (field !== 'name' ||
+                !item.type.startsWith('google_') ||
+                (['project', 'region'].every(
+                  (scope) =>
+                    typeof value(item, scope) === 'string' &&
+                    value(item, scope) === value(candidate, scope),
+                ) &&
+                  (candidate.type !== 'google_compute_router_interface' ||
+                    value(item, 'router') === value(candidate, 'router')))),
+          )),
+    );
+    if (candidates.length === 1) return candidates[0]!.address;
+    get(item.address).unresolved!.push(
+      `${key} の関連先は${candidates.length > 1 ? '候補が複数あり' : ''}未解決`,
+    );
+    return;
+  };
+  const topology: Record<string, [string, string | string[], string][]> = {
+    aws_ec2_transit_gateway_vpc_attachment: [
+      ['transit_gateway_id', 'aws.transit-gateway', 'attached-transit-gateway'],
+    ],
+    aws_ec2_transit_gateway_route_table: [
+      ['transit_gateway_id', 'aws.transit-gateway', 'transit-gateway-route-table'],
+    ],
+    aws_ec2_transit_gateway_route_table_association: [
+      ['transit_gateway_route_table_id', 'aws.tgw-route-table', 'associated-route-table'],
+      [
+        'transit_gateway_attachment_id',
+        ['aws.tgw-attachment', 'aws.vpn-connection'],
+        'route-table-association',
+      ],
+    ],
+    aws_ec2_transit_gateway_route_table_propagation: [
+      ['transit_gateway_route_table_id', 'aws.tgw-route-table', 'propagation-route-table'],
+      [
+        'transit_gateway_attachment_id',
+        ['aws.tgw-attachment', 'aws.vpn-connection'],
+        'route-propagation',
+      ],
+    ],
+    aws_vpn_connection: [
+      ['transit_gateway_id', 'aws.transit-gateway', 'vpn-transit-gateway'],
+      ['customer_gateway_id', 'aws.customer-gateway', 'customer-gateway'],
+    ],
+    aws_ram_resource_association: [
+      ['resource_share_arn', 'aws.ram-share', 'resource-share'],
+      ['resource_arn', 'aws.transit-gateway', 'shared-resource'],
+    ],
+    aws_ram_principal_association: [['resource_share_arn', 'aws.ram-share', 'principal-share']],
+    google_compute_ha_vpn_gateway: [['network', 'network', 'vpn-network']],
+    google_compute_router: [['network', 'network', 'router-network']],
+    google_compute_vpn_tunnel: [
+      ['vpn_gateway', 'gcp.ha-vpn', 'ha-vpn-gateway'],
+      ['peer_external_gateway', 'gcp.external-vpn', 'external-vpn-peer'],
+      ['router', 'gcp.router', 'tunnel-router'],
+    ],
+    google_compute_router_interface: [
+      ['router', 'gcp.router', 'interface-router'],
+      ['vpn_tunnel', 'gcp.vpn-tunnel', 'interface-tunnel'],
+    ],
+    google_compute_router_peer: [
+      ['router', 'gcp.router', 'bgp-router'],
+      ['interface', 'gcp.router-interface', 'bgp-interface'],
+    ],
+  };
   for (const item of items) {
     const resource = get(item.address);
+    for (const [key, targetType, label] of topology[item.type] ?? []) {
+      const target = semanticTarget(
+        item,
+        key,
+        targetType,
+        key === 'transit_gateway_attachment_id'
+          ? ['id', 'transit_gateway_attachment_id']
+          : undefined,
+      );
+      if (target) edge(item.address, target, 'association', label);
+    }
+    if (item.type === 'aws_ram_principal_association')
+      resource.unresolved!.push(
+        '共有先principalのアカウント・OU・組織への所属は未解決（値は取り込みません）',
+      );
+    if (item.type === 'aws_ecs_service') {
+      const cluster = semanticTarget(item, 'cluster', 'aws.ecs-cluster');
+      if (cluster) resource.parentId = cluster;
+      const definition = semanticTarget(item, 'task_definition', 'aws.ecs-task-definition');
+      if (definition) edge(item.address, definition, 'dependency', 'task-definition');
+    }
+    if (
+      ['aws_elastic_beanstalk_environment', 'aws_elastic_beanstalk_application_version'].includes(
+        item.type,
+      )
+    ) {
+      const application = semanticTarget(item, 'application', 'aws.beanstalk-application');
+      if (application) resource.parentId = application;
+    }
+    if (item.type === 'aws_elastic_beanstalk_environment') {
+      // バージョン名はアプリケーション内で一意。別アプリの同名版を結び付けない。
+      const version = value(item, 'version_label');
+      if (typeof version === 'string') {
+        const candidates = items.filter(
+          (candidate) =>
+            candidate.type === 'aws_elastic_beanstalk_application_version' &&
+            value(candidate, 'name') === version &&
+            value(candidate, 'application') === value(item, 'application') &&
+            typeof value(item, 'application') === 'string',
+        );
+        if (
+          candidates.length === 1 &&
+          resource.parentId &&
+          get(resource.parentId).type === 'aws.beanstalk-application'
+        )
+          edge(item.address, candidates[0]!.address, 'dependency', 'application-version');
+        else resource.unresolved!.push('version_label の関連先は未解決');
+      }
+      resource.unresolved!.push('環境が内部生成するリソースと実配置は未取得（DSLで明示可能）');
+    }
     for (const target of related(item, value(item, 'vpc_id'), 'vpc', 'VPC')) {
       if (
         get(target).type === 'vpc' &&
@@ -357,7 +514,11 @@ export function importTerraformJSON(input: unknown, context: TerraformContext = 
               ),
         unknown:
           change.after_unknown === true
-            ? Object.fromEntries(Object.keys(safe).map((key) => [key, true]))
+            ? Object.fromEntries(
+                [...new Set([...Object.keys(safe), ...Object.keys(obj(resource.values))])].map(
+                  (key) => [key, true],
+                ),
+              )
             : obj(change.after_unknown),
         dependencies: arr(resource.depends_on).filter((v): v is string => typeof v === 'string'),
       });
@@ -467,7 +628,9 @@ export async function importTerraformRepository(
       else {
         unknown[key] = true;
         const refs =
-          expression.match(/(?:module\.[\w-]+\.)?(?:aws_[\w]+|data\.aws_[\w]+)\.[\w-]+/g) ?? [];
+          expression.match(
+            /(?:module\.[\w-]+\.)?(?:(?:aws|google)_[\w]+|data\.(?:aws|google)_[\w]+)\.[\w-]+/g,
+          ) ?? [];
         for (const ref of refs) {
           const prefix = modulePrefix(def.address);
           const target = (prefix ? prefix + '.' : '') + ref;
@@ -484,6 +647,21 @@ export async function importTerraformRepository(
                 'security_groups',
                 'gateway_id',
                 'route_table_id',
+                'cluster',
+                'task_definition',
+                'application',
+                'customer_gateway_id',
+                'interface',
+                'network',
+                'peer_external_gateway',
+                'resource_arn',
+                'resource_share_arn',
+                'router',
+                'transit_gateway_attachment_id',
+                'transit_gateway_id',
+                'transit_gateway_route_table_id',
+                'vpn_gateway',
+                'vpn_tunnel',
               ].includes(key)
             ) {
               values[key] = expression.trim().startsWith('[')

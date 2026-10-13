@@ -48,6 +48,9 @@ ID は表示名や座標から独立しています。`view` ID も同じ名前�
 `subnet`、`group`、`module` です。子は一つの直接の親に所属します。
 
 サービス種別は `aws.ecs`、`gcp.compute`、`azure.vm`、`github.actions` などです。
+SaaS の対応型は `saas.github`、`saas.1password`、`saas.linear`、`saas.gitlab`、`saas.neon`、
+`saas.fly`、`saas.resend`、`saas.elasticsearch`、`saas.kibana` です。
+[アイコン対応表と利用条件](assets.md) と [サービス連携の例](../examples/saas.infra) を参照してください。
 未対応の種別も解析して代替表示で残します。アイコン対応表は拡張できます。
 
 `subnet ID public` / `private` / `unknown` の短縮形は `subnetType` 属性になります。
@@ -175,3 +178,61 @@ ELK のアルゴリズム、seed、入力 ID 順序を固定します。同じ�
 
 実例は `examples/aws.infra`、`examples/gcp-azure.infra`、`examples/multicloud.infra`、
 `examples/large.infra` にあります。大規模例はサービス 300 個、境界 18 個、接続 299 本です。
+
+## ECS と Elastic Beanstalk の詳細構成
+
+`aws.ecs` は従来の概要表現として維持します。詳細には次の型を使います。
+
+| 型                          | 意味                               | 入れ子                   |
+| --------------------------- | ---------------------------------- | ------------------------ |
+| `aws.ecs-cluster`           | ECS クラスター                     | サービス、単発タスクなど |
+| `aws.ecs-service`           | タスク数を維持するサービス         | 設計・観測した実行タスク |
+| `aws.ecs-task-definition`   | タスクの設計図・リビジョン         | コンテナ定義             |
+| `aws.ecs-task`              | 起動するタスク                     | 実行コンテナ             |
+| `aws.ecs-container`         | コンテナ定義または実行コンテナ     | なし                     |
+| `aws.beanstalk-application` | アプリケーションの論理的なまとまり | 環境、アプリケーション版 |
+| `aws.beanstalk-environment` | 版を実行する環境                   | 明示した管理下リソース   |
+| `aws.beanstalk-version`     | 配備するアプリケーション版         | なし                     |
+
+タスク定義はクラスターやサービスと別ノードで宣言し、複数サービス・単発タスクから
+接続できます。サービスから定義への `dependency`、実行タスクから定義への `association`、
+環境から版への `deploy` など、意図を明記します。入れ子境界は折りたたみ・展開・詳細移動できます。
+`meta.cpu`、`meta.memory`、`meta.desiredCount`、`meta.tier` などは拡張テキスト属性で記述できます。
+コンテナの環境変数や認証情報は記載しないでください。
+
+[ecs-beanstalk.infra](../examples/ecs-beanstalk.infra) はECSのサービス、単発タスク、
+タスク定義と、Beanstalk StandardのWeb/Worker環境の設計例です。
+実行タスクや管理下EC2は実環境から取得した情報ではありません。
+BeanstalkにはEKSを使うClusterモードもあります。すべての環境をALB・EC2構成とみなさず、
+図に必要な実体と関係を明示してください。
+
+概念は [ECS公式説明](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/Welcome.html) と
+[Beanstalk公式説明](https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/concepts.html) に基づきます。
+
+## Transit Gateway・RAM・Google Cloud VPN
+
+[transit-vpn.infra](../examples/transit-vpn.infra) は、AWSの所有アカウント・本番/開発の参加アカウントと
+Google Cloudプロジェクトを分けた設計例です。
+TGWを各VPCへ複製せず、所有アカウントに一つ置き、参加側のアタッチメントから関連線を結びます。
+
+| 型                                                               | 意味                                    |
+| ---------------------------------------------------------------- | --------------------------------------- |
+| `aws.transit-gateway`                                            | ネットワークの接続ハブ                  |
+| `aws.tgw-attachment`                                             | VPCアタッチメント                       |
+| `aws.tgw-route-table`                                            | TGWルートテーブル                       |
+| `aws.tgw-route-association` / `aws.tgw-route-propagation`        | 関連付け・経路伝播の設定                |
+| `aws.ram-share`                                                  | RAMリソース共有                         |
+| `aws.ram-resource-association` / `aws.ram-principal-association` | 共有リソース・共有先の設定              |
+| `aws.customer-gateway` / `aws.vpn-connection`                    | AWS側の対向定義・Site-to-Site VPN接続   |
+| `gcp.ha-vpn` / `gcp.external-vpn` / `gcp.vpn-tunnel`             | HA VPN・外部対向定義・個別トンネル      |
+| `gcp.router` / `gcp.router-interface` / `gcp.bgp-peer`           | Cloud Router・インターフェース・BGPピア |
+
+共有先は `auth`、アタッチメント・トンネル・関連付け・伝播設定は `association` の線で区別できます。
+RAMの共有やルート設定だけを、通信成立やVPN/BGPの稼働状態とみなしません。
+アカウントを折りたたむと跨る接続を集約し、展開すると元の端点とkindを復元します。
+Google VPCはglobal、HA VPNとCloud Routerは明示したリージョンに置きます。
+
+公式の [AWS共有TGW](https://docs.aws.amazon.com/vpc/latest/tgw/working-with-transit-gateways.html) と
+[Google CloudからAWSへのHA VPN](https://docs.cloud.google.com/network-connectivity/docs/vpn/how-to/connect-ha-vpn-aws-peer-gateway)
+を根拠に、構成例は所有アカウント内のAWS VPN接続2本・Customer Gateway2つ、Google側4トンネルを描きます。
+PSKや実IPは含みません。構成図の設計例であり、接続状態やSLA、ルートの到達性を検証する機能ではありません。

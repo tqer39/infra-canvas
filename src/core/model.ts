@@ -97,5 +97,11 @@ export const boundaryTypes = new Set([
   'subnet',
   'group',
   'module',
+  'aws.ecs-cluster',
+  'aws.ecs-service',
+  'aws.ecs-task-definition',
+  'aws.ecs-task',
+  'aws.beanstalk-application',
+  'aws.beanstalk-environment',
 ]);
 export const isBoundary = (resource: Resource): boolean => boundaryTypes.has(resource.type);
