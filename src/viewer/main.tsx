@@ -74,6 +74,8 @@ function RegionFlag({ resource }: { resource: Resource }) {
   return (
     <img
       className="region-flag"
+      width={20}
+      height={15}
       src={getCountryFlag(country.code)}
       alt={`${country.name}の国旗`}
       title={`${country.name} · ${region}`}
@@ -114,23 +116,23 @@ function ResourceCard({ data }: NodeProps<ResourceNode>) {
           </span>
         )}
         <div className="resource-text">
-          <span className="resource-type">
-            {resource.type}
+          <span className="resource-type">{resource.type}</span>
+          <span className="resource-label">
             <RegionFlag resource={resource} />
-          </span>
-          {homepage ? (
-            <a
-              className="service-name-link nodrag nopan"
-              href={homepage}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(event) => event.stopPropagation()}
-            >
+            {homepage ? (
+              <a
+                className="service-name-link nodrag nopan"
+                href={homepage}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <strong title={resource.label}>{resource.label}</strong>
+              </a>
+            ) : (
               <strong title={resource.label}>{resource.label}</strong>
-            </a>
-          ) : (
-            <strong title={resource.label}>{resource.label}</strong>
-          )}
+            )}
+          </span>
         </div>
         {boundary && (
           <button
@@ -826,8 +828,10 @@ function App() {
             <>
               <div className="detail-type">{selectedResource.type}</div>
               <h2>
-                <RegionFlag resource={selectedResource} />
-                {selectedResource.label}
+                <span className="resource-label">
+                  <RegionFlag resource={selectedResource} />
+                  <span>{selectedResource.label}</span>
+                </span>
               </h2>
               <code className="resource-id">{selectedResource.id}</code>
               {isBoundary(selectedResource) && (

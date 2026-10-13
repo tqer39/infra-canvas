@@ -2,6 +2,7 @@ import ELK from 'elkjs/lib/elk.bundled.js';
 import type { ElkNode, ElkExtendedEdge } from 'elkjs/lib/elk-api.js';
 import { validateResourceHierarchy } from './validate.js';
 import { isBoundary } from './model.js';
+import { getRegionCountry, getResourceRegion } from '../assets/regions.js';
 import type {
   Connection,
   DisplayGraph,
@@ -14,7 +15,7 @@ import type {
 export interface LayoutOptions {
   direction?: 'RIGHT' | 'DOWN';
 }
-export const layoutVersion = 'infra-canvas-layout-4';
+export const layoutVersion = 'infra-canvas-layout-5';
 
 const kindLabels = {
   traffic: '通信',
@@ -57,9 +58,14 @@ export async function layoutGraph(
         const nested = makeChildren(resource.id);
         const labelWidth = textWidth(resource.label, 8, 14);
         const collapsed = isBoundary(resource) && graph.collapsed.includes(resource.id);
-        // 折りたたみ境界にはアイコン・余白・展開ボタンの幅を確保する。
-        const headerWidth = isBoundary(resource) ? 112 : 80;
         const detailBoundary = isBoundary(resource) && resource.type.startsWith('aws.');
+        // 折りたたみ境界にはアイコン・余白・展開ボタンの幅を確保する。
+        const headerWidth =
+          (isBoundary(resource) ? 112 : 80) +
+          (getRegionCountry(getResourceRegion(resource)) ? 26 : 0) +
+          (isBoundary(resource) && !collapsed && !detailBoundary
+            ? textWidth(resource.type, 6, 10) + 9
+            : 0);
         const width = Math.max(
           180,
           Math.min(

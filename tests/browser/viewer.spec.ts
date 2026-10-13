@@ -202,6 +202,30 @@ for (const offline of [false, true]) {
     await page.getByRole('button', { name: '解析して反映' }).click();
     await expect(page.locator('.canvas-footer')).toContainText('6 要素');
     await expect(page.locator('.resource-card .region-flag')).toHaveCount(4);
+    const tokyoName = page.locator('.react-flow__node[data-id="tokyo"] .resource-label');
+    await expect(tokyoName.locator('strong')).toHaveText('東京');
+    await expect(tokyoName.locator('.region-flag')).toHaveAttribute('width', '20');
+    await expect(tokyoName.locator('.region-flag')).toHaveAttribute('height', '15');
+    const flagBesideName = (container: Element) => {
+      const flag = container.querySelector('.region-flag')!;
+      const label = container.querySelector('strong, span')!;
+      const f = flag.getBoundingClientRect(),
+        l = label.getBoundingClientRect();
+      return (
+        getComputedStyle(flag).width === '20px' &&
+        getComputedStyle(flag).height === '15px' &&
+        f.right <= l.left &&
+        l.left - f.right < f.width &&
+        f.top < l.bottom &&
+        l.top < f.bottom &&
+        label.scrollWidth <= label.clientWidth
+      );
+    };
+    await expect.poll(() => tokyoName.evaluate(flagBesideName)).toBe(true);
+    await page.getByRole('button', { name: '東京を折りたたむ', exact: true }).click();
+    await expect(tokyoName.locator('strong')).toHaveText('東京');
+    await expect.poll(() => tokyoName.evaluate(flagBesideName)).toBe(true);
+    await page.getByRole('button', { name: '東京を展開', exact: true }).click();
     await expect(
       page.locator('.react-flow__node[data-id="virginia"] .region-flag'),
     ).toHaveAttribute('alt', 'アメリカ合衆国の国旗');
@@ -239,6 +263,10 @@ for (const offline of [false, true]) {
       'title',
       '日本 · asia-northeast1',
     );
+    await expect(page.locator('.detail-panel h2')).toHaveText('Google Cloud 東京');
+    await expect
+      .poll(() => page.locator('.detail-panel h2 .resource-label').evaluate(flagBesideName))
+      .toBe(true);
     await clear.click();
     await page.getByRole('button', { name: 'DSL を編集' }).click();
     await page.screenshot({ path: `artifacts/regions-${offline ? 'offline' : 'dev'}.png` });
