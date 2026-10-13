@@ -21,6 +21,13 @@ test.beforeAll(() => {
   ]);
   execFileSync(process.execPath, [
     'dist/cli.js',
+    'html',
+    'examples/service-catalog.infra',
+    '--out',
+    'artifacts/service-catalog.html',
+  ]);
+  execFileSync(process.execPath, [
+    'dist/cli.js',
     'import',
     'examples/terraform',
     '--json',
@@ -31,6 +38,105 @@ test.beforeAll(() => {
     'artifacts/terraform.infra',
   ]);
 });
+for (const offline of [false, true]) {
+  test(`横ホイールでパンし、接続ラベルをマウス・キーボードで選択する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/saas.html') : 'http://127.0.0.1:5188');
+    if (!offline) await page.locator('input[type=file]').setInputFiles('examples/saas.infra');
+    await expect(page.locator('.canvas-footer')).toContainText('9 要素');
+    const viewport = () =>
+      page.locator('.react-flow__viewport').evaluate(async (element) => {
+        for (let i = 0; i < 35; i++) await new Promise(requestAnimationFrame);
+        const matrix = new DOMMatrixReadOnly(getComputedStyle(element).transform);
+        return { x: matrix.e, y: matrix.f, zoom: matrix.a };
+      });
+    const initial = await viewport();
+    await page.mouse.move(400, 300);
+    await page.mouse.wheel(120, 0);
+    const right = await viewport();
+    expect(right.zoom).toBe(initial.zoom);
+    expect(right.y).toBe(initial.y);
+    expect(right.x).toBeCloseTo(initial.x - 120, 2);
+    await page.mouse.wheel(-120, 0);
+    expect((await viewport()).x).toBeCloseTo(initial.x, 2);
+    await page.keyboard.down('Shift');
+    await page.mouse.wheel(0, 80);
+    await page.keyboard.up('Shift');
+    const shift = await viewport();
+    expect(shift.x).toBeCloseTo(initial.x - 80, 2);
+    expect(shift.zoom).toBe(initial.zoom);
+    await page.mouse.wheel(0, 100);
+    expect((await viewport()).zoom).toBeLessThan(initial.zoom);
+    await page.getByRole('button', { name: 'Fit View' }).click();
+    const label = page.getByRole('button', {
+      name: 'Fly.io → Neon: 通信 · postgres · 5432',
+      exact: true,
+    });
+    await label.click();
+    await expect(label).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.detail-panel')).toContainText('postgres');
+    await expect(page.locator('.detail-panel')).toContainText('5432');
+    await expect(page.locator('.react-flow__node[data-id="app"] .related')).toHaveCount(1);
+    await expect(page.locator('.react-flow__node[data-id="database"] .related')).toHaveCount(1);
+    const deployment = page.getByRole('button', { name: 'GitHub → Fly.io: デプロイ', exact: true });
+    await deployment.focus();
+    await expect(deployment).toBeFocused();
+    await deployment.press('Enter');
+    await expect(page.locator('.detail-panel h2')).toHaveText('デプロイ');
+    await deployment.press('Space');
+    await expect(deployment).toHaveAttribute('aria-pressed', 'true');
+    await page.screenshot({ path: `artifacts/connection-${offline ? 'offline' : 'dev'}.png` });
+    await page.getByRole('button', { name: 'DSL を編集' }).click();
+    await page
+      .getByRole('textbox', { name: 'DSL 入力' })
+      .fill(
+        'diagram "集約接続" {\ngroup sources "送信元" {\naws.lambda a "A"\naws.lambda b "B"\n}\naws.rds target "接続先"\na -> target kind=traffic protocol=tcp port=5432\nb -> target kind=traffic protocol=tcp port=5432\n}',
+      );
+    await page.getByRole('button', { name: '解析して反映' }).click();
+    await page.getByRole('button', { name: '送信元を折りたたむ', exact: true }).click();
+    const aggregated = page.getByRole('button', {
+      name: '送信元 → 接続先: 通信 · tcp · 5432',
+      exact: true,
+    });
+    await aggregated.click();
+    await expect(page.locator('.detail-panel')).toContainText('元の接続 2');
+    await expect(page.locator('.detail-panel')).toContainText('a → target');
+    await expect(page.locator('.detail-panel')).toContainText('b → target');
+  });
+  test(`主要43サービスのアイコンが読み込める (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    const requests: string[] = [];
+    page.on('request', (request) => {
+      if (/^https?:/.test(request.url())) requests.push(request.url());
+    });
+    if (offline) await context.setOffline(true);
+    await page.goto(
+      offline ? 'file://' + resolve('artifacts/service-catalog.html') : 'http://127.0.0.1:5188',
+    );
+    if (!offline)
+      await page.locator('input[type=file]').setInputFiles('examples/service-catalog.infra');
+    await expect(page.locator('.canvas-footer')).toContainText('43 要素');
+    const images = page.locator('.service-icon');
+    await expect(images).toHaveCount(43);
+    await expect
+      .poll(() =>
+        images.evaluateAll((images) =>
+          images.every((element) => {
+            const image = element as HTMLImageElement;
+            return image.complete && image.naturalWidth > 0;
+          }),
+        ),
+      )
+      .toBe(true);
+    await expect(page.locator('.fallback-icon')).toHaveCount(0);
+    if (offline) expect(requests).toEqual([]);
+  });
+}
 for (const offline of [false, true]) {
   test(`SaaS の9アイコン・別名・未知の種別を表示する (${offline ? 'HTML' : '開発画面'})`, async ({
     page,

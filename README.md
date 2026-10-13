@@ -38,6 +38,9 @@ node dist/cli.js dsl artifacts/terraform-model.json --out artifacts/terraform.in
 
 `npm run cli -- ...` も利用できます。
 HTML は JavaScript・CSS・アイコンを同梱した単一ファイルで、直接開いてオフラインで操作できます。
+横ホイールと Shift＋縦ホイールで左右にパンし、通常の縦ホイールでズームします。
+矢印のラベルはクリックまたは Tab でフォーカスでき、Enter／Space でも選択できます。
+選択した接続の種類・属性・接続元／先・集約前の接続を右パネルで確認できます。
 外部 CDN や開発サーバーへの接続は不要です。
 モデル JSON、DSL、HTML の構成情報は閲覧者に見えます。共有前に内容を確認してください。
 
@@ -78,6 +81,7 @@ npm 公開はしていません。ビルド後、ローカルのパス依存と�
 
 [DSL 仕様](docs/dsl.md) に LLM 向け生成指示、例、修正例を用意しています。
 [アイコンと一次資料](docs/assets.md) に取得元、版、利用条件を記録しています。
+[主要サービス43種の一覧](docs/service-icons.md) と [カタログ入力](examples/service-catalog.infra) も用意しています。
 [検証結果](docs/verification.md) にブラウザ操作、配置計測、制約を記録しています。
 
 ## 検証

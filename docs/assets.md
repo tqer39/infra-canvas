@@ -58,6 +58,11 @@ Fly.io のカードのアイコンと名前には、条件に従って公式ホ�
 ラベルからの推測ではなく型名で対応付けます。未知のサービスは従来どおり代替表示になります。
 9サービスを含む実例は [saas.infra](../examples/saas.infra) です。
 
+## 追加カタログ
+
+[主要サービスのアイコン一覧](service-icons.md) に追加34種と、日本のサービスを含む公開カタログをまとめています。
+既存9種と合わせ43種に対応しています。
+
 ## 仕様の確認先
 
 - [React Flow の Sub Flows](https://reactflow.dev/learn/layouting/sub-flows)：親 ID、相対座標、親を先に並べる規則。

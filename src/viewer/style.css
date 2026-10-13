@@ -356,6 +356,22 @@ textarea:focus-visible {
   display: flex;
   flex-shrink: 0;
 }
+.connection-label {
+  position: absolute;
+  pointer-events: all;
+  padding: 3px 5px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #4a5870;
+  font-size: 10px;
+  white-space: nowrap;
+}
+.connection-label:hover,
+.connection-label[aria-pressed='true'] {
+  border-color: #24877f;
+  background: #edf8f5;
+}
 .service-name-link {
   color: inherit;
   text-decoration: none;

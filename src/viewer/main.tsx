@@ -10,6 +10,7 @@ import {
   Position,
   MarkerType,
   BaseEdge,
+  EdgeLabelRenderer,
   getSmoothStepPath,
   applyNodeChanges,
   useReactFlow,
@@ -143,20 +144,36 @@ function RoutedConnection(props: EdgeProps) {
   const path = route?.points.length
     ? route.points.map((point, index) => `${index ? 'L' : 'M'} ${point.x} ${point.y}`).join(' ')
     : fallback[0];
+  const select = props.data?.onSelect as ((id: string) => void) | undefined;
   return (
-    <BaseEdge
-      id={props.id}
-      path={path}
-      markerEnd={props.markerEnd}
-      markerStart={props.markerStart}
-      style={props.style}
-      label={props.label}
-      labelX={route?.label?.x ?? fallback[1]}
-      labelY={route?.label?.y ?? fallback[2]}
-      labelStyle={props.labelStyle}
-      labelBgStyle={props.labelBgStyle}
-      labelBgPadding={props.labelBgPadding}
-    />
+    <>
+      <BaseEdge
+        id={props.id}
+        path={path}
+        markerEnd={props.markerEnd}
+        markerStart={props.markerStart}
+        style={props.style}
+      />
+      <EdgeLabelRenderer>
+        <button
+          className="connection-label nodrag nopan"
+          style={{
+            transform: `translate(-50%, -50%) translate(${route?.label?.x ?? fallback[1]}px, ${route?.label?.y ?? fallback[2]}px)`,
+            opacity: props.style?.opacity,
+            zIndex: props.selected ? 11 : 2,
+          }}
+          aria-label={String(props.data?.accessibleLabel ?? props.label)}
+          aria-pressed={props.selected}
+          onFocus={() => select?.(props.id)}
+          onClick={(event) => {
+            event.stopPropagation();
+            select?.(props.id);
+          }}
+        >
+          {props.label}
+        </button>
+      </EdgeLabelRenderer>
+    </>
   );
 }
 const edgeTypes = { routed: RoutedConnection };
@@ -172,6 +189,7 @@ function App() {
   const [expanded, setExpanded] = useState<string[]>([]);
   const [scope, setScope] = useState<string>();
   const [selected, setSelected] = useState<string>();
+  const [selectedEdge, setSelectedEdge] = useState<string>();
   const [hovered, setHovered] = useState<string>();
   const [query, setQuery] = useState('');
   const [nodes, setNodes] = useState<ResourceNode[]>([]);
@@ -202,6 +220,34 @@ function App() {
     [],
   );
   const flow = useReactFlow<ResourceNode>();
+  const canvas = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = canvas.current;
+    if (!element) return;
+    const onWheel = (event: WheelEvent) => {
+      if (
+        event.ctrlKey ||
+        event.metaKey ||
+        !(event.target instanceof Element) ||
+        !event.target.closest('.react-flow')
+      )
+        return;
+      const horizontal = event.deltaX || (event.shiftKey ? event.deltaY : 0);
+      if (!horizontal) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const pixels =
+        horizontal * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? element.clientWidth : 1);
+      const viewport = flow.getViewport();
+      void flow.setViewport({ ...viewport, x: viewport.x - pixels });
+    };
+    element.addEventListener('wheel', onWheel, { capture: true, passive: false });
+    return () => element.removeEventListener('wheel', onWheel, { capture: true });
+  }, [flow]);
+  const selectConnection = useCallback((id: string) => {
+    setSelected(undefined);
+    setSelectedEdge(id);
+  }, []);
   const upload = useRef<HTMLInputElement>(null);
   const graphRef = useRef<DisplayGraph | undefined>(undefined);
   graphRef.current = graph;
@@ -360,9 +406,17 @@ function App() {
     return () => cancelAnimationFrame(frame);
   }, [graph, flow]);
   const activeId = selected ?? hovered;
+  const selectedConnection = graph?.connections.find(
+    (edge) => edge.id === selectedEdge || edge.originalIds.includes(selectedEdge ?? ''),
+  );
   const focus = activeId ? (graph?.representative[activeId] ?? activeId) : undefined;
   const related = useMemo(() => {
     const ids = new Set<string>();
+    if (selectedConnection) {
+      ids.add(selectedConnection.source);
+      ids.add(selectedConnection.target);
+      return ids;
+    }
     if (focus) {
       ids.add(focus);
       graph?.connections.forEach((edge) => {
@@ -373,7 +427,7 @@ function App() {
       });
     }
     return ids;
-  }, [focus, graph]);
+  }, [focus, graph, selectedConnection]);
   const renderedNodes = useMemo(
     () =>
       nodes.map((node) => ({
@@ -383,26 +437,37 @@ function App() {
         data: {
           ...node.data,
           related: related.has(node.id),
-          muted: Boolean(focus) && !related.has(node.id) && !isBoundary(node.data.resource),
+          muted:
+            Boolean(focus || selectedConnection) &&
+            !related.has(node.id) &&
+            !isBoundary(node.data.resource),
         },
       })),
-    [nodes, selected, related, focus, graph],
+    [nodes, selected, related, focus, graph, selectedConnection],
   );
   const renderedEdges = useMemo(
     () =>
       edges.map((edge) => {
-        const match = edge.source === focus || edge.target === focus;
+        const match = selectedConnection
+          ? edge.id === selectedConnection.id
+          : edge.source === focus || edge.target === focus;
         return {
           ...edge,
+          selected: edge.id === selectedConnection?.id,
+          data: {
+            ...edge.data,
+            onSelect: selectConnection,
+            accessibleLabel: `${graph?.resources.find((resource) => resource.id === edge.source)?.label ?? edge.source} → ${graph?.resources.find((resource) => resource.id === edge.target)?.label ?? edge.target}: ${edge.label}`,
+          },
           zIndex: match ? 10 : 1,
           style: {
             ...edge.style,
             strokeWidth: match ? 3.5 : 1.7,
-            opacity: focus && !match ? 0.14 : 1,
+            opacity: (focus || selectedConnection) && !match ? 0.14 : 1,
           },
         };
       }),
-    [edges, focus],
+    [edges, focus, selectedConnection, selectConnection, graph],
   );
   const selectedResource = diagram?.resources.find((resource) => resource.id === selected);
   const selectedRelations = [
@@ -421,6 +486,7 @@ function App() {
         .slice(0, 40) ?? [])
     : [];
   const focusResource = (id: string) => {
+    setSelectedEdge(undefined);
     setSelected(id);
     setQuery('');
     pendingFocus.current = { id, previousGraph: graph };
@@ -460,6 +526,7 @@ function App() {
     setExpanded([]);
     setScope(undefined);
     setSelected(undefined);
+    setSelectedEdge(undefined);
     setDiagnostics(next.diagnostics.map((item) => `${item.line}:${item.column} ${item.message}`));
   };
   const apply = () => {
@@ -536,7 +603,7 @@ function App() {
             <p className="editor-hint">構文エラーがある場合は、現在の図を保持します。</p>
           </aside>
         )}
-        <div className="canvas-area">
+        <div className="canvas-area" ref={canvas}>
           <div className="canvas-toolbar">
             <div className="view-tabs" aria-label="表示の切り替え">
               {Object.entries(viewLabels).map(([id, label]) => (
@@ -592,8 +659,15 @@ function App() {
             edgeTypes={edgeTypes}
             onNodeMouseEnter={(_, node) => setHovered(node.id)}
             onNodeMouseLeave={() => setHovered(undefined)}
-            onNodeClick={(_, node) => setSelected(node.id)}
-            onPaneClick={() => setSelected(undefined)}
+            onNodeClick={(_, node) => {
+              setSelectedEdge(undefined);
+              setSelected(node.id);
+            }}
+            onEdgeClick={(_, edge) => selectConnection(edge.id)}
+            onPaneClick={() => {
+              setSelected(undefined);
+              setSelectedEdge(undefined);
+            }}
             minZoom={0.05}
             maxZoom={2.5}
             nodesDraggable={false}
@@ -632,7 +706,52 @@ function App() {
           </div>
         </div>
         <aside className="detail-panel">
-          {selectedResource ? (
+          {selectedConnection ? (
+            <>
+              <div className="detail-type">接続 · {kindLabels[selectedConnection.kind]}</div>
+              <h2>
+                {String(selectedConnection.attributes.label ?? kindLabels[selectedConnection.kind])}
+              </h2>
+              <h3>接続元 → 接続先</h3>
+              <div className="relations">
+                {[selectedConnection.source, selectedConnection.target].map((id, index) => (
+                  <button key={`${index}-${id}`} onClick={() => focusResource(id)}>
+                    <span className="relation-kind">{index === 0 ? '接続元' : '接続先'}</span>
+                    <strong>
+                      {graph?.resources.find((resource) => resource.id === id)?.label ?? id}
+                    </strong>
+                  </button>
+                ))}
+              </div>
+              <h3>属性</h3>
+              <dl>
+                {Object.entries(selectedConnection.attributes).map(([key, value]) => (
+                  <div key={key}>
+                    <dt>{key}</dt>
+                    <dd>{Array.isArray(value) ? value.join(', ') : String(value)}</dd>
+                  </div>
+                ))}
+              </dl>
+              <h3>
+                元の接続 <span>{selectedConnection.originalIds.length}</span>
+              </h3>
+              <dl>
+                {selectedConnection.originalIds.map((id) => {
+                  const original = diagram?.connections.find((edge) => edge.id === id);
+                  return (
+                    <div key={id}>
+                      <dt>{id}</dt>
+                      <dd>
+                        {original
+                          ? `${original.source} → ${original.target}`
+                          : `${selectedConnection.source} → ${selectedConnection.target}`}
+                      </dd>
+                    </div>
+                  );
+                })}
+              </dl>
+            </>
+          ) : selectedResource ? (
             <>
               <div className="detail-type">{selectedResource.type}</div>
               <h2>{selectedResource.label}</h2>
