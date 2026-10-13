@@ -445,7 +445,7 @@ textarea:focus-visible {
   flex-shrink: 0;
 }
 .react-flow__edgelabel-renderer {
-  z-index: 12;
+  z-index: var(--edge-label-z-index, 12);
 }
 .connection-label {
   position: absolute;

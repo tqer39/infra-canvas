@@ -128,3 +128,26 @@ test('AWS境界アイコンは明示的な公開区分と所属を使い、他�
   ])
     assert.equal(icon(id), 'subnet', id);
 });
+test('AWSのアカウントとリージョンに公式境界アイコンを使い、他クラウドへ流用しない', () => {
+  const d = parseDSL(`diagram "regions" {
+account aws "AWS アカウント" {
+ region tokyo "東京" region="ap-northeast-1"
+ region planned "未確定リージョン"
+}
+region standalone "Virginia" region="us-east-1"
+project google "Google" {
+ region gcp "東京" region="asia-northeast1"
+}
+subscription azure "Azure" {
+ region azure_region "東京" region="japaneast"
+}
+region unknown "AWS 東京"
+region explicit_google "東京" region="ap-northeast-1" provider=google
+}`).diagram!;
+  const byId = new Map(d.resources.map((r) => [r.id, r]));
+  const icon = (id: string) => getResourceIconType(byId.get(id)!, byId);
+  assert.equal(icon('aws'), 'aws.account');
+  for (const id of ['tokyo', 'planned', 'standalone']) assert.equal(icon(id), 'aws.region');
+  for (const id of ['gcp', 'azure_region', 'unknown', 'explicit_google'])
+    assert.equal(icon(id), 'region');
+});

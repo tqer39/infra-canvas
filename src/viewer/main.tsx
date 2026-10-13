@@ -1,6 +1,14 @@
 import { resourceMetadata } from '../core/resource-metadata';
 import { resourceContent } from '../core/content';
-import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  StrictMode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   ReactFlow,
@@ -66,6 +74,7 @@ const kindColors: Record<string, string> = {
   deploy: '#8165b0',
   association: '#258d81',
 };
+const activeEdgeZ = 10;
 const viewLabels: Record<string, string> = {
   overview: '概要',
   service: 'サービス',
@@ -297,6 +306,7 @@ function App() {
   const [edges, setEdges] = useState<Edge[]>([]);
   const [graph, setGraph] = useState<DisplayGraph>();
   const [layoutTime, setLayoutTime] = useState(0);
+  const [labelLayer, setLabelLayer] = useState(activeEdgeZ + 2);
   const [busy, setBusy] = useState(false);
   const autoFitContext = useRef<{ diagram?: Diagram; view: string; scope?: string } | undefined>(
     undefined,
@@ -431,6 +441,8 @@ function App() {
           return count;
         };
         sorted.sort((a, b) => depth(a) - depth(b));
+        // 入れ子の深度が接続の z-index に加算されるため、ラベル層にも反映する。
+        setLabelLayer(activeEdgeZ + Math.max(0, ...sorted.map(depth)) + 2);
         setNodes(
           sorted.map((resource) => {
             const placement = placements.get(resource.id)!;
@@ -586,7 +598,7 @@ function App() {
             onSelect: selectConnection,
             accessibleLabel: `${graph?.resources.find((resource) => resource.id === edge.source)?.label ?? edge.source} → ${graph?.resources.find((resource) => resource.id === edge.target)?.label ?? edge.target}: ${edge.label}`,
           },
-          zIndex: match ? 10 : 1,
+          zIndex: match ? activeEdgeZ : 1,
           style: {
             ...edge.style,
             strokeWidth: match ? 3.5 : 1.7,
@@ -730,7 +742,11 @@ function App() {
             <p className="editor-hint">構文エラーがある場合は、現在の図を保持します。</p>
           </aside>
         )}
-        <div className="canvas-area" ref={canvas}>
+        <div
+          className="canvas-area"
+          ref={canvas}
+          style={{ '--edge-label-z-index': labelLayer } as CSSProperties}
+        >
           <div className="canvas-toolbar">
             <div className="view-tabs" aria-label="表示の切り替え">
               {Object.entries(viewLabels).map(([id, label]) => (
@@ -841,6 +857,8 @@ function App() {
             maxZoom={2.5}
             nodesDraggable={false}
             nodesConnectable={false}
+            elevateNodesOnSelect={false}
+            elevateEdgesOnSelect={false}
           >
             <Background gap={24} size={1} color="#d9e1ea" />
             <Controls showInteractive={false} />

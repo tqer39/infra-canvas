@@ -1,4 +1,6 @@
 import aws_vpc from './aws-vpc.svg';
+import aws_account from './aws-account.svg';
+import aws_region from './aws-region.svg';
 import aws_public_subnet from './aws-public-subnet.svg';
 import aws_private_subnet from './aws-private-subnet.svg';
 import claude from './saas-claude.svg';
@@ -112,6 +114,8 @@ const icons: Record<string, string> = {
   'aws.organization-root': aws_organizations,
   'aws.organizational-unit': aws_organizational_unit,
   'aws.organization-account': aws_organization_account,
+  'aws.account': aws_account,
+  'aws.region': aws_region,
   'aws.organization-policy': aws_organizations,
   'aws.organization-policy-attachment': aws_organizations,
   'external.user': user,

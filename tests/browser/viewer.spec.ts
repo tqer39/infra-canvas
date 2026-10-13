@@ -67,6 +67,74 @@ test.beforeAll(() => {
   ]);
 });
 for (const offline of [false, true]) {
+  test(`IAM Role・境界の選択後も矢印ラベルが前面で操作でき、AWS境界アイコンを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    const node = (id: string) => page.locator(`.react-flow__node[data-id="${id}"]`);
+    for (const [id, name] of [
+      ['prod', 'AWS-Account'],
+      ['dev', 'AWS-Account'],
+      ['tokyo', 'Region'],
+    ]) {
+      const icon = node(id).locator('.service-icon');
+      await expect
+        .poll(() => icon.evaluate((e) => (e as HTMLImageElement).naturalWidth))
+        .toBeGreaterThan(0);
+      expect(
+        await icon.evaluate(async (e) => (await fetch((e as HTMLImageElement).src)).text()),
+      ).toContain(name + '_32');
+    }
+    await expect(node('tokyo').locator('.resource-label')).toContainText('東京');
+    await expect(node('tokyo').locator('.region-flag')).toHaveAttribute('width', '20');
+    const label = page.getByRole('button', {
+      name: 'デプロイ IAM Role → ECS API: サービス更新',
+      exact: true,
+    });
+    const inFront = () =>
+      label.evaluate((element) => {
+        const r = element.getBoundingClientRect();
+        const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+        return top === element || (top !== null && element.contains(top));
+      });
+    for (const shape of ['orthogonal', 'bezier']) {
+      await page.getByRole('combobox', { name: '矢印の形状' }).selectOption(shape);
+      for (const id of ['deploy_role', 'prod', 'tokyo']) {
+        await node(id).locator('.resource-label').click();
+        await expect(page.locator('.detail-panel > h2')).toHaveText(
+          id === 'deploy_role' ? 'デプロイ IAM Role' : id === 'prod' ? '本番アカウント' : '東京',
+        );
+        await expect.poll(inFront).toBe(true);
+        await label.click();
+        await expect(label).toHaveAttribute('aria-pressed', 'true');
+        await expect.poll(inFront).toBe(true);
+        await page.getByRole('button', { name: '選択を解除', exact: true }).click();
+        await label.focus();
+        await expect(label).toHaveAttribute('aria-pressed', 'true');
+        await expect.poll(inFront).toBe(true);
+      }
+    }
+    // 固定の z-index に戻すと、深い入れ子で再発することも検証する。
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    const groups = Array.from({ length: 20 }, (_, i) => `group nested_${i} "階層${i}" {`).join(
+      '\n',
+    );
+    await page
+      .getByRole('textbox', { name: 'DSL 入力' })
+      .fill(
+        `diagram "深い入れ子" {\n${groups}\naws.iam deploy_role "デプロイ IAM Role"\n${'}\n'.repeat(20)}aws.ecs api "ECS API"\ndeploy_role -> api kind=deploy label="サービス更新"\n}`,
+      );
+    await page.getByRole('button', { name: '解析して反映', exact: true }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('22 要素');
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    await node('deploy_role').locator('.resource-label').click();
+    await expect.poll(inFront).toBe(true);
+    await label.click();
+    await expect(label).toHaveAttribute('aria-pressed', 'true');
+  });
   test(`Datadog・New Relicへの送信種類と公式アイコンを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
     context,
@@ -812,7 +880,7 @@ for (const offline of [false, true]) {
     if (!offline)
       await page.locator('input[type=file]').setInputFiles('examples/ecs-beanstalk.infra');
     await expect(page.locator('.document-title')).toHaveText('ECS と Elastic Beanstalk の詳細構成');
-    await expect(page.locator('.service-icon')).toHaveCount(15);
+    await expect(page.locator('.service-icon')).toHaveCount(17);
     await expect
       .poll(() =>
         page
@@ -883,7 +951,7 @@ for (const offline of [false, true]) {
     if (!offline)
       await page.locator('input[type=file]').setInputFiles('examples/transit-vpn.infra');
     await expect(page.locator('.canvas-footer')).toContainText('28 要素');
-    await expect(page.locator('.service-icon')).toHaveCount(18);
+    await expect(page.locator('.service-icon')).toHaveCount(24);
     await expect(
       page.locator('.react-flow__node[data-id="prod_subnet"] .fallback-icon'),
     ).toHaveCount(1);

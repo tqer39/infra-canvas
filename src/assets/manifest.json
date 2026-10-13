@@ -1771,5 +1771,27 @@
     "brandColor": "#1CE783",
     "colorSource": "https://github.com/simple-icons/simple-icons/blob/16.35.0/data/simple-icons.json",
     "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
+  },
+  {
+    "type": "aws.account",
+    "file": "aws-account.svg",
+    "archivePath": "Architecture-Group-Icons_07312026/AWS-Account_32.svg",
+    "sha256": "f39e6364a75803321948bf0fa87edfc7a1413996b3a38eb64c9ca9f0e81a2b38",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
+  },
+  {
+    "type": "aws.region",
+    "file": "aws-region.svg",
+    "archivePath": "Architecture-Group-Icons_07312026/Region_32.svg",
+    "sha256": "848203d40c55e213c84c1b8a3e14c2fa92aaa793b31a5c17a5fd1737ef58b8ca",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
   }
 ]
