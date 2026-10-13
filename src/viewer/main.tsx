@@ -27,7 +27,7 @@ import { serializeDSL } from '../core/serialize';
 import { buildDisplayGraph } from '../core/display';
 import { layoutGraph } from '../core/layout';
 import { isBoundary, type Diagram, type Resource, type DisplayGraph } from '../core/model';
-import { getIcon } from '../assets/icons';
+import { getIcon, getIconHomepage } from '../assets/icons';
 import defaultSource from '../../examples/aws.infra?raw';
 
 declare global {
@@ -68,6 +68,7 @@ function ResourceCard({ data }: NodeProps<ResourceNode>) {
   const { resource, collapsed, onToggle, related, muted } = data;
   const boundary = isBoundary(resource);
   const icon = getIcon(resource.type);
+  const homepage = getIconHomepage(resource.type);
   return (
     <div
       className={`resource-card ${boundary && !collapsed ? 'boundary-card' : ''} ${related ? 'related' : ''} ${muted ? 'muted' : ''}`}
@@ -76,7 +77,20 @@ function ResourceCard({ data }: NodeProps<ResourceNode>) {
       <Handle type="source" position={Position.Right} />
       <div className="resource-heading">
         {icon ? (
-          <img className="service-icon" src={icon} alt="" />
+          homepage ? (
+            <a
+              className="service-icon-link nodrag nopan"
+              href={homepage}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Fly.io 公式サイトを開く"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <img className="service-icon" src={icon} alt="" />
+            </a>
+          ) : (
+            <img className="service-icon" src={icon} alt="" />
+          )
         ) : (
           <span className={`fallback-icon ${boundary ? 'boundary-icon' : ''}`} aria-hidden="true">
             {boundary ? '▦' : '◇'}
@@ -84,7 +98,19 @@ function ResourceCard({ data }: NodeProps<ResourceNode>) {
         )}
         <div className="resource-text">
           <span className="resource-type">{resource.type}</span>
-          <strong title={resource.label}>{resource.label}</strong>
+          {homepage ? (
+            <a
+              className="service-name-link nodrag nopan"
+              href={homepage}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <strong title={resource.label}>{resource.label}</strong>
+            </a>
+          ) : (
+            <strong title={resource.label}>{resource.label}</strong>
+          )}
         </div>
         {boundary && (
           <button
@@ -153,6 +179,10 @@ function App() {
   const [graph, setGraph] = useState<DisplayGraph>();
   const [layoutTime, setLayoutTime] = useState(0);
   const [busy, setBusy] = useState(false);
+  const autoFitContext = useRef<{ diagram?: Diagram; view: string; scope?: string } | undefined>(
+    undefined,
+  );
+  const pendingFocus = useRef<{ id: string; previousGraph?: DisplayGraph } | undefined>(undefined);
   const measurementFrame = useRef<number | undefined>(undefined);
   const pendingMeasurements = useRef<NodeChange<ResourceNode>[]>([]);
   const onNodesChange = useCallback((changes: NodeChange<ResourceNode>[]) => {
@@ -307,12 +337,27 @@ function App() {
     };
   }, [visibleDiagram, view, collapsed, expanded, toggle]);
   useEffect(() => {
-    if (nodes.length) {
-      const frame = requestAnimationFrame(() => {
-        void flow.fitView({ padding: 0.14, duration: 250 });
-      });
-      return () => cancelAnimationFrame(frame);
+    if (!graph || !nodes.length) return;
+    const previous = autoFitContext.current;
+    if (
+      previous &&
+      previous.diagram === diagram &&
+      previous.view === view &&
+      previous.scope === scope
+    )
+      return;
+    // 図・表示目的・ドリルダウンを変えたときだけ全体表示する。
+    // 境界の再配置では、ユーザーが操作したパンとズームを維持する。
+    const context = { diagram, view, scope };
+    if (pendingFocus.current) {
+      autoFitContext.current = context;
+      return;
     }
+    const frame = requestAnimationFrame(() => {
+      autoFitContext.current = context;
+      void flow.fitView({ padding: 0.14, duration: 250 });
+    });
+    return () => cancelAnimationFrame(frame);
   }, [graph, flow]);
   const activeId = selected ?? hovered;
   const focus = activeId ? (graph?.representative[activeId] ?? activeId) : undefined;
@@ -375,7 +420,6 @@ function App() {
         )
         .slice(0, 40) ?? [])
     : [];
-  const pendingFocus = useRef<{ id: string; previousGraph?: DisplayGraph } | undefined>(undefined);
   const focusResource = (id: string) => {
     setSelected(id);
     setQuery('');
@@ -554,7 +598,6 @@ function App() {
             maxZoom={2.5}
             nodesDraggable={false}
             nodesConnectable={false}
-            fitView
           >
             <Background gap={24} size={1} color="#d9e1ea" />
             <Controls showInteractive={false} />

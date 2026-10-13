@@ -67,13 +67,14 @@ npm 公開はしていません。ビルド後、ローカルのパス依存と�
 
 ## サンプルと仕様
 
-| 入力                                          | 内容                                                                 |
-| --------------------------------------------- | -------------------------------------------------------------------- |
-| [aws.infra](examples/aws.infra)               | AWS 2 アカウント、2 AZ、ALB・ECS・RDS、重複 SG、GitHub Actions・OIDC |
-| [gcp-azure.infra](examples/gcp-azure.infra)   | Google Cloud と Azure の小規模構成                                   |
-| [multicloud.infra](examples/multicloud.infra) | 複数クラウドと外部サービス                                           |
-| [large.infra](examples/large.infra)           | 300 サービスと18境界                                                 |
-| [terraform](examples/terraform)               | module、count、for_each、複数 provider、未確定値を含む合成入力       |
+| 入力                                          | 内容                                                                           |
+| --------------------------------------------- | ------------------------------------------------------------------------------ |
+| [aws.infra](examples/aws.infra)               | AWS 2 アカウント、2 AZ、ALB・ECS・RDS、重複 SG、GitHub Actions・OIDC           |
+| [gcp-azure.infra](examples/gcp-azure.infra)   | Google Cloud と Azure の小規模構成                                             |
+| [multicloud.infra](examples/multicloud.infra) | 複数クラウドと外部サービス                                                     |
+| [saas.infra](examples/saas.infra)             | GitHub・1Password・Linear・GitLab・Neon・Fly.io・Resend・Elasticsearch・Kibana |
+| [large.infra](examples/large.infra)           | 300 サービスと18境界                                                           |
+| [terraform](examples/terraform)               | module、count、for_each、複数 provider、未確定値を含む合成入力                 |
 
 [DSL 仕様](docs/dsl.md) に LLM 向け生成指示、例、修正例を用意しています。
 [アイコンと一次資料](docs/assets.md) に取得元、版、利用条件を記録しています。
@@ -101,7 +102,7 @@ CI は同じ型検査・lint・整形チェック・回帰テスト・ビルド�
 ## 初期版の範囲と制約
 
 AWS・Google Cloud・Azure・GitHub・外部サービスを DSL で記述できます。
-代表サービスは公式アイコン、未知の種別は種別名を含む代替表示になります。
+代表クラウドサービスは公式アイコン、SaaS は公式配布素材または Simple Icons の固定版を表示します。未知の種別は種別名を含む代替表示になります。
 Terraform は AWS を優先します。plan/state の実体は保持しますが、アカウントを provider alias から推定しません。
 SG は重複可能な関連であり、許可規則だけで通信成立を判断しません。
 参照や `depends_on` は依存関係として描画します。

@@ -1,3 +1,12 @@
+import github from './saas-github.svg';
+import linear from './saas-linear.svg';
+import fly from './saas-fly.svg';
+import gitlab from './saas-gitlab.svg';
+import neon from './saas-neon.svg';
+import resend from './saas-resend.svg';
+import onepassword from './saas-1password.svg';
+import elasticsearch from './saas-elasticsearch.svg';
+import kibana from './saas-kibana.svg';
 import gcp_storage from './gcp-storage.svg';
 import aws_alb from './aws-alb.svg';
 import aws_ecs from './aws-ecs.svg';
@@ -14,6 +23,20 @@ import azure_app from './azure-app.svg';
 import azure_sql from './azure-sql.svg';
 import azure_storage from './azure-storage.svg';
 const icons: Record<string, string> = {
+  'saas.github': github,
+  'github.repository': github,
+  'github.actions': github,
+  'saas.linear': linear,
+  'saas.fly': fly,
+  'saas.gitlab': gitlab,
+  'gitlab.repository': gitlab,
+  'gitlab.ci': gitlab,
+  'saas.neon': neon,
+  'saas.resend': resend,
+  'saas.1password': onepassword,
+  'saas.elasticsearch': elasticsearch,
+  'saas.kibana': kibana,
+
   'gcp.storage': gcp_storage,
   'aws.alb': aws_alb,
   'aws.ecs': aws_ecs,
@@ -31,3 +54,6 @@ const icons: Record<string, string> = {
   'azure.storage': azure_storage,
 };
 export const getIcon = (type: string): string | undefined => icons[type];
+
+export const getIconHomepage = (type: string): string | undefined =>
+  type === 'saas.fly' ? 'https://fly.io' : undefined;

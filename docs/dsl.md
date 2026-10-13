@@ -48,6 +48,9 @@ ID は表示名や座標から独立しています。`view` ID も同じ名前�
 `subnet`、`group`、`module` です。子は一つの直接の親に所属します。
 
 サービス種別は `aws.ecs`、`gcp.compute`、`azure.vm`、`github.actions` などです。
+SaaS の対応型は `saas.github`、`saas.1password`、`saas.linear`、`saas.gitlab`、`saas.neon`、
+`saas.fly`、`saas.resend`、`saas.elasticsearch`、`saas.kibana` です。
+[アイコン対応表と利用条件](assets.md) と [サービス連携の例](../examples/saas.infra) を参照してください。
 未対応の種別も解析して代替表示で残します。アイコン対応表は拡張できます。
 
 `subnet ID public` / `private` / `unknown` の短縮形は `subnetType` 属性になります。

@@ -1,0 +1,23 @@
+diagram "SaaS・IaaS のサービス連携" version=1 {
+  saas.github github "GitHub"
+  saas.gitlab gitlab "GitLab"
+  saas.linear linear "Linear"
+  saas.1password secrets "1Password"
+  saas.fly app "Fly.io"
+  saas.neon database "Neon"
+  saas.resend mail "Resend"
+  saas.elasticsearch search "Elasticsearch"
+  saas.kibana dashboard "Kibana"
+
+  linear -> github kind=association label="Issue 連携"
+  linear -> gitlab kind=association label="Issue 連携"
+  secrets -> github kind=auth label="CI シークレット"
+  secrets -> gitlab kind=auth label="CI シークレット"
+  github -> app kind=deploy
+  gitlab -> app kind=deploy
+  app -> database kind=traffic protocol=postgres port=5432
+  app -> mail kind=traffic protocol=https port=443
+  app -> search kind=traffic protocol=https port=443
+  dashboard -> search kind=dependency
+  view service level=service
+}

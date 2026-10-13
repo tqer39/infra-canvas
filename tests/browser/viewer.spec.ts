@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 test.beforeAll(() => {
@@ -14,6 +14,13 @@ test.beforeAll(() => {
   ]);
   execFileSync(process.execPath, [
     'dist/cli.js',
+    'html',
+    'examples/saas.infra',
+    '--out',
+    'artifacts/saas.html',
+  ]);
+  execFileSync(process.execPath, [
+    'dist/cli.js',
     'import',
     'examples/terraform',
     '--json',
@@ -24,6 +31,107 @@ test.beforeAll(() => {
     'artifacts/terraform.infra',
   ]);
 });
+for (const offline of [false, true]) {
+  test(`SaaS の9アイコン・別名・未知の種別を表示する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    const requests: string[] = [];
+    page.on('request', (request) => {
+      if (/^https?:/.test(request.url())) requests.push(request.url());
+    });
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/saas.html') : 'http://127.0.0.1:5188');
+    if (!offline) await page.locator('input[type=file]').setInputFiles('examples/saas.infra');
+    await expect(page.locator('.canvas-footer')).toContainText('9 要素');
+    const icons = page.locator('.react-flow__node .service-icon');
+    await expect(icons).toHaveCount(9);
+    await expect
+      .poll(() =>
+        icons.evaluateAll((images) =>
+          images.every((element) => {
+            const image = element as HTMLImageElement;
+            return image.complete && image.naturalWidth > 0 && image.naturalHeight > 0;
+          }),
+        ),
+      )
+      .toBe(true);
+    await expect(page.locator('.react-flow__node[data-id="app"] a').first()).toHaveAttribute(
+      'href',
+      'https://fly.io',
+    );
+    if (offline) {
+      expect(
+        await icons.evaluateAll((images) =>
+          images.every((image) => image.getAttribute('src')?.startsWith('data:image/svg+xml')),
+        ),
+      ).toBe(true);
+      expect(requests).toEqual([]);
+    }
+    await page.getByRole('button', { name: 'Fit View' }).click();
+    await page.screenshot({ path: `artifacts/saas-${offline ? 'offline' : 'dev'}.png` });
+    await page.getByRole('button', { name: 'DSL を編集' }).click();
+    await page
+      .getByRole('textbox', { name: 'DSL 入力' })
+      .fill(
+        readFileSync('examples/saas.infra', 'utf8').replace(
+          /}\s*$/,
+          'github.actions actions "GitHub Actions"\ngitlab.ci ci "GitLab CI"\nsaas.unknown unknown "未対応サービス"\n}',
+        ),
+      );
+    await page.getByRole('button', { name: '解析して反映' }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('12 要素');
+    await expect(icons).toHaveCount(11);
+    await expect(page.locator('.react-flow__node[data-id="unknown"] .fallback-icon')).toHaveCount(
+      1,
+    );
+    await expect(page.locator('.react-flow__node[data-id="unknown"] .resource-type')).toHaveText(
+      'saas.unknown',
+    );
+  });
+}
+for (const offline of [false, true]) {
+  test(`境界の展開と折りたたみでパンとズームを維持する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    await page.getByRole('textbox', { name: 'リソース検索' }).fill('Public AZ-a');
+    await page.getByRole('button', { name: 'Public AZ-a subnet · public_a' }).click();
+    const viewport = async () =>
+      page.locator('.react-flow__viewport').evaluate(async (element) => {
+        // 検索移動・遅延 fitView のアニメーションが完了するまで観測する。
+        for (let frame = 0; frame < 35; frame++) await new Promise(requestAnimationFrame);
+        const matrix = new DOMMatrixReadOnly(getComputedStyle(element).transform);
+        return { x: matrix.e, y: matrix.f, zoom: matrix.a };
+      });
+    const searched = await viewport();
+    await page.getByRole('button', { name: 'Zoom Out' }).click();
+    const zoomed = await viewport();
+    expect(zoomed.zoom).toBeLessThan(searched.zoom);
+    await page.mouse.move(550, 400);
+    await page.mouse.down({ button: 'middle' });
+    await page.mouse.move(610, 450, { steps: 5 });
+    await page.mouse.up({ button: 'middle' });
+    const panned = await viewport();
+    expect(panned.x).not.toBe(zoomed.x);
+    expect(panned.y).not.toBe(zoomed.y);
+    await page.getByRole('button', { name: 'Public AZ-aを展開', exact: true }).click();
+    await expect(
+      page.getByRole('button', { name: 'Public AZ-aを折りたたむ', exact: true }),
+    ).toBeVisible();
+    expect(await viewport()).toEqual(panned);
+    await page.getByRole('button', { name: 'Public AZ-aを折りたたむ', exact: true }).click();
+    await expect(
+      page.getByRole('button', { name: 'Public AZ-aを展開', exact: true }),
+    ).toBeVisible();
+    expect(await viewport()).toEqual(panned);
+    await page.getByRole('button', { name: 'Fit View' }).click();
+    expect((await viewport()).zoom).toBeLessThan(panned.zoom);
+  });
+}
 test('表示切替・集約復元・検索・強調・ドリルダウン', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
