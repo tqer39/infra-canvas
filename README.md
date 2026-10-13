@@ -28,6 +28,9 @@ Terraform の生の JSON は CLI で取り込んでください。
 概要表示でもすべて展開でき、詳細へ移動した状態ではその範囲だけを操作します。パン・ズームは維持します。
 `region` 属性を持つ境界やサービスには、対応する国・地域の国旗を表示します（[対応範囲と出典](docs/regions.md)）。
 
+アカウントID・リージョン・AZ・AZ ID・CIDRなどの明示属性は、名前の下に表示します。
+展開・折りたたみの両方で確認でき、IDの先頭ゼロを保持します（[表示例](examples/identity.infra)）。
+
 ## CLI
 
 ```bash
@@ -82,6 +85,8 @@ npm 公開はしていません。ビルド後、ローカルのパス依存と�
 | [saas.infra](examples/saas.infra)             | GitHub・1Password・Linear・GitLab・Neon・Fly.io・Resend・Elasticsearch・Kibana |
 | [large.infra](examples/large.infra)           | 300 サービスと18境界                                                           |
 | [terraform](examples/terraform)               | module、count、for_each、複数 provider、未確定値を含む合成入力                 |
+
+[公開構成図5件の対応確認](docs/architecture-coverage.md) と [再記述サンプル](examples/reference) では、3クラウド公式・クラスメソッド・サーバーワークスの図を検証しています。
 
 [DSL 仕様](docs/dsl.md) に LLM 向け生成指示、例、修正例を用意しています。
 [アイコンと一次資料](docs/assets.md) に取得元、版、利用条件を記録しています。

@@ -747,3 +747,224 @@ resource "google_compute_vpn_tunnel" "main" {
     await rm(temporary, { recursive: true, force: true });
   }
 });
+
+const organizationFixture = () => ({
+  format_version: '1.0',
+  values: {
+    root_module: {
+      resources: [
+        {
+          address: 'aws_organizations_organization.main',
+          type: 'aws_organizations_organization',
+          values: {
+            id: 'o-main',
+            roots: [{ id: 'r-main' }],
+            accounts: [{ email: 'EMAIL_SENTINEL' }],
+          },
+        },
+        {
+          address: 'aws_organizations_organizational_unit.platform',
+          type: 'aws_organizations_organizational_unit',
+          values: { id: 'ou-platform', parent_id: 'r-main' },
+        },
+        {
+          address: 'aws_organizations_organizational_unit.prod',
+          type: 'aws_organizations_organizational_unit',
+          values: { id: 'ou-prod', parent_id: 'ou-platform' },
+        },
+        {
+          address: 'aws_organizations_account.prod',
+          type: 'aws_organizations_account',
+          values: { id: '123456789012', parent_id: 'ou-prod', email: 'EMAIL_SENTINEL' },
+        },
+        {
+          address: 'aws_organizations_policy.scp',
+          type: 'aws_organizations_policy',
+          values: { id: 'p-scp', type: 'SERVICE_CONTROL_POLICY', content: 'CONTENT_SENTINEL' },
+        },
+        {
+          address: 'aws_organizations_policy_attachment.prod',
+          type: 'aws_organizations_policy_attachment',
+          values: { policy_id: 'p-scp', target_id: 'ou-prod' },
+        },
+      ],
+    },
+  },
+});
+
+test('OrganizationsのRootと入れ子OU/accountの所属、ポリシー設定を保持し機密内容を除外する', () => {
+  const diagram = importTerraformJSON(organizationFixture());
+  const by = (address: string) => diagram.resources.find((r) => r.provenance?.address === address)!;
+  const org = by('aws_organizations_organization.main');
+  const root = diagram.resources.find((r) => r.type === 'aws.organization-root')!;
+  const ou = by('aws_organizations_organizational_unit.platform');
+  const prod = by('aws_organizations_organizational_unit.prod');
+  const account = by('aws_organizations_account.prod');
+  assert.equal(root.parentId, org.id);
+  assert.equal(ou.parentId, root.id);
+  assert.equal(prod.parentId, ou.id);
+  assert.equal(account.parentId, prod.id);
+  assert.equal(account.type, 'aws.organization-account');
+  assert.equal(
+    by('aws_organizations_policy.scp').attributes['meta.policyType'],
+    'SERVICE_CONTROL_POLICY',
+  );
+  assert.equal(diagram.connections.length, 2);
+  assert.ok(diagram.connections.every((e) => e.kind === 'association'));
+  assert.ok(!JSON.stringify(diagram).includes('SENTINEL'));
+});
+
+test('Organizationsの不明・機密・曖昧・循環した所属はRootやOUへ推測接続しない', () => {
+  const input = organizationFixture();
+  const resources = input.values.root_module.resources;
+  resources[1]!.values.parent_id = 'ou-prod';
+  const cycle = importTerraformJSON(input);
+  assert.ok(
+    cycle.resources
+      .filter((r) => r.type === 'aws.organizational-unit')
+      .every((r) => r.parentId === undefined),
+  );
+  assert.equal(
+    cycle.resources.find((r) => r.type === 'aws.organization-account')?.parentId,
+    undefined,
+  );
+  for (const mask of ['sensitive', 'unknown', 'absent', 'duplicate']) {
+    const input = organizationFixture();
+    const rs = input.values.root_module.resources;
+    if (mask === 'absent') delete rs[3]!.values.parent_id;
+    if (mask === 'sensitive') Object.assign(rs[3]!, { sensitive_values: { parent_id: true } });
+    if (mask === 'duplicate')
+      rs.push({ ...rs[2]!, address: 'aws_organizations_organizational_unit.duplicate' });
+    const diagram = importTerraformJSON(
+      mask === 'unknown'
+        ? {
+            format_version: '1.0',
+            planned_values: input.values,
+            resource_changes: [
+              { address: rs[3]!.address, change: { after_unknown: { parent_id: true } } },
+            ],
+          }
+        : input,
+    );
+    assert.equal(
+      diagram.resources.find((r) => r.type === 'aws.organization-account')?.parentId,
+      undefined,
+      mask,
+    );
+  }
+  const masked = organizationFixture();
+  Object.assign(masked.values.root_module.resources[0]!, { sensitive_values: { roots: true } });
+  assert.equal(
+    importTerraformJSON(masked).resources.filter((r) => r.type === 'aws.organization-root').length,
+    0,
+  );
+  const named = organizationFixture();
+  Object.assign(named.values.root_module.resources[2]!.values, { name: 'display-only-ou' });
+  Object.assign(named.values.root_module.resources[4]!.values, { name: 'display-only-policy' });
+  named.values.root_module.resources[5]!.values.target_id = 'display-only-ou';
+  named.values.root_module.resources[5]!.values.policy_id = 'display-only-policy';
+  assert.equal(importTerraformJSON(named).connections.length, 0);
+  const fresh = organizationFixture();
+  const unknownRoot = importTerraformJSON({
+    format_version: '1.0',
+    planned_values: fresh.values,
+    resource_changes: [
+      {
+        address: fresh.values.root_module.resources[0]!.address,
+        change: { after_unknown: { roots: true } },
+      },
+    ],
+  });
+  assert.equal(unknownRoot.resources.filter((r) => r.type === 'aws.organization-root').length, 0);
+});
+
+test('Organizationsの静的Root/OU/account/ポリシー直接参照を保持する', async () => {
+  const temporary = await mkdtemp(path.join(tmpdir(), 'infra-canvas-organizations-'));
+  try {
+    await writeFile(
+      path.join(temporary, 'main.tf'),
+      `
+resource "aws_organizations_organization" "main" {}
+resource "aws_organizations_organizational_unit" "prod" {
+ parent_id = aws_organizations_organization.main.roots[0].id
+}
+resource "aws_organizations_account" "prod" {
+ parent_id = aws_organizations_organizational_unit.prod.id
+ email = "EMAIL_SENTINEL"
+}
+resource "aws_organizations_policy" "scp" { type = "SERVICE_CONTROL_POLICY" }
+resource "aws_organizations_policy_attachment" "prod" {
+ policy_id = aws_organizations_policy.scp.id
+ target_id = aws_organizations_account.prod.id
+}
+`,
+    );
+    const diagram = await importTerraformRepository({ repository: temporary });
+    const by = (type: string) => diagram.resources.find((r) => r.type === type)!;
+    assert.equal(by('aws.organizational-unit').parentId, by('aws.organization-root').id);
+    assert.equal(by('aws.organization-account').parentId, by('aws.organizational-unit').id);
+    assert.ok(
+      diagram.connections.some(
+        (e) =>
+          e.source === by('aws.organization-policy-attachment').id &&
+          e.target === by('aws.organization-account').id &&
+          e.kind === 'association',
+      ),
+    );
+    assert.ok(!JSON.stringify(diagram).includes('EMAIL_SENTINEL'));
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});
+
+test('明示されたOrganizationsアカウントID・AZ IDだけを取り込み、機密・未確定値を表示しない', () => {
+  const resources = [
+    {
+      address: 'aws_organizations_account.known',
+      type: 'aws_organizations_account',
+      values: { id: '012345678901' },
+    },
+    {
+      address: 'aws_organizations_account.secret',
+      type: 'aws_organizations_account',
+      values: { id: '111111111111' },
+      sensitive_values: { id: true },
+    },
+    {
+      address: 'aws_organizations_account.pending',
+      type: 'aws_organizations_account',
+      values: { id: '222222222222' },
+    },
+    {
+      address: 'aws_subnet.known',
+      type: 'aws_subnet',
+      values: { availability_zone: 'ap-northeast-1a', availability_zone_id: 'apne1-az1' },
+    },
+    {
+      address: 'aws_subnet.secret',
+      type: 'aws_subnet',
+      values: { availability_zone_id: 'apne1-az2' },
+      sensitive_values: { availability_zone_id: true },
+    },
+    {
+      address: 'aws_subnet.pending',
+      type: 'aws_subnet',
+      values: { availability_zone_id: 'apne1-az3' },
+    },
+  ];
+  const d = importTerraformJSON({
+    format_version: '1.0',
+    planned_values: { root_module: { resources } },
+    resource_changes: [
+      { address: 'aws_organizations_account.pending', change: { after_unknown: { id: true } } },
+      { address: 'aws_subnet.pending', change: { after_unknown: { availability_zone_id: true } } },
+    ],
+  });
+  const attrs = (id: string) => d.resources.find((r) => r.provenance?.address === id)!.attributes;
+  assert.equal(attrs('aws_organizations_account.known').account, '012345678901');
+  assert.equal(attrs('aws_organizations_account.secret').account, undefined);
+  assert.equal(attrs('aws_organizations_account.pending').account, undefined);
+  assert.equal(attrs('aws_subnet.known').availability_zone_id, 'apne1-az1');
+  assert.equal(attrs('aws_subnet.secret').availability_zone_id, undefined);
+  assert.equal(attrs('aws_subnet.pending').availability_zone_id, undefined);
+});

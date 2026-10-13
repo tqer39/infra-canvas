@@ -20,7 +20,11 @@ Google の ZIP に独立した OSS ライセンスや版番号はありません
 同梱はこの構成図表示の用途に限定します。別用途への転用は提供元の条件を確認してください。
 
 `src/assets/icons.ts` の型名と資産の対応表は拡張できます。
-AWS ALB は Elastic Load Balancing アイコンです。未対応の種別は代替記号と種別名を表示します。
+AWS ALB は Elastic Load Balancing アイコンです。
+`vpc` はAWS公式のVPCグループアイコンを表示します。AWSの所属・明示provider・取り込み元が分かる
+`subnet` は `public`／`private` 指定に応じて公式Public／Private Subnetグループアイコンを表示します。
+公開区分が不明なSubnetと、Google Cloud・AzureのSubnetは汎用記号のままです。
+名前に「Public」「Private」が含まれるだけでは公開区分を推測しません。3資産も月次更新の対象です。未対応の種別は代替記号と種別名を表示します。
 
 `external.user`（利用者）は、人の頭と肩を表した独自 SVG を表示します。
 Infra Canvas の色に合わせて作成した素材で、外部ライブラリやブランド素材への依存はありません。
@@ -65,8 +69,8 @@ Fly.io のカードのアイコンと名前には、条件に従って公式ホ�
 
 ## 追加カタログ
 
-[主要サービスのアイコン一覧](service-icons.md) に追加34種と、日本のサービスを含む公開カタログをまとめています。
-既存9種と合わせ43種に対応しています。
+[主要サービスのアイコン一覧](service-icons.md) に追加49種と、日本のサービスを含む公開カタログをまとめています。
+既存9種と合わせ58種に対応しています。
 
 ## 仕様の確認先
 
@@ -140,3 +144,9 @@ Cloud VPNとCloud Routerは公式ページが配布するLegacy console iconsの
 Core product iconsにこの2製品の固有アイコンがないため、legacy配布物を明示して同梱しています。
 HA/外部VPN/トンネルはCloud VPN、Router interface/BGP peerはCloud Routerアイコンを共有します。
 `cloudPack=gcp-legacy` をマニフェストに記録し、月次更新ではcoreとlegacyのZIPを別々に取得します。
+
+## Organizationsのアイコン
+
+組織・OU・Organizationsアカウントは公式AWSのService/Resource Iconsを使います。
+Root・ポリシー・適用設定はOrganizationsのサービスアイコンを共有し、型名で区別します。
+原本・出典・ハッシュをマニフェストに記録し、月次更新とオフラインHTMLの対象に含めます。

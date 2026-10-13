@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { getResourceIconType } from '../src/assets/resource-icons.js';
 import { parseDSL, validateDiagram } from '../src/core/index.js';
 
 test('同梱アイコンは記録したハッシュと一致し、外部資産や実行コードを含まない', () => {
@@ -26,7 +27,7 @@ test('同梱アイコンは記録したハッシュと一致し、外部資産�
   }
 });
 
-test('Simple Icons の37種はブランドカラーを適用し、原本の形状を保持する', () => {
+test('Simple Icons の52種はブランドカラーを適用し、原本の形状を保持する', () => {
   const manifest = JSON.parse(readFileSync('src/assets/manifest.json', 'utf8')) as {
     type: string;
     file: string;
@@ -35,7 +36,7 @@ test('Simple Icons の37種はブランドカラーを適用し、原本の形�
     originalSha256?: string;
   }[];
   const colored = manifest.filter((icon) => icon.provider === 'Simple Icons');
-  assert.equal(colored.length, 37);
+  assert.equal(colored.length, 52);
   for (const icon of colored) {
     assert.match(icon.brandColor ?? '', /^#[0-9A-F]{6}$/);
     const svg = readFileSync(`src/assets/${icon.file}`, 'utf8');
@@ -60,4 +61,70 @@ test('SaaS の実例は9サービスの有効な DSL で、すべて同梱アイ
   assert.equal(new Set(parsed.diagram.resources.map((resource) => resource.type)).size, 9);
   for (const resource of parsed.diagram.resources)
     assert.ok(manifest.some((entry) => entry.type === resource.type));
+});
+
+test('LLMカタログと全サービスカタログは有効で、同梱資産の型を漏れなく表示する', () => {
+  const manifest = JSON.parse(readFileSync('src/assets/manifest.json', 'utf8')) as {
+    type: string;
+  }[];
+  const catalogs = ['service-catalog', 'llm-catalog'].map((name) => {
+    const parsed = parseDSL(readFileSync(`examples/${name}.infra`, 'utf8'));
+    assert.ok(parsed.diagram, JSON.stringify(parsed.diagnostics));
+    assert.deepEqual(validateDiagram(parsed.diagram).diagnostics, []);
+    const types = parsed.diagram.resources.map((resource) => resource.type);
+    assert.equal(new Set(types).size, types.length);
+    for (const type of types)
+      assert.ok(
+        manifest.some((entry) => entry.type === type),
+        type,
+      );
+    return types;
+  });
+  assert.deepEqual(
+    [...catalogs[0]].sort(),
+    manifest
+      .filter((entry) => entry.type.startsWith('saas.'))
+      .map((entry) => entry.type)
+      .sort(),
+  );
+  assert.equal(catalogs[1].length, 17);
+  for (const type of catalogs[1]) assert.ok(catalogs[0].includes(type), type);
+});
+
+test('AWS境界アイコンは明示的な公開区分と所属を使い、他クラウドや未知の区分を推測しない', () => {
+  const parsed = parseDSL(`diagram "境界アイコン" {
+    vpc vpc "VPC" {
+      subnet public_net "名前には区分なし" public
+      subnet private_net "名前には区分なし" private
+      subnet unknown_net "Public と書いても未確定" unknown
+    }
+    project google "Google" {
+      network gcp "Network" {
+        subnet google_net "Private AWS という名前" private
+      }
+    }
+    subscription azure "Azure" {
+      subnet azure_net "Public" public
+    }
+    subnet orphan "Private" private
+    subnet imported "Public" provider="aws.secondary" subnetVisibility="public"
+    subnet unknown_imported "Private" provider="aws" subnetVisibility="unknown"
+    subnet explicit_google "Public" public provider="google"
+  }`);
+  assert.ok(parsed.diagram, JSON.stringify(parsed.diagnostics));
+  const resources = new Map(parsed.diagram.resources.map((resource) => [resource.id, resource]));
+  const icon = (id: string) => getResourceIconType(resources.get(id)!, resources);
+  assert.equal(icon('vpc'), 'aws.vpc');
+  assert.equal(icon('public_net'), 'aws.subnet-public');
+  assert.equal(icon('private_net'), 'aws.subnet-private');
+  assert.equal(icon('imported'), 'aws.subnet-public');
+  for (const id of [
+    'unknown_net',
+    'google_net',
+    'azure_net',
+    'orphan',
+    'unknown_imported',
+    'explicit_google',
+  ])
+    assert.equal(icon(id), 'subnet', id);
 });

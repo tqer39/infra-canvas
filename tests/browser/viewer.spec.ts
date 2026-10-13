@@ -8,6 +8,13 @@ test.beforeAll(() => {
   execFileSync(process.execPath, [
     'dist/cli.js',
     'html',
+    'examples/organizations.infra',
+    '--out',
+    'artifacts/organizations.html',
+  ]);
+  execFileSync(process.execPath, [
+    'dist/cli.js',
+    'html',
     'examples/aws.infra',
     '--out',
     'artifacts/aws.html',
@@ -60,6 +67,29 @@ for (const offline of [false, true]) {
     if (offline) await context.setOffline(true);
     await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
     await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    const boundaryIcon = (id: string) =>
+      page.locator(`.react-flow__node[data-id="${id}"] .service-icon`);
+    for (const [id, title] of [
+      ['main', 'Virtual-private-cloud-VPC'],
+      ['public_a', 'Public-subnet'],
+      ['private_a', 'Private-subnet'],
+    ]) {
+      const icon = boundaryIcon(id);
+      await expect(icon).toHaveCount(1);
+      await expect
+        .poll(() => icon.evaluate((element) => (element as HTMLImageElement).naturalWidth))
+        .toBeGreaterThan(0);
+      const svg = await icon.evaluate(
+        async (element) => await (await fetch((element as HTMLImageElement).src)).text(),
+      );
+      expect(svg).toContain(title + '_32');
+    }
+    await page.getByRole('button', { name: 'Public AZ-aを展開', exact: true }).click();
+    await expect(
+      page.getByRole('button', { name: 'Public AZ-aを折りたたむ', exact: true }),
+    ).toBeVisible();
+    await expect(boundaryIcon('public_a')).toHaveCount(1);
+
     await page.getByRole('button', { name: 'DSL を編集' }).click();
     await page
       .getByRole('textbox', { name: 'DSL 入力' })
@@ -88,6 +118,27 @@ for (const offline of [false, true]) {
     await expect(
       page.getByRole('button', { name: '西アカウント → 東アカウント: 通信', exact: true }),
     ).toHaveCount(1);
+    // 一括で閉じた境界も、親から順に個別の＋で再展開できる。
+    await page.getByRole('button', { name: '西アカウントを展開', exact: true }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('4 要素');
+    await expect(page.getByRole('button', { name: '入れ子を展開', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: '入れ子を展開', exact: true }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('6 要素');
+    const controlGap = await page.locator('.react-flow__node[data-id="west"]').evaluate((node) => {
+      const label = node.querySelector('.resource-label')!.getBoundingClientRect();
+      const button = node.querySelector('.boundary-toggle')!.getBoundingClientRect();
+      return (button.left - label.right) / (button.width / 22);
+    });
+    expect(controlGap).toBeLessThanOrEqual(24);
+
+    await expect(
+      page.getByRole('button', { name: 'A → 東アカウント: 通信', exact: true }),
+    ).toHaveCount(1);
+    await page.getByRole('button', { name: '東アカウントを展開', exact: true }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('7 要素 ·  2 接続');
+    expect(await viewport()).toBe(before);
+    await fold.click();
+    await expect(page.locator('.canvas-footer')).toContainText('3 要素');
     await expand.click();
     await expect(page.locator('.canvas-footer')).toContainText('7 要素 ·  2 接続');
     await expect(expand).toBeDisabled();
@@ -195,6 +246,30 @@ for (const offline of [false, true]) {
     await page.getByRole('button', { name: '解析して反映' }).click();
     await expect(page.locator('.canvas-footer')).toContainText('6 要素');
     await expect(page.locator('.resource-card .region-flag')).toHaveCount(4);
+    const tokyoName = page.locator('.react-flow__node[data-id="tokyo"] .resource-label');
+    await expect(tokyoName.locator('strong')).toHaveText('東京');
+    await expect(tokyoName.locator('.region-flag')).toHaveAttribute('width', '20');
+    await expect(tokyoName.locator('.region-flag')).toHaveAttribute('height', '15');
+    const flagBesideName = (container: Element) => {
+      const flag = container.querySelector('.region-flag')!;
+      const label = container.querySelector('strong, span')!;
+      const f = flag.getBoundingClientRect(),
+        l = label.getBoundingClientRect();
+      return (
+        getComputedStyle(flag).width === '20px' &&
+        getComputedStyle(flag).height === '15px' &&
+        f.right <= l.left &&
+        l.left - f.right < f.width &&
+        f.top < l.bottom &&
+        l.top < f.bottom &&
+        label.scrollWidth <= label.clientWidth
+      );
+    };
+    await expect.poll(() => tokyoName.evaluate(flagBesideName)).toBe(true);
+    await page.getByRole('button', { name: '東京を折りたたむ', exact: true }).click();
+    await expect(tokyoName.locator('strong')).toHaveText('東京');
+    await expect.poll(() => tokyoName.evaluate(flagBesideName)).toBe(true);
+    await page.getByRole('button', { name: '東京を展開', exact: true }).click();
     await expect(
       page.locator('.react-flow__node[data-id="virginia"] .region-flag'),
     ).toHaveAttribute('alt', 'アメリカ合衆国の国旗');
@@ -232,6 +307,10 @@ for (const offline of [false, true]) {
       'title',
       '日本 · asia-northeast1',
     );
+    await expect(page.locator('.detail-panel h2')).toHaveText('Google Cloud 東京');
+    await expect
+      .poll(() => page.locator('.detail-panel h2 .resource-label').evaluate(flagBesideName))
+      .toBe(true);
     await clear.click();
     await page.getByRole('button', { name: 'DSL を編集' }).click();
     await page.screenshot({ path: `artifacts/regions-${offline ? 'offline' : 'dev'}.png` });
@@ -309,7 +388,7 @@ for (const offline of [false, true]) {
     await expect(page.locator('.detail-panel')).toContainText('a → target');
     await expect(page.locator('.detail-panel')).toContainText('b → target');
   });
-  test(`主要43サービスのアイコンとブランドカラーを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
+  test(`主要58サービスのアイコンとブランドカラーを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
     context,
   }) => {
@@ -323,9 +402,9 @@ for (const offline of [false, true]) {
     );
     if (!offline)
       await page.locator('input[type=file]').setInputFiles('examples/service-catalog.infra');
-    await expect(page.locator('.canvas-footer')).toContainText('43 要素');
+    await expect(page.locator('.canvas-footer')).toContainText('58 要素');
     const images = page.locator('.service-icon');
-    await expect(images).toHaveCount(43);
+    await expect(images).toHaveCount(58);
     await expect
       .poll(() =>
         images.evaluateAll((images) =>
@@ -374,7 +453,7 @@ for (const offline of [false, true]) {
         }),
       brandColors,
     );
-    expect(renderedColors).toHaveLength(37);
+    expect(renderedColors).toHaveLength(52);
     expect(renderedColors.filter((brand) => !brand.matches)).toEqual([]);
     if (offline) expect(requests).toEqual([]);
   });
@@ -642,7 +721,13 @@ for (const offline of [false, true]) {
     if (!offline)
       await page.locator('input[type=file]').setInputFiles('examples/transit-vpn.infra');
     await expect(page.locator('.canvas-footer')).toContainText('28 要素');
-    await expect(page.locator('.service-icon')).toHaveCount(16);
+    await expect(page.locator('.service-icon')).toHaveCount(18);
+    await expect(
+      page.locator('.react-flow__node[data-id="prod_subnet"] .fallback-icon'),
+    ).toHaveCount(1);
+    await expect(
+      page.locator('.react-flow__node[data-id="google_vpc"] .fallback-icon'),
+    ).toHaveCount(1);
     await expect
       .poll(() =>
         page
@@ -667,5 +752,213 @@ for (const offline of [false, true]) {
     await page.getByRole('button', { name: '選択を解除', exact: true }).click();
     await page.getByRole('button', { name: 'Fit View' }).click();
     await page.screenshot({ path: `artifacts/transit-vpn-${offline ? 'offline' : 'dev'}.png` });
+  });
+}
+
+for (const offline of [false, true]) {
+  test(`OrganizationsのOU/accountを展開・集約してポリシーを選択する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(
+      offline ? 'file://' + resolve('artifacts/organizations.html') : 'http://127.0.0.1:5188',
+    );
+    if (!offline)
+      await page.locator('input[type=file]').setInputFiles('examples/organizations.infra');
+    await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    await expect(page.locator('.react-flow__node[data-id="prod"]')).toBeVisible();
+    await expect(page.locator('.react-flow__node[data-id="workloads"]')).toBeVisible();
+    await page.locator('.react-flow__node[data-id="workloads"] .boundary-toggle').click();
+    await expect(page.locator('.react-flow__node[data-id="prod"]')).toHaveCount(0);
+    await page.getByRole('button', { name: 'すべて展開する', exact: true }).click();
+    await expect(page.locator('.react-flow__node[data-id="prod"]')).toBeVisible();
+    await page.getByRole('textbox', { name: 'リソース検索' }).fill('ワークロード向け SCP');
+    await page.locator('.search-results button').click();
+    await expect(page.locator('.detail-panel h2')).toHaveText('ワークロード向け SCP');
+    await expect(page.locator('.detail-panel')).toContainText('SERVICE_CONTROL_POLICY');
+    await expect
+      .poll(() =>
+        page
+          .locator('.service-icon')
+          .evaluateAll((images) =>
+            images.every(
+              (e) => (e as HTMLImageElement).complete && (e as HTMLImageElement).naturalWidth > 0,
+            ),
+          ),
+      )
+      .toBe(true);
+    await page.getByRole('button', { name: '選択を解除', exact: true }).click();
+    await page.getByRole('button', { name: 'Fit View' }).click();
+    await page.screenshot({ path: `artifacts/organizations-${offline ? 'offline' : 'dev'}.png` });
+  });
+}
+
+for (const reference of [
+  'aws-web',
+  'gcp-delivery',
+  'azure-private-link',
+  'classmethod-websocket',
+  'serverworks-inspection',
+]) {
+  test(`公開構成図 ${reference}: オフラインHTMLと折りたたみ後の導線`, async ({ page, context }) => {
+    const output = `artifacts/reference-${reference}.html`;
+    execFileSync(process.execPath, [
+      'dist/cli.js',
+      'html',
+      `examples/reference/${reference}.infra`,
+      '--out',
+      output,
+    ]);
+    await context.setOffline(true);
+    await page.goto('file://' + resolve(output));
+    await expect(page.locator('.canvas-footer')).toContainText('要素');
+    await expect(page.locator('.react-flow__node')).not.toHaveCount(0);
+    for (const content of await page.locator('.resource-content').all()) {
+      const bounds = await content.evaluate((el) => {
+        const c = el.getBoundingClientRect();
+        const p = el.closest('.resource-card')!.getBoundingClientRect();
+        return {
+          bottom: c.bottom,
+          parent: p.bottom,
+          width: el.clientWidth,
+          scroll: el.scrollWidth,
+        };
+      });
+      expect(bounds.bottom).toBeLessThanOrEqual(bounds.parent + 1);
+      expect(bounds.scroll).toBeLessThanOrEqual(bounds.width + 1);
+    }
+    if (reference === 'serverworks-inspection') {
+      await expect(page.getByRole('table', { name: 'Inspection TGW routes' })).toContainText(
+        '10.100.6.0/24',
+      );
+      await page.getByRole('table', { name: 'Inspection TGW routes' }).click();
+      await expect(page.locator('.detail-panel')).toContainText('Inspection TGW routes');
+    }
+    await page.screenshot({ path: `artifacts/reference-${reference}.png`, fullPage: true });
+    await page.getByRole('button', { name: 'すべて折りたたむ', exact: true }).click();
+    await page.getByRole('button', { name: 'Fit View' }).click();
+    const expand = page.locator('.boundary-toggle').filter({ hasText: '+' }).first();
+    await expect(expand).toBeVisible();
+    await expand.click();
+    await expect(page.locator('.boundary-toggle').filter({ hasText: '−' }).first()).toBeVisible();
+  });
+}
+
+test('表・リストの長文を折り返し、HTMLを実行せず表示する', async ({ page }) => {
+  await page.goto('http://127.0.0.1:5188');
+  await page.getByRole('button', { name: 'DSL を編集' }).click();
+  const long = '長い設定値の日本語と英数字abcdefghijklmnopqrstuvwxyzを表示します。'.repeat(5);
+  const literal = '<img src=x onerror=alert(1)>';
+  const source = `diagram "表とリスト" {\ncustom.node table "長文の表" display=table columns=["見出し", "Value"] rows=[${JSON.stringify(long)}, ${JSON.stringify(literal)}]\ncustom.node list "長文のリスト" display=list items=[${JSON.stringify(long)}, ${JSON.stringify(literal)}]\n}`;
+  await page.getByRole('textbox', { name: 'DSL 入力' }).fill(source);
+  await page.getByRole('button', { name: '解析して反映' }).click();
+  await page.getByRole('button', { name: 'DSL を編集' }).click();
+  await expect(page.locator('.canvas-footer')).toContainText('2 要素');
+  await expect(page.getByRole('table', { name: '長文の表' })).toContainText(literal);
+  await expect(page.locator('.resource-list')).toContainText(literal);
+  await expect(page.locator('.resource-content img')).toHaveCount(0);
+  for (const content of await page.locator('.resource-content').all()) {
+    expect(
+      await content.evaluate(
+        (el) =>
+          el.getBoundingClientRect().bottom <=
+          el.closest('.resource-card')!.getBoundingClientRect().bottom + 1,
+      ),
+    ).toBe(true);
+    expect(await content.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  }
+  await page.screenshot({ path: 'artifacts/reference-content.png' });
+});
+
+for (const offline of [false, true]) {
+  test(`アカウント・リージョン・AZを名前と並べ、展開・折りたたみでも識別情報を保持 (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    const output = 'artifacts/identity.html';
+    execFileSync(process.execPath, [
+      'dist/cli.js',
+      'html',
+      'examples/identity.infra',
+      '--out',
+      output,
+    ]);
+    if (offline) {
+      await context.setOffline(true);
+      await page.goto('file://' + resolve(output));
+    } else {
+      await page.goto('http://127.0.0.1:5188');
+      await page.locator('input[type=file]').setInputFiles('examples/identity.infra');
+    }
+    await expect(page.locator('.document-title')).toHaveText(
+      'アカウント・リージョン・AZの識別情報',
+    );
+    const meta = (id: string) =>
+      page.locator(`.react-flow__node[data-id="${id}"] .resource-metadata`);
+    await expect(meta('prod')).toContainText('012345678901');
+    await expect(meta('tokyo')).toContainText('ap-northeast-1');
+    await expect(page.locator('.react-flow__node[data-id="tokyo"] .resource-label')).toContainText(
+      '東京',
+    );
+    await expect(meta('private_a')).toContainText('ap-northeast-1a');
+    await expect(meta('private_a')).toContainText('apne1-az1');
+    await expect(meta('google')).toContainText('demo-project');
+    await expect(meta('azure')).toContainText('00000000-0000-0000-0000-000000000001');
+    for (const el of await page.locator('.resource-metadata').all()) {
+      expect(await el.evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
+      expect(
+        await el.evaluate(
+          (e) =>
+            e.getBoundingClientRect().bottom <
+            e.closest('.resource-card')!.getBoundingClientRect().bottom,
+        ),
+      ).toBe(true);
+    }
+    const parent = page.locator('.react-flow__node[data-id="tokyo"]');
+    const child = page.locator('.react-flow__node[data-id="main"]');
+    expect(await meta('tokyo').evaluate((e) => e.getBoundingClientRect().bottom)).toBeLessThan(
+      (await child.boundingBox())!.y,
+    );
+    await page.getByRole('textbox', { name: 'リソース検索' }).fill('アプリ Subnet');
+    await page.locator('.search-results button').first().click();
+    await page.getByRole('button', { name: 'アプリ Subnetを展開', exact: true }).click();
+    await expect(
+      page.getByRole('button', { name: 'アプリ Subnetを折りたたむ', exact: true }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'アプリ Subnetを折りたたむ', exact: true }).click();
+    await expect(
+      page.locator('.react-flow__node[data-id="private_a"] .collapsed-hint'),
+    ).toBeVisible();
+    await expect(meta('private_a')).toContainText('apne1-az1');
+    expect(
+      await meta('private_a').evaluate(
+        (e) =>
+          e.getBoundingClientRect().bottom <=
+          e.closest('.resource-card')!.querySelector('.collapsed-hint')!.getBoundingClientRect()
+            .top,
+      ),
+    ).toBe(true);
+    await page.getByRole('button', { name: 'アプリ Subnetを展開', exact: true }).click();
+    await expect(meta('private_a')).toContainText('ap-northeast-1a');
+    await page.getByRole('button', { name: '概要', exact: true }).click();
+    await page.getByRole('button', { name: 'すべて折りたたむ', exact: true }).click();
+    await expect(meta('prod')).toContainText('012345678901');
+    await expect(parent).toHaveCount(0);
+    await page.getByRole('textbox', { name: 'リソース検索' }).fill('本番アカウント');
+    await page.locator('.search-results button').first().click();
+    await expect
+      .poll(() => meta('prod').evaluate((e) => e.getBoundingClientRect().width))
+      .toBeGreaterThan(200);
+    await expect(page.getByText('構成を配置しています…', { exact: true })).toBeHidden();
+    await expect
+      .poll(() =>
+        meta('prod').evaluate((e) => {
+          const rect = e.getBoundingClientRect();
+          return rect.y > 180 && rect.y < 600;
+        }),
+      )
+      .toBe(true);
+    await page.screenshot({ path: `artifacts/identity-${offline ? 'offline' : 'live'}.png` });
   });
 }

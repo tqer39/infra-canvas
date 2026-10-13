@@ -1,0 +1,52 @@
+# サーバーワークス 2021-05-25「Centralized Inspection at Inspection VPC」図
+# https://blog.serverworks.co.jp/aws-network-firewall-and-transit-gateway
+# 2AZをサービス単位へ集約。ルート表は元図のTGW表の再記述（到達性評価ではない）。
+diagram "サーバーワークス・集中検査VPC" version=1 {
+  external.network internet "Internet"
+  account cloud "AWS" {
+    aws.transit-gateway tgw "Transit Gateway"
+    aws.tgw-route-table spoke_routes "Spoke TGW routes" display=table columns=["Destination", "Target"] rows=["0.0.0.0/0", "Inspection VPC"]
+    aws.tgw-route-table inspection_routes "Inspection TGW routes" display=table columns=["Destination", "Target"] rows=["0.0.0.0/0", "Egress VPC", "10.100.0.0/24", "Ingress VPC", "10.100.5.0/24", "System A VPC", "10.100.6.0/24", "System B VPC"]
+    vpc inspection "Inspection VPC" cidr="10.100.11.0/24" {
+      aws.network-firewall firewall "Network Firewall endpoints（2AZ）"
+      aws.tgw-attachment inspection_attachment "Inspection attachment"
+    }
+    vpc egress "Egress VPC" cidr="10.100.10.0/24" {
+      aws.nat nat "NAT Gateways（2AZ）"
+      aws.igw igw "Internet Gateway"
+      aws.tgw-attachment egress_attachment "Egress attachment"
+    }
+    vpc ingress "Ingress VPC" cidr="10.100.0.0/24" {
+      aws.alb alb "Ingress ALB"
+      aws.tgw-attachment ingress_attachment "Ingress attachment"
+    }
+    vpc system_a "System A VPC" cidr="10.100.5.0/24" {
+      aws.ec2 a "System A workload（2AZ）"
+      aws.tgw-attachment a_attachment "System A attachment"
+    }
+    vpc system_b "System B VPC" cidr="10.100.6.0/24" {
+      aws.ec2 b "System B workload（2AZ）"
+      aws.tgw-attachment b_attachment "System B attachment"
+    }
+  }
+  inspection_attachment -> tgw kind=association
+  egress_attachment -> tgw kind=association
+  ingress_attachment -> tgw kind=association
+  a_attachment -> tgw kind=association
+  b_attachment -> tgw kind=association
+  spoke_routes -> tgw kind=association label="Spoke用設定"
+  inspection_routes -> tgw kind=association label="検査後の設定"
+  a -> tgw kind=traffic label="1 / Egress・East-West開始"
+  tgw -> firewall kind=traffic label="2 / 検査へ"
+  firewall -> tgw kind=traffic label="3 / 検査後にTGWへ戻る"
+  tgw -> nat kind=traffic label="4 / Egressへ"
+  nat -> igw kind=traffic label="5"
+  igw -> internet kind=traffic label="6"
+  tgw -> b kind=traffic label="4 / East-West"
+  internet -> alb kind=traffic label="Ingress"
+  alb -> tgw kind=traffic label="検査VPCへ"
+  tgw -> a kind=traffic label="検査後の宛先"
+  view overview level=overview
+  view service level=resource
+  view network level=subnet
+}

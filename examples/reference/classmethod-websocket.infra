@@ -1,0 +1,27 @@
+# DevelopersIO 2026-05-25「検証環境」図と付属CDKの構成要素
+# https://dev.classmethod.jp/articles/amazon-cloudfront-websockets-vpc-origins/
+diagram "クラスメソッド・CloudFront VPC Origin WebSocket" version=1 {
+  external.user user "WebSocket client"
+  account cloud "AWS" {
+    aws.cloudfront cdn "CloudFront"
+    vpc main "VPC" {
+      aws.igw igw "IGW（アタッチのみ・Subnetからルートなし）"
+      subnet isolated_a "Private AZ A" private {
+        aws.ecs-task task "Fargate task（1実体）"
+        aws.vpc-endpoint endpoints "VPC Endpoints" display=list items=["ECR API", "ECR Docker", "CloudWatch Logs"]
+      }
+      subnet isolated_b "Private AZ B" private
+      aws.alb alb "Internal ALB" subnets=[isolated_a, isolated_b]
+      aws.vpc-endpoint s3_endpoint "S3 Gateway Endpoint"
+    }
+  }
+  user -> cdn kind=traffic protocol=wss port=443
+  cdn -> alb kind=traffic protocol=http port=80 label="VPC Origin / WebSocket"
+  alb -> task kind=traffic protocol=http port=8080
+  task -> endpoints kind=dependency label="イメージ取得・ログ"
+  task -> s3_endpoint kind=dependency
+  igw -> main kind=association label="アタッチ（通信経路を意味しない）"
+  view overview level=overview
+  view service level=resource
+  view network level=subnet
+}

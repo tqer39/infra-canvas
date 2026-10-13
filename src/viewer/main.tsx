@@ -1,3 +1,5 @@
+import { resourceMetadata } from '../core/resource-metadata';
+import { resourceContent } from '../core/content';
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
@@ -29,6 +31,7 @@ import { buildDisplayGraph } from '../core/display';
 import { layoutGraph } from '../core/layout';
 import { isBoundary, type Diagram, type Resource, type DisplayGraph } from '../core/model';
 import { getIcon, getIconHomepage } from '../assets/icons';
+import { getResourceIconType } from '../assets/resource-icons';
 import { getCountryFlag } from '../assets/flags';
 import { getRegionCountry, getResourceRegion } from '../assets/regions';
 import defaultSource from '../../examples/aws.infra?raw';
@@ -41,6 +44,7 @@ declare global {
 type ResourceData = Record<string, unknown> & {
   resource: Resource;
   collapsed: boolean;
+  iconType: string;
   onToggle: (id: string) => void;
   related: boolean;
   muted: boolean;
@@ -74,6 +78,8 @@ function RegionFlag({ resource }: { resource: Resource }) {
   return (
     <img
       className="region-flag"
+      width={20}
+      height={15}
       src={getCountryFlag(country.code)}
       alt={`${country.name}の国旗`}
       title={`${country.name} · ${region}`}
@@ -84,8 +90,10 @@ function RegionFlag({ resource }: { resource: Resource }) {
 function ResourceCard({ data }: NodeProps<ResourceNode>) {
   const { resource, collapsed, onToggle, related, muted } = data;
   const boundary = isBoundary(resource);
-  const icon = getIcon(resource.type);
+  const icon = getIcon(data.iconType);
   const homepage = getIconHomepage(resource.type);
+  const content = resourceContent(resource);
+  const metadata = resourceMetadata(resource);
   return (
     <div
       className={`resource-card ${boundary && !collapsed ? 'boundary-card' : ''} ${boundary && resource.type.startsWith('aws.') ? 'detail-boundary-card' : ''} ${collapsed ? 'collapsed-card' : ''} ${related ? 'related' : ''} ${muted ? 'muted' : ''}`}
@@ -114,23 +122,23 @@ function ResourceCard({ data }: NodeProps<ResourceNode>) {
           </span>
         )}
         <div className="resource-text">
-          <span className="resource-type">
-            {resource.type}
+          <span className="resource-type">{resource.type}</span>
+          <span className="resource-label">
             <RegionFlag resource={resource} />
-          </span>
-          {homepage ? (
-            <a
-              className="service-name-link nodrag nopan"
-              href={homepage}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(event) => event.stopPropagation()}
-            >
+            {homepage ? (
+              <a
+                className="service-name-link nodrag nopan"
+                href={homepage}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <strong title={resource.label}>{resource.label}</strong>
+              </a>
+            ) : (
               <strong title={resource.label}>{resource.label}</strong>
-            </a>
-          ) : (
-            <strong title={resource.label}>{resource.label}</strong>
-          )}
+            )}
+          </span>
         </div>
         {boundary && (
           <button
@@ -146,6 +154,43 @@ function ResourceCard({ data }: NodeProps<ResourceNode>) {
           </button>
         )}
       </div>
+      {metadata.length > 0 && (
+        <dl className="resource-metadata nodrag nopan" aria-label={`${resource.label}の識別情報`}>
+          {metadata.map((item) => (
+            <div key={item.label}>
+              <dt>{item.label}</dt>
+              <dd>{item.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {content?.kind === 'table' && (
+        <table className="resource-content" aria-label={resource.label}>
+          <thead>
+            <tr>
+              {content.columns.map((column, index) => (
+                <th key={index}>{column}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {content.rows.map((row, index) => (
+              <tr key={index}>
+                {row.map((cell, column) => (
+                  <td key={column}>{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {content?.kind === 'list' && (
+        <ul className="resource-content resource-list" aria-label={resource.label}>
+          {content.items.map((item, index) => (
+            <li key={index}>{item}</li>
+          ))}
+        </ul>
+      )}
       {collapsed && <span className="collapsed-hint">折りたたみ中</span>}
       {resource.unresolved?.length ? (
         <span className="unresolved-badge" title={resource.unresolved.join(' / ')}>
@@ -331,6 +376,9 @@ function App() {
     })
       .then((layout) => {
         if (!active) return;
+        const originalResources = new Map(
+          diagram?.resources.map((resource) => [resource.id, resource]),
+        );
         const placements = new Map(layout.nodes.map((node) => [node.id, node]));
         const routes = new Map((layout.edges ?? []).map((edge) => [edge.id, edge]));
         const sorted = [...display.resources];
@@ -365,6 +413,7 @@ function App() {
               style: { width: placement.width, height: placement.height },
               data: {
                 resource,
+                iconType: getResourceIconType(resource, originalResources),
                 collapsed: display.collapsed.includes(resource.id),
                 onToggle: toggle,
                 related: false,
@@ -418,7 +467,7 @@ function App() {
     return () => {
       active = false;
     };
-  }, [visibleDiagram, view, collapsed, expanded, toggle]);
+  }, [diagram, visibleDiagram, view, collapsed, expanded, toggle]);
   useEffect(() => {
     if (!graph || !nodes.length) return;
     const previous = autoFitContext.current;
@@ -826,8 +875,10 @@ function App() {
             <>
               <div className="detail-type">{selectedResource.type}</div>
               <h2>
-                <RegionFlag resource={selectedResource} />
-                {selectedResource.label}
+                <span className="resource-label">
+                  <RegionFlag resource={selectedResource} />
+                  <span>{selectedResource.label}</span>
+                </span>
               </h2>
               <code className="resource-id">{selectedResource.id}</code>
               {isBoundary(selectedResource) && (

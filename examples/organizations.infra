@@ -1,0 +1,41 @@
+diagram "AWS Organizations マルチアカウント（設計例）" version=1 {
+  aws.organization org "AWS Organizations" {
+    aws.organization-root root "組織の Root" {
+      aws.organization-account management "管理アカウント" meta.role="management"
+      aws.organizational-unit platform "Platform OU" {
+        aws.organization-account security "セキュリティアカウント" {
+          aws.iam-role audit "監査用ロール"
+        }
+        aws.organization-account network_account "ネットワーク所有アカウント" {
+          region tokyo "東京" region="ap-northeast-1" {
+            aws.transit-gateway tgw "共有 Transit Gateway"
+            aws.ram-share ram "TGW の RAM 共有"
+          }
+        }
+      }
+      aws.organizational-unit workloads "Workloads OU" {
+        aws.organizational-unit production "Production OU" {
+          aws.organization-account prod "本番アカウント" {
+            vpc prod_vpc "本番 VPC"
+          }
+        }
+        aws.organizational-unit sandbox "Sandbox OU" {
+          aws.organization-account dev "開発アカウント" {
+            vpc dev_vpc "開発 VPC"
+          }
+        }
+      }
+    }
+    aws.organization-policy scp "ワークロード向け SCP" meta.policyType="SERVICE_CONTROL_POLICY"
+    aws.organization-policy tag_policy "共通タグポリシー" meta.policyType="TAG_POLICY"
+  }
+  scp -> workloads kind=association label="SCP 適用（権限付与を示さない）"
+  tag_policy -> root kind=association label="タグポリシー適用（SCPとは別種別）"
+  ram -> tgw kind=association label="共有対象"
+  ram -> prod kind=auth label="RAM 共有先"
+  ram -> dev kind=auth label="RAM 共有先"
+  audit -> prod kind=auth label="監査ロールの信頼設定（設計）"
+  view overview level=overview direction=DOWN
+  view services level=service direction=DOWN
+  view network level=subnet direction=DOWN
+}

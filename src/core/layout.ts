@@ -1,7 +1,10 @@
+import { resourceMetadata, metadataWidth, metadataHeight } from './resource-metadata.js';
+import { resourceContent, contentDimensions } from './content.js';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import type { ElkNode, ElkExtendedEdge } from 'elkjs/lib/elk-api.js';
 import { validateResourceHierarchy } from './validate.js';
 import { isBoundary } from './model.js';
+import { getRegionCountry, getResourceRegion } from '../assets/regions.js';
 import type {
   Connection,
   DisplayGraph,
@@ -14,7 +17,7 @@ import type {
 export interface LayoutOptions {
   direction?: 'RIGHT' | 'DOWN';
 }
-export const layoutVersion = 'infra-canvas-layout-4';
+export const layoutVersion = 'infra-canvas-layout-7';
 
 const kindLabels = {
   traffic: '通信',
@@ -57,10 +60,21 @@ export async function layoutGraph(
         const nested = makeChildren(resource.id);
         const labelWidth = textWidth(resource.label, 8, 14);
         const collapsed = isBoundary(resource) && graph.collapsed.includes(resource.id);
-        // 折りたたみ境界にはアイコン・余白・展開ボタンの幅を確保する。
-        const headerWidth = isBoundary(resource) ? 112 : 80;
         const detailBoundary = isBoundary(resource) && resource.type.startsWith('aws.');
+        // 折りたたみ境界にはアイコン・余白・展開ボタンの幅を確保する。
+        const headerWidth =
+          (isBoundary(resource) ? 112 : 80) +
+          (getRegionCountry(getResourceRegion(resource)) ? 26 : 0) +
+          (isBoundary(resource) && !collapsed && !detailBoundary
+            ? textWidth(resource.type, 6, 10) + 9
+            : 0);
+        const content = resourceContent(resource);
+        const metadata = resourceMetadata(resource);
         const width = Math.max(
+          metadataWidth(metadata),
+          content
+            ? Math.max(360, content.kind === 'table' ? content.columns.length * 140 + 28 : 0)
+            : 0,
           180,
           Math.min(
             Math.max(labelWidth, detailBoundary ? textWidth(resource.type, 6, 10) : 0) +
@@ -69,17 +83,24 @@ export async function layoutGraph(
           ),
         );
         const labelLines =
-          collapsed || detailBoundary ? Math.ceil(labelWidth / (width - headerWidth)) : 1;
+          collapsed || detailBoundary || content
+            ? Math.ceil(labelWidth / (width - headerWidth))
+            : 1;
+        const metaHeight = metadataHeight(metadata, width);
         const node: ElkNode = {
           id: resource.id,
           width,
-          height: (isBoundary(resource) ? 80 : 86) + Math.max(0, labelLines - 1) * 18,
+          height:
+            (isBoundary(resource) ? 80 : 86) +
+            Math.max(0, labelLines - 1) * 18 +
+            (content ? contentDimensions(content, width).height : 0) +
+            metaHeight,
         };
         if (nested.length) {
           node.children = nested;
           node.layoutOptions = {
-            'elk.padding': `[top=${detailBoundary ? 68 + Math.max(0, labelLines - 1) * 18 : 56},left=24,bottom=24,right=24]`,
-            ...(detailBoundary
+            'elk.padding': `[top=${(detailBoundary ? 68 + Math.max(0, labelLines - 1) * 18 : 56) + metaHeight},left=24,bottom=24,right=24]`,
+            ...(detailBoundary || metadata.length
               ? {
                   'elk.nodeSize.constraints': 'MINIMUM_SIZE',
                   'elk.nodeSize.minimum': `(${width}, ${node.height})`,

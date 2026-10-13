@@ -133,14 +133,24 @@ textarea:focus-visible {
 .region-flag {
   width: 20px;
   height: 15px;
+  min-width: 20px;
+  max-width: 20px;
+  flex: 0 0 20px;
   object-fit: contain;
   vertical-align: middle;
   border: 1px solid #d5e1e8;
   border-radius: 2px;
-  margin-left: 6px;
+  margin: 0;
 }
-.detail-panel h2 .region-flag {
-  margin: 0 7px 2px 0;
+.resource-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+.resource-label > :last-child {
+  min-width: 0;
 }
 .view-tabs {
   padding: 4px;
@@ -462,7 +472,12 @@ textarea:focus-visible {
   color: #6e9aa7;
   font-size: 23px;
 }
+.boundary-card:not(.detail-boundary-card) .service-icon {
+  width: 24px;
+  height: 24px;
+}
 .boundary-card .resource-text {
+  flex: 0 1 auto;
   flex-direction: row;
   align-items: baseline;
   gap: 9px;
@@ -486,6 +501,9 @@ textarea:focus-visible {
   height: 22px;
   padding: 0;
   line-height: 1;
+}
+.boundary-card .boundary-toggle {
+  margin-left: 0;
 }
 .resource-card.related {
   border-color: #218f82;
@@ -788,4 +806,57 @@ textarea:focus-visible {
   white-space: normal;
   overflow-wrap: anywhere;
   overflow: visible;
+}
+
+.resource-content {
+  margin: 0 14px 16px;
+  width: calc(100% - 28px);
+  table-layout: fixed;
+  border-collapse: collapse;
+  font: 12px/18px monospace;
+}
+.resource-content th,
+.resource-content td,
+.resource-list li {
+  padding: 6px 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid #d5e1e8;
+  text-align: left;
+}
+.resource-content th {
+  background: #edf7f5;
+}
+.resource-list {
+  padding: 0;
+  list-style: none;
+}
+.resource-card:has(.resource-content) .resource-text strong {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.resource-metadata {
+  margin: 0 14px 8px;
+  font-size: 11px;
+  line-height: 16px;
+}
+.resource-metadata > div {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+}
+.resource-metadata dt {
+  flex: 0 0 108px;
+  color: #597586;
+  font-size: 10px;
+}
+.resource-metadata dd {
+  user-select: text;
+  margin: 0;
+  min-width: 0;
+  font: 11px/16px monospace;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  color: #345b6d;
 }

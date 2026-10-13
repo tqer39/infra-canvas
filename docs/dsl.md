@@ -236,3 +236,59 @@ Google VPCはglobal、HA VPNとCloud Routerは明示したリージョンに置�
 [Google CloudからAWSへのHA VPN](https://docs.cloud.google.com/network-connectivity/docs/vpn/how-to/connect-ha-vpn-aws-peer-gateway)
 を根拠に、構成例は所有アカウント内のAWS VPN接続2本・Customer Gateway2つ、Google側4トンネルを描きます。
 PSKや実IPは含みません。構成図の設計例であり、接続状態やSLA、ルートの到達性を検証する機能ではありません。
+
+## AWS Organizations
+
+[organizations.infra](../examples/organizations.infra) では、組織 → Root → 入れ子OU → アカウントを境界で定義します。
+型は `aws.organization`、`aws.organization-root`、`aws.organizational-unit`、`aws.organization-account` です。
+アカウント内にはリージョン・VPC・各サービスを置けます。既存の `account` も引き続き使えます。
+管理アカウントとメンバーアカウントは名前や `meta.role` で明示します。
+概要ではOrganizationsアカウントも折りたたみ、OUは独立して展開・折りたたみできます。
+
+`aws.organization-policy` と `aws.organization-policy-attachment` でポリシーと適用設定を分けられます。
+`meta.policyType` にSCP・タグポリシー等の種別を記述し、Root・OU・アカウントへの適用を `association` で結びます。
+組織の所属だけからRAM共有・IAMの信頼や通信関係を推測しません。
+SCPの継承・実効権限の計算や実際のアカウント作成は行いません。
+SCPは権限を付与せず、管理アカウントにも適用されません。
+[Organizationsの概念](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_getting-started_concepts.html) と
+[SCPの公式説明](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html) を参照してください。
+
+## 図上の表・リスト
+
+サービスカードに `display=table` または `display=list` を指定すると、選択しなくても設定を読めます。
+境界への指定はできません。列・行・項目は文字列配列で、HTMLを解釈しません。
+
+```text
+aws.tgw-route-table routes "TGW routes" display=table columns=["Destination", "Target"] rows=["0.0.0.0/0", "Inspection VPC", "10.100.5.0/24", "System A VPC"]
+aws.vpc-endpoint endpoints "Endpoints" display=list items=["ECR API", "ECR Docker", "CloudWatch Logs"]
+```
+
+`columns` は空でない列名配列、`rows` は行順に並べたセルの配列です。
+`rows` の要素数は列数の倍数にしてください。空の `rows` はヘッダーのみの表になります。
+`list` には `items` を指定します。表に `items`、リストに `columns` / `rows` は指定できません。
+内容の幅と折り返し高さを自動配置に渡します。境界を折りたたむとカードを隠し、展開すると復元します。
+表の文字列は経路設定の説明であり、ID参照・ルート評価・通信成立の証明ではありません。
+
+資料から再記述した構成図と確認範囲は [構成図資料の対応確認](architecture-coverage.md) を参照してください。
+
+## アカウント・リージョン・AZの表示
+
+表示名の下に、明示した `account`（アカウントID）、`project`、`subscription`、`region`、`az`、`azId`、`cidr` をラベル付きで表示します。
+展開・折りたたみの両方で読める領域を確保します。国旗と「東京」等の名前はそのまま残します。
+Terraformの `availability_zone`、`availability_zone_id`、`cidr_block` も同じ表示に使います。
+対応するDSL属性が併存する場合は `az`、`azId`、`cidr` を優先します。
+
+```text
+account prod "本番アカウント" account="012345678901" {
+  region tokyo "東京" region="ap-northeast-1" {
+    subnet app "アプリ Subnet" private az="ap-northeast-1a" cidr="10.0.10.0/24"
+  }
+}
+```
+
+IDは文字列で指定し、先頭ゼロを保持します。親・名前・provider aliasから未指定の所属を推測して表示しません。
+複数SubnetのサービスにはAZを一つに決めず、Subnetの関連を使います。
+AZ名だけでアカウント間の同じ物理ゾーンを示すとは扱いません。確認できたAZ IDは `azId` に明記できます。
+[AWSのアカウント識別子](https://docs.aws.amazon.com/general/latest/gr/acct-identifiers.html) と
+[AZ IDの説明](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dh-sharing.html) を参照してください。
+[identity.infra](../examples/identity.infra) は架空IDを使った表示例です。
