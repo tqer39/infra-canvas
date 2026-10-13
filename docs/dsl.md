@@ -270,3 +270,25 @@ aws.vpc-endpoint endpoints "Endpoints" display=list items=["ECR API", "ECR Docke
 表の文字列は経路設定の説明であり、ID参照・ルート評価・通信成立の証明ではありません。
 
 資料から再記述した構成図と確認範囲は [構成図資料の対応確認](architecture-coverage.md) を参照してください。
+
+## アカウント・リージョン・AZの表示
+
+表示名の下に、明示した `account`（アカウントID）、`project`、`subscription`、`region`、`az`、`azId`、`cidr` をラベル付きで表示します。
+展開・折りたたみの両方で読める領域を確保します。国旗と「東京」等の名前はそのまま残します。
+Terraformの `availability_zone`、`availability_zone_id`、`cidr_block` も同じ表示に使います。
+対応するDSL属性が併存する場合は `az`、`azId`、`cidr` を優先します。
+
+```text
+account prod "本番アカウント" account="012345678901" {
+  region tokyo "東京" region="ap-northeast-1" {
+    subnet app "アプリ Subnet" private az="ap-northeast-1a" cidr="10.0.10.0/24"
+  }
+}
+```
+
+IDは文字列で指定し、先頭ゼロを保持します。親・名前・provider aliasから未指定の所属を推測して表示しません。
+複数SubnetのサービスにはAZを一つに決めず、Subnetの関連を使います。
+AZ名だけでアカウント間の同じ物理ゾーンを示すとは扱いません。確認できたAZ IDは `azId` に明記できます。
+[AWSのアカウント識別子](https://docs.aws.amazon.com/general/latest/gr/acct-identifiers.html) と
+[AZ IDの説明](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dh-sharing.html) を参照してください。
+[identity.infra](../examples/identity.infra) は架空IDを使った表示例です。

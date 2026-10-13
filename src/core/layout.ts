@@ -1,3 +1,4 @@
+import { resourceMetadata, metadataWidth, metadataHeight } from './resource-metadata.js';
 import { resourceContent, contentDimensions } from './content.js';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import type { ElkNode, ElkExtendedEdge } from 'elkjs/lib/elk-api.js';
@@ -16,7 +17,7 @@ import type {
 export interface LayoutOptions {
   direction?: 'RIGHT' | 'DOWN';
 }
-export const layoutVersion = 'infra-canvas-layout-6';
+export const layoutVersion = 'infra-canvas-layout-7';
 
 const kindLabels = {
   traffic: '通信',
@@ -68,7 +69,9 @@ export async function layoutGraph(
             ? textWidth(resource.type, 6, 10) + 9
             : 0);
         const content = resourceContent(resource);
+        const metadata = resourceMetadata(resource);
         const width = Math.max(
+          metadataWidth(metadata),
           content
             ? Math.max(360, content.kind === 'table' ? content.columns.length * 140 + 28 : 0)
             : 0,
@@ -83,19 +86,21 @@ export async function layoutGraph(
           collapsed || detailBoundary || content
             ? Math.ceil(labelWidth / (width - headerWidth))
             : 1;
+        const metaHeight = metadataHeight(metadata, width);
         const node: ElkNode = {
           id: resource.id,
           width,
           height:
             (isBoundary(resource) ? 80 : 86) +
             Math.max(0, labelLines - 1) * 18 +
-            (content ? contentDimensions(content, width).height : 0),
+            (content ? contentDimensions(content, width).height : 0) +
+            metaHeight,
         };
         if (nested.length) {
           node.children = nested;
           node.layoutOptions = {
-            'elk.padding': `[top=${detailBoundary ? 68 + Math.max(0, labelLines - 1) * 18 : 56},left=24,bottom=24,right=24]`,
-            ...(detailBoundary
+            'elk.padding': `[top=${(detailBoundary ? 68 + Math.max(0, labelLines - 1) * 18 : 56) + metaHeight},left=24,bottom=24,right=24]`,
+            ...(detailBoundary || metadata.length
               ? {
                   'elk.nodeSize.constraints': 'MINIMUM_SIZE',
                   'elk.nodeSize.minimum': `(${width}, ${node.height})`,

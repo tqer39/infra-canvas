@@ -23,6 +23,8 @@ const textAttributes = new Set([
   'description',
   'region',
   'az',
+  'azId',
+  'availability_zone_id',
   'cidr',
   'protocol',
   'account',

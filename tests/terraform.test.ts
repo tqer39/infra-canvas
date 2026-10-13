@@ -916,3 +916,55 @@ resource "aws_organizations_policy_attachment" "prod" {
     await rm(temporary, { recursive: true, force: true });
   }
 });
+
+test('明示されたOrganizationsアカウントID・AZ IDだけを取り込み、機密・未確定値を表示しない', () => {
+  const resources = [
+    {
+      address: 'aws_organizations_account.known',
+      type: 'aws_organizations_account',
+      values: { id: '012345678901' },
+    },
+    {
+      address: 'aws_organizations_account.secret',
+      type: 'aws_organizations_account',
+      values: { id: '111111111111' },
+      sensitive_values: { id: true },
+    },
+    {
+      address: 'aws_organizations_account.pending',
+      type: 'aws_organizations_account',
+      values: { id: '222222222222' },
+    },
+    {
+      address: 'aws_subnet.known',
+      type: 'aws_subnet',
+      values: { availability_zone: 'ap-northeast-1a', availability_zone_id: 'apne1-az1' },
+    },
+    {
+      address: 'aws_subnet.secret',
+      type: 'aws_subnet',
+      values: { availability_zone_id: 'apne1-az2' },
+      sensitive_values: { availability_zone_id: true },
+    },
+    {
+      address: 'aws_subnet.pending',
+      type: 'aws_subnet',
+      values: { availability_zone_id: 'apne1-az3' },
+    },
+  ];
+  const d = importTerraformJSON({
+    format_version: '1.0',
+    planned_values: { root_module: { resources } },
+    resource_changes: [
+      { address: 'aws_organizations_account.pending', change: { after_unknown: { id: true } } },
+      { address: 'aws_subnet.pending', change: { after_unknown: { availability_zone_id: true } } },
+    ],
+  });
+  const attrs = (id: string) => d.resources.find((r) => r.provenance?.address === id)!.attributes;
+  assert.equal(attrs('aws_organizations_account.known').account, '012345678901');
+  assert.equal(attrs('aws_organizations_account.secret').account, undefined);
+  assert.equal(attrs('aws_organizations_account.pending').account, undefined);
+  assert.equal(attrs('aws_subnet.known').availability_zone_id, 'apne1-az1');
+  assert.equal(attrs('aws_subnet.secret').availability_zone_id, undefined);
+  assert.equal(attrs('aws_subnet.pending').availability_zone_id, undefined);
+});

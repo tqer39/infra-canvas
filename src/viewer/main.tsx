@@ -1,3 +1,4 @@
+import { resourceMetadata } from '../core/resource-metadata';
 import { resourceContent } from '../core/content';
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -92,6 +93,7 @@ function ResourceCard({ data }: NodeProps<ResourceNode>) {
   const icon = getIcon(data.iconType);
   const homepage = getIconHomepage(resource.type);
   const content = resourceContent(resource);
+  const metadata = resourceMetadata(resource);
   return (
     <div
       className={`resource-card ${boundary && !collapsed ? 'boundary-card' : ''} ${boundary && resource.type.startsWith('aws.') ? 'detail-boundary-card' : ''} ${collapsed ? 'collapsed-card' : ''} ${related ? 'related' : ''} ${muted ? 'muted' : ''}`}
@@ -152,6 +154,16 @@ function ResourceCard({ data }: NodeProps<ResourceNode>) {
           </button>
         )}
       </div>
+      {metadata.length > 0 && (
+        <dl className="resource-metadata nodrag nopan" aria-label={`${resource.label}の識別情報`}>
+          {metadata.map((item) => (
+            <div key={item.label}>
+              <dt>{item.label}</dt>
+              <dd>{item.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
       {content?.kind === 'table' && (
         <table className="resource-content" aria-label={resource.label}>
           <thead>

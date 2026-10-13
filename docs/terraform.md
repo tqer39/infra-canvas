@@ -59,11 +59,13 @@ module 出力経由や曖昧な実体参照の依存は未解決のままです�
 
 ## 機密値と静的取り込みの範囲
 
-表示属性は availability_zone、region、CIDR、instance_type、engine、engine_version の
+表示属性は availability_zone、availability_zone_id、region、CIDR、instance_type、engine、engine_version の
 形式検証つき allowlist です。任意の name、description、tags、user_data、パスワード、
 接続文字列、outputs、variables は表示モデルへ取り込みません。
 sensitive_values / after_sensitive が true または配下に true を含む属性は除外します。
 Subnet/SG/VPC の ID は関連解決にのみ使い、値を属性へコピーしません。
+Organizations account の非機密・確定した12桁の `id` は例外として `account` に保存し、図上の識別情報に表示します。
+機密・未確定のアカウントIDとAZ IDは表示せず、provider aliasからアカウントIDを推測しません。
 unknown は対応する安全属性の未確定情報として記録します。
 
 アドレス、ファイルパス、リポジトリパスは出典として残ります。共有前にはそれらの

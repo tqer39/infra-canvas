@@ -870,3 +870,95 @@ test('表・リストの長文を折り返し、HTMLを実行せず表示する'
   }
   await page.screenshot({ path: 'artifacts/reference-content.png' });
 });
+
+for (const offline of [false, true]) {
+  test(`アカウント・リージョン・AZを名前と並べ、展開・折りたたみでも識別情報を保持 (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    const output = 'artifacts/identity.html';
+    execFileSync(process.execPath, [
+      'dist/cli.js',
+      'html',
+      'examples/identity.infra',
+      '--out',
+      output,
+    ]);
+    if (offline) {
+      await context.setOffline(true);
+      await page.goto('file://' + resolve(output));
+    } else {
+      await page.goto('http://127.0.0.1:5188');
+      await page.locator('input[type=file]').setInputFiles('examples/identity.infra');
+    }
+    await expect(page.locator('.document-title')).toHaveText(
+      'アカウント・リージョン・AZの識別情報',
+    );
+    const meta = (id: string) =>
+      page.locator(`.react-flow__node[data-id="${id}"] .resource-metadata`);
+    await expect(meta('prod')).toContainText('012345678901');
+    await expect(meta('tokyo')).toContainText('ap-northeast-1');
+    await expect(page.locator('.react-flow__node[data-id="tokyo"] .resource-label')).toContainText(
+      '東京',
+    );
+    await expect(meta('private_a')).toContainText('ap-northeast-1a');
+    await expect(meta('private_a')).toContainText('apne1-az1');
+    await expect(meta('google')).toContainText('demo-project');
+    await expect(meta('azure')).toContainText('00000000-0000-0000-0000-000000000001');
+    for (const el of await page.locator('.resource-metadata').all()) {
+      expect(await el.evaluate((e) => e.scrollWidth <= e.clientWidth + 1)).toBe(true);
+      expect(
+        await el.evaluate(
+          (e) =>
+            e.getBoundingClientRect().bottom <
+            e.closest('.resource-card')!.getBoundingClientRect().bottom,
+        ),
+      ).toBe(true);
+    }
+    const parent = page.locator('.react-flow__node[data-id="tokyo"]');
+    const child = page.locator('.react-flow__node[data-id="main"]');
+    expect(await meta('tokyo').evaluate((e) => e.getBoundingClientRect().bottom)).toBeLessThan(
+      (await child.boundingBox())!.y,
+    );
+    await page.getByRole('textbox', { name: 'リソース検索' }).fill('アプリ Subnet');
+    await page.locator('.search-results button').first().click();
+    await page.getByRole('button', { name: 'アプリ Subnetを展開', exact: true }).click();
+    await expect(
+      page.getByRole('button', { name: 'アプリ Subnetを折りたたむ', exact: true }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'アプリ Subnetを折りたたむ', exact: true }).click();
+    await expect(
+      page.locator('.react-flow__node[data-id="private_a"] .collapsed-hint'),
+    ).toBeVisible();
+    await expect(meta('private_a')).toContainText('apne1-az1');
+    expect(
+      await meta('private_a').evaluate(
+        (e) =>
+          e.getBoundingClientRect().bottom <=
+          e.closest('.resource-card')!.querySelector('.collapsed-hint')!.getBoundingClientRect()
+            .top,
+      ),
+    ).toBe(true);
+    await page.getByRole('button', { name: 'アプリ Subnetを展開', exact: true }).click();
+    await expect(meta('private_a')).toContainText('ap-northeast-1a');
+    await page.getByRole('button', { name: '概要', exact: true }).click();
+    await page.getByRole('button', { name: 'すべて折りたたむ', exact: true }).click();
+    await expect(meta('prod')).toContainText('012345678901');
+    await expect(parent).toHaveCount(0);
+    await page.getByRole('textbox', { name: 'リソース検索' }).fill('本番アカウント');
+    await page.locator('.search-results button').first().click();
+    await expect
+      .poll(() => meta('prod').evaluate((e) => e.getBoundingClientRect().width))
+      .toBeGreaterThan(200);
+    await expect(page.getByText('構成を配置しています…', { exact: true })).toBeHidden();
+    await expect
+      .poll(() =>
+        meta('prod').evaluate((e) => {
+          const rect = e.getBoundingClientRect();
+          return rect.y > 180 && rect.y < 600;
+        }),
+      )
+      .toBe(true);
+    await page.screenshot({ path: `artifacts/identity-${offline ? 'offline' : 'live'}.png` });
+  });
+}

@@ -67,6 +67,7 @@ const types: Record<string, string> = {
   google_compute_router_peer: 'gcp.bgp-peer',
 };
 const safe: Record<string, RegExp> = {
+  availability_zone_id: /^[a-z0-9-]+-az\d+$/,
   availability_zone: /^[a-z]{2}(?:-gov)?-[a-z]+-\d[a-z]$/,
   region: /^(?:[a-z]{2}(?:-gov)?-[a-z]+-\d|[a-z]+-[a-z]+\d)$/,
   cidr_block: /^[\d.:a-f]+\/\d{1,3}$/,
@@ -202,6 +203,8 @@ function build(items: Item[], kind: Provenance['kind'], context: TerraformContex
     const parent = modulePrefix(item.address);
     if (parent) addModule(parent);
     const attributes = clean(item.values, item.sensitive);
+    for (const key of Object.keys(safe))
+      if (hasSensitive(item.unknown[key])) delete attributes[key];
     if (
       item.type === 'aws_organizations_policy' &&
       !hasSensitive(item.sensitive.type) &&
@@ -212,6 +215,14 @@ function build(items: Item[], kind: Provenance['kind'], context: TerraformContex
       )
     )
       attributes['meta.policyType'] = item.values.type;
+    if (
+      item.type === 'aws_organizations_account' &&
+      !hasSensitive(item.sensitive.id) &&
+      !hasSensitive(item.unknown.id) &&
+      typeof item.values.id === 'string' &&
+      /^\d{12}$/.test(item.values.id)
+    )
+      attributes.account = item.values.id;
     attributes.terraformType = item.type;
     const resource: Resource = {
       id: item.address,
@@ -230,9 +241,11 @@ function build(items: Item[], kind: Provenance['kind'], context: TerraformContex
     for (const key of Object.keys(safe))
       if (hasSensitive(item.unknown[key])) resource.unresolved!.push(`${key} は未確定`);
     if (!Object.keys(attributes).includes('region'))
-      resource.unresolved!.push('アカウント・リージョンは未確定');
+      resource.unresolved!.push(
+        attributes.account ? 'リージョンは未確定' : 'アカウント・リージョンは未確定',
+      );
     d.resources.push(resource);
-    // ID 値は関連の解決だけに使い、表示属性へコピーしません。
+    // 一般のID値は関連解決のみ。OrganizationsアカウントIDの明示表示は上で限定します。
     if (
       !hasSensitive(item.sensitive.id) &&
       !hasSensitive(item.unknown.id) &&

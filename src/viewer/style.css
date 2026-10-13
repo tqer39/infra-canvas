@@ -835,3 +835,28 @@ textarea:focus-visible {
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+.resource-metadata {
+  margin: 0 14px 8px;
+  font-size: 11px;
+  line-height: 16px;
+}
+.resource-metadata > div {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+}
+.resource-metadata dt {
+  flex: 0 0 108px;
+  color: #597586;
+  font-size: 10px;
+}
+.resource-metadata dd {
+  user-select: text;
+  margin: 0;
+  min-width: 0;
+  font: 11px/16px monospace;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  color: #345b6d;
+}
