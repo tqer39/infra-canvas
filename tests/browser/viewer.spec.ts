@@ -793,3 +793,80 @@ for (const offline of [false, true]) {
     await page.screenshot({ path: `artifacts/organizations-${offline ? 'offline' : 'dev'}.png` });
   });
 }
+
+for (const reference of [
+  'aws-web',
+  'gcp-delivery',
+  'azure-private-link',
+  'classmethod-websocket',
+  'serverworks-inspection',
+]) {
+  test(`公開構成図 ${reference}: オフラインHTMLと折りたたみ後の導線`, async ({ page, context }) => {
+    const output = `artifacts/reference-${reference}.html`;
+    execFileSync(process.execPath, [
+      'dist/cli.js',
+      'html',
+      `examples/reference/${reference}.infra`,
+      '--out',
+      output,
+    ]);
+    await context.setOffline(true);
+    await page.goto('file://' + resolve(output));
+    await expect(page.locator('.canvas-footer')).toContainText('要素');
+    await expect(page.locator('.react-flow__node')).not.toHaveCount(0);
+    for (const content of await page.locator('.resource-content').all()) {
+      const bounds = await content.evaluate((el) => {
+        const c = el.getBoundingClientRect();
+        const p = el.closest('.resource-card')!.getBoundingClientRect();
+        return {
+          bottom: c.bottom,
+          parent: p.bottom,
+          width: el.clientWidth,
+          scroll: el.scrollWidth,
+        };
+      });
+      expect(bounds.bottom).toBeLessThanOrEqual(bounds.parent + 1);
+      expect(bounds.scroll).toBeLessThanOrEqual(bounds.width + 1);
+    }
+    if (reference === 'serverworks-inspection') {
+      await expect(page.getByRole('table', { name: 'Inspection TGW routes' })).toContainText(
+        '10.100.6.0/24',
+      );
+      await page.getByRole('table', { name: 'Inspection TGW routes' }).click();
+      await expect(page.locator('.detail-panel')).toContainText('Inspection TGW routes');
+    }
+    await page.screenshot({ path: `artifacts/reference-${reference}.png`, fullPage: true });
+    await page.getByRole('button', { name: 'すべて折りたたむ', exact: true }).click();
+    await page.getByRole('button', { name: 'Fit View' }).click();
+    const expand = page.locator('.boundary-toggle').filter({ hasText: '+' }).first();
+    await expect(expand).toBeVisible();
+    await expand.click();
+    await expect(page.locator('.boundary-toggle').filter({ hasText: '−' }).first()).toBeVisible();
+  });
+}
+
+test('表・リストの長文を折り返し、HTMLを実行せず表示する', async ({ page }) => {
+  await page.goto('http://127.0.0.1:5188');
+  await page.getByRole('button', { name: 'DSL を編集' }).click();
+  const long = '長い設定値の日本語と英数字abcdefghijklmnopqrstuvwxyzを表示します。'.repeat(5);
+  const literal = '<img src=x onerror=alert(1)>';
+  const source = `diagram "表とリスト" {\ncustom.node table "長文の表" display=table columns=["見出し", "Value"] rows=[${JSON.stringify(long)}, ${JSON.stringify(literal)}]\ncustom.node list "長文のリスト" display=list items=[${JSON.stringify(long)}, ${JSON.stringify(literal)}]\n}`;
+  await page.getByRole('textbox', { name: 'DSL 入力' }).fill(source);
+  await page.getByRole('button', { name: '解析して反映' }).click();
+  await page.getByRole('button', { name: 'DSL を編集' }).click();
+  await expect(page.locator('.canvas-footer')).toContainText('2 要素');
+  await expect(page.getByRole('table', { name: '長文の表' })).toContainText(literal);
+  await expect(page.locator('.resource-list')).toContainText(literal);
+  await expect(page.locator('.resource-content img')).toHaveCount(0);
+  for (const content of await page.locator('.resource-content').all()) {
+    expect(
+      await content.evaluate(
+        (el) =>
+          el.getBoundingClientRect().bottom <=
+          el.closest('.resource-card')!.getBoundingClientRect().bottom + 1,
+      ),
+    ).toBe(true);
+    expect(await content.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+  }
+  await page.screenshot({ path: 'artifacts/reference-content.png' });
+});

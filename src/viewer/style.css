@@ -807,3 +807,31 @@ textarea:focus-visible {
   overflow-wrap: anywhere;
   overflow: visible;
 }
+
+.resource-content {
+  margin: 0 14px 16px;
+  width: calc(100% - 28px);
+  table-layout: fixed;
+  border-collapse: collapse;
+  font: 12px/18px monospace;
+}
+.resource-content th,
+.resource-content td,
+.resource-list li {
+  padding: 6px 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid #d5e1e8;
+  text-align: left;
+}
+.resource-content th {
+  background: #edf7f5;
+}
+.resource-list {
+  padding: 0;
+  list-style: none;
+}
+.resource-card:has(.resource-content) .resource-text strong {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

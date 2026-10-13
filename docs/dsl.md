@@ -252,3 +252,21 @@ SCPの継承・実効権限の計算や実際のアカウント作成は行い�
 SCPは権限を付与せず、管理アカウントにも適用されません。
 [Organizationsの概念](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_getting-started_concepts.html) と
 [SCPの公式説明](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html) を参照してください。
+
+## 図上の表・リスト
+
+サービスカードに `display=table` または `display=list` を指定すると、選択しなくても設定を読めます。
+境界への指定はできません。列・行・項目は文字列配列で、HTMLを解釈しません。
+
+```text
+aws.tgw-route-table routes "TGW routes" display=table columns=["Destination", "Target"] rows=["0.0.0.0/0", "Inspection VPC", "10.100.5.0/24", "System A VPC"]
+aws.vpc-endpoint endpoints "Endpoints" display=list items=["ECR API", "ECR Docker", "CloudWatch Logs"]
+```
+
+`columns` は空でない列名配列、`rows` は行順に並べたセルの配列です。
+`rows` の要素数は列数の倍数にしてください。空の `rows` はヘッダーのみの表になります。
+`list` には `items` を指定します。表に `items`、リストに `columns` / `rows` は指定できません。
+内容の幅と折り返し高さを自動配置に渡します。境界を折りたたむとカードを隠し、展開すると復元します。
+表の文字列は経路設定の説明であり、ID参照・ルート評価・通信成立の証明ではありません。
+
+資料から再記述した構成図と確認範囲は [構成図資料の対応確認](architecture-coverage.md) を参照してください。

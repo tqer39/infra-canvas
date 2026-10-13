@@ -1,0 +1,50 @@
+# Azure公式 Architecture図: App ServiceをVNet内のVMとして扱わない
+# https://learn.microsoft.com/en-us/azure/architecture/web-apps/app-service/architectures/baseline-zone-redundant
+diagram "Azure公式・Private LinkとApp Service" version=1 {
+  external.user user "User"
+  subscription azure "Azure" {
+    network vnet "Virtual network" {
+      subnet gateway_net "Application Gateway subnet" { azure.application-gateway gateway "Application Gateway + WAF" }
+      subnet integration_net "App Service integration subnet" { azure.network-interface interface "Virtual interface" }
+      subnet endpoint_net "Private endpoint subnet" {
+        azure.private-endpoint app_endpoint "App Service private endpoint"
+        azure.private-endpoint db_endpoint "Database private endpoint"
+        azure.private-endpoint key_endpoint "Configuration private endpoint"
+        azure.private-endpoint storage_endpoint "Storage private endpoint"
+      }
+    }
+    group app "App Service（リージョンの論理境界）" {
+      azure.app app1 "App Service instance / Zone 1"
+      azure.app app2 "App Service instance / Zone 2"
+      azure.app app3 "App Service instance / Zone 3"
+      azure.managed-identity identity "Managed identity"
+    }
+    azure.sql db "SQL Database"
+    azure.key-vault keys "Key Vault"
+    azure.storage storage "Storage"
+    azure.private-dns dns "Private DNS zones"
+    azure.ddos protection "DDoS Protection"
+    azure.entra-id entra "Microsoft Entra ID"
+    azure.monitor monitor "Monitoring" display=list items=["Application Insights", "Azure Monitor", "Health Model"]
+  }
+  user -> gateway kind=traffic
+  gateway -> app_endpoint kind=traffic
+  app_endpoint -> app1 kind=traffic
+  app_endpoint -> app2 kind=traffic
+  app_endpoint -> app3 kind=traffic
+  app -> interface kind=traffic label="VNet integration（送信）"
+  interface -> db_endpoint kind=traffic
+  interface -> key_endpoint kind=traffic
+  interface -> storage_endpoint kind=traffic
+  db_endpoint -> db kind=traffic
+  key_endpoint -> keys kind=traffic
+  storage_endpoint -> storage kind=traffic
+  dns -> vnet kind=association label="DNSリンク"
+  protection -> vnet kind=association label="保護"
+  identity -> keys kind=auth
+  entra -> app kind=auth
+  app -> monitor kind=association label="監視"
+  view overview level=overview
+  view service level=resource
+  view network level=subnet
+}

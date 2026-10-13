@@ -1,3 +1,4 @@
+import { resourceContent } from './content.js';
 import { isBoundary } from './model.js';
 import type { Diagram, Resource } from './model.js';
 
@@ -57,6 +58,7 @@ export function validateDiagram(value: unknown): Diagram {
       (resource.unresolved !== undefined && !strings(resource.unresolved))
     )
       throw new Error('リソースの ID・種別・ラベル・有限値属性・ソース位置を確認してください。');
+    resourceContent(resource);
     if (ids.has(resource.id)) throw new Error(`ID が重複しています: ${resource.id}`);
     ids.add(resource.id);
     if (resource.provenance !== undefined) {

@@ -1,0 +1,41 @@
+# Google Cloud公式 Figure 1 (2025-01-13)、製品の設定・通信成立の保証ではない
+# https://docs.cloud.google.com/architecture/network-application-delivery
+diagram "Google Cloud公式・複数プロジェクトのWeb配信" version=1 {
+  external.user clients "External clients"
+  group edge "Cloud edge（論理的なまとめ）" {
+    gcp.load-balancing lb "External HTTPS Load Balancing" scope=global
+    gcp.dns dns "Cloud DNS"
+    gcp.armor armor "Cloud Armor"
+    gcp.certificate-manager cert "Certificate Manager"
+  }
+  project frontend "Frontend project" {
+    region a "Region A" {
+      gcp.compute front_a "Frontend workload A"
+    }
+    region b "Region B" {
+      gcp.compute front_b "Frontend workload B"
+    }
+  }
+  project backend "Backend project" {
+    network workload1 "Workload VPC 1" scope=global { gcp.compute back1 "Backend workload 1" }
+    network workload2 "Workload VPC 2" scope=global { gcp.compute back2 "Backend workload 2" }
+  }
+  project shared "Shared services project" {
+    network shared_net "Shared services VPC" scope=global { gcp.compute shared_workload "Shared workload" }
+  }
+  clients -> lb kind=traffic protocol=https
+  dns -> lb kind=association label="名前解決"
+  armor -> lb kind=association label="保護"
+  cert -> lb kind=association label="証明書"
+  lb -> front_a kind=traffic
+  lb -> front_b kind=traffic
+  front_a -> back1 kind=traffic
+  front_a -> back2 kind=traffic
+  front_a -> shared_workload kind=traffic
+  front_b -> back1 kind=traffic
+  front_b -> back2 kind=traffic
+  front_b -> shared_workload kind=traffic
+  view overview level=overview
+  view service level=resource
+  view network level=subnet
+}

@@ -1,3 +1,4 @@
+import { resourceContent } from '../core/content';
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import {
@@ -90,6 +91,7 @@ function ResourceCard({ data }: NodeProps<ResourceNode>) {
   const boundary = isBoundary(resource);
   const icon = getIcon(data.iconType);
   const homepage = getIconHomepage(resource.type);
+  const content = resourceContent(resource);
   return (
     <div
       className={`resource-card ${boundary && !collapsed ? 'boundary-card' : ''} ${boundary && resource.type.startsWith('aws.') ? 'detail-boundary-card' : ''} ${collapsed ? 'collapsed-card' : ''} ${related ? 'related' : ''} ${muted ? 'muted' : ''}`}
@@ -150,6 +152,33 @@ function ResourceCard({ data }: NodeProps<ResourceNode>) {
           </button>
         )}
       </div>
+      {content?.kind === 'table' && (
+        <table className="resource-content" aria-label={resource.label}>
+          <thead>
+            <tr>
+              {content.columns.map((column, index) => (
+                <th key={index}>{column}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {content.rows.map((row, index) => (
+              <tr key={index}>
+                {row.map((cell, column) => (
+                  <td key={column}>{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {content?.kind === 'list' && (
+        <ul className="resource-content resource-list" aria-label={resource.label}>
+          {content.items.map((item, index) => (
+            <li key={index}>{item}</li>
+          ))}
+        </ul>
+      )}
       {collapsed && <span className="collapsed-hint">折りたたみ中</span>}
       {resource.unresolved?.length ? (
         <span className="unresolved-badge" title={resource.unresolved.join(' / ')}>

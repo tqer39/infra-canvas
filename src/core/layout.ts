@@ -1,3 +1,4 @@
+import { resourceContent, contentDimensions } from './content.js';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import type { ElkNode, ElkExtendedEdge } from 'elkjs/lib/elk-api.js';
 import { validateResourceHierarchy } from './validate.js';
@@ -15,7 +16,7 @@ import type {
 export interface LayoutOptions {
   direction?: 'RIGHT' | 'DOWN';
 }
-export const layoutVersion = 'infra-canvas-layout-5';
+export const layoutVersion = 'infra-canvas-layout-6';
 
 const kindLabels = {
   traffic: '通信',
@@ -66,7 +67,11 @@ export async function layoutGraph(
           (isBoundary(resource) && !collapsed && !detailBoundary
             ? textWidth(resource.type, 6, 10) + 9
             : 0);
+        const content = resourceContent(resource);
         const width = Math.max(
+          content
+            ? Math.max(360, content.kind === 'table' ? content.columns.length * 140 + 28 : 0)
+            : 0,
           180,
           Math.min(
             Math.max(labelWidth, detailBoundary ? textWidth(resource.type, 6, 10) : 0) +
@@ -75,11 +80,16 @@ export async function layoutGraph(
           ),
         );
         const labelLines =
-          collapsed || detailBoundary ? Math.ceil(labelWidth / (width - headerWidth)) : 1;
+          collapsed || detailBoundary || content
+            ? Math.ceil(labelWidth / (width - headerWidth))
+            : 1;
         const node: ElkNode = {
           id: resource.id,
           width,
-          height: (isBoundary(resource) ? 80 : 86) + Math.max(0, labelLines - 1) * 18,
+          height:
+            (isBoundary(resource) ? 80 : 86) +
+            Math.max(0, labelLines - 1) * 18 +
+            (content ? contentDimensions(content, width).height : 0),
         };
         if (nested.length) {
           node.children = nested;

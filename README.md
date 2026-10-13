@@ -83,6 +83,8 @@ npm 公開はしていません。ビルド後、ローカルのパス依存と�
 | [large.infra](examples/large.infra)           | 300 サービスと18境界                                                           |
 | [terraform](examples/terraform)               | module、count、for_each、複数 provider、未確定値を含む合成入力                 |
 
+[公開構成図5件の対応確認](docs/architecture-coverage.md) と [再記述サンプル](examples/reference) では、3クラウド公式・クラスメソッド・サーバーワークスの図を検証しています。
+
 [DSL 仕様](docs/dsl.md) に LLM 向け生成指示、例、修正例を用意しています。
 [アイコンと一次資料](docs/assets.md) に取得元、版、利用条件を記録しています。
 [主要サービス43種の一覧](docs/service-icons.md) と [カタログ入力](examples/service-catalog.infra) も用意しています。

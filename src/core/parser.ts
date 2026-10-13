@@ -1,3 +1,4 @@
+import { resourceContent } from './content.js';
 import { boundaryTypes } from './model.js';
 import type {
   Attribute,
@@ -18,6 +19,7 @@ interface Token extends SourceLocation {
 }
 const edgeKinds = new Set(['traffic', 'dependency', 'auth', 'deploy', 'association']);
 const textAttributes = new Set([
+  'display',
   'description',
   'region',
   'az',
@@ -53,6 +55,9 @@ const textAttributes = new Set([
   'subnetVisibility',
 ]);
 const arrayAttributes = new Set([
+  'columns',
+  'rows',
+  'items',
   'subnets',
   'members',
   'tags',
@@ -375,6 +380,15 @@ export function parseDSL(source: string): ParseResult {
             }
           }
           if (Array.isArray(attributes.unresolved)) resource.unresolved = attributes.unresolved;
+          try {
+            resourceContent(resource);
+          } catch (error) {
+            report(
+              parsed.positions.get('display') ?? first,
+              'resource.content',
+              (error as Error).message,
+            );
+          }
           resources.push(resource);
           for (const key of ['subnets', 'members', 'securityGroups', 'dependsOn'])
             if (Array.isArray(attributes[key]))

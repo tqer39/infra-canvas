@@ -4,3 +4,4 @@ export * from './serialize.js';
 export * from './display.js';
 export * from './layout.js';
 export * from './validate.js';
+export * from './content.js';

@@ -1,0 +1,59 @@
+# AWS公式 Web Application Architecture on AWS (2021-11-19), 構成要素の再記述
+# https://d1.awsstatic.com/architecture-diagrams/ArchitectureDiagrams/web-application-architecture-on-aws-ra.pdf
+diagram "AWS公式・多層Web構成" version=1 {
+  external.user client "Web Client"
+  account cloud "AWS Cloud" {
+    aws.route53 dns "Route 53"
+    aws.waf waf "WAF"
+    aws.cloudfront cdn "CloudFront"
+    aws.s3 storage "静的コンテンツ・バックアップ"
+    aws.acm cert "ACM"
+    vpc app "VPC" {
+      group az_a "Availability Zone 1" {
+        subnet public_a public { aws.nat nat_a "NAT Gateway A" }
+        subnet web_a private { aws.ec2 web1 "Web server A" }
+        subnet app_a private { aws.ec2 app1 "Application server A" }
+        subnet db_a private { aws.rds primary "Primary database" }
+      }
+      group az_b "Availability Zone 2" {
+        subnet public_b public { aws.nat nat_b "NAT Gateway B" }
+        subnet web_b private { aws.ec2 web2 "Web server B" }
+        subnet app_b private { aws.ec2 app2 "Application server B" }
+        subnet db_b private { aws.rds standby "Standby database" }
+      }
+      aws.alb front "Internet-facing ALB" subnets=[public_a, public_b]
+      aws.alb internal "Internal ALB" subnets=[app_a, app_b]
+      aws.autoscaling web_scale "Web Auto Scaling" display=list items=["Web server A", "Web server B"]
+      aws.autoscaling app_scale "Application Auto Scaling" display=list items=["Application server A", "Application server B"]
+      aws.efs files "共有ファイル"
+      aws.elasticache cache "Cache"
+    }
+  }
+  client -> dns kind=traffic label="名前解決"
+  dns -> waf kind=association label="Webの入口"
+  waf -> cdn kind=association label="保護対象"
+  waf -> front kind=association label="保護対象"
+  cdn -> storage kind=traffic label="静的コンテンツ"
+  cdn -> front kind=traffic label="動的コンテンツ"
+  cert -> front kind=association label="TLS証明書"
+  front -> web1 kind=traffic
+  front -> web2 kind=traffic
+  web1 -> internal kind=traffic
+  web2 -> internal kind=traffic
+  internal -> app1 kind=traffic
+  internal -> app2 kind=traffic
+  app1 -> primary kind=traffic
+  app2 -> primary kind=traffic
+  primary -> standby kind=association label="待機系"
+  app1 -> cache kind=traffic
+  app2 -> cache kind=traffic
+  web1 -> files kind=traffic
+  web2 -> files kind=traffic
+  web_scale -> web1 kind=association label="メンバー"
+  web_scale -> web2 kind=association label="メンバー"
+  app_scale -> app1 kind=association label="メンバー"
+  app_scale -> app2 kind=association label="メンバー"
+  view overview level=overview
+  view service level=resource
+  view network level=subnet
+}
