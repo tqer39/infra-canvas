@@ -4,10 +4,10 @@
 日本のサービスも含まれます。各社公式のブランドキットと併用します。
 人気順のランキングではなく、構成図で扱いやすいホスティング・DB・監視・認証・CI・共同作業の代表例です。
 
-追加49種と既存の1Password・Elasticsearch・Kibanaは、Simple Icons（版はマニフェスト参照） の
+追加50種と既存の1Password・Elasticsearch・Kibanaは、Simple Icons（版はマニフェスト参照） の
 ブランドカラー（`hex`）を SVG の `fill` 属性に適用して同梱しています。形状は変更しません。
 Vercel・Notion など、ブランドカラーが黒のサービスは黒で表示します。
-既存9種と合わせ、サービス・技術の58種に対応します。クラウドのアイコンは別に維持します。
+既存9種と合わせ、サービス・技術の59種に対応します。クラウドのアイコンは別に維持します。
 外部 CDN や新しい npm 依存は使わず、単一 HTML にも埋め込みます。
 [既存9種の対応表・利用条件](assets.md) と、`src/assets/manifest.json` に版・取得元・カラー・原本と着色後のハッシュを記録しています。
 Simple Icons の CC0 はブランドの商標利用を許諾するものではありません。提供元の条件が別途適用されます。
@@ -31,6 +31,7 @@ Simple Icons の CC0 はブランドの商標利用を許諾するものでは�
 | Terraform       | `saas.terraform`      | 海外・共通技術 | [提供元](https://www.hashicorp.com/brand)                                                                                                                    |
 | Sentry          | `saas.sentry`         | 海外・共通技術 | [提供元](https://sentry.io/branding/)                                                                                                                        |
 | Datadog         | `saas.datadog`        | 海外・共通技術 | [提供元](https://www.datadoghq.com/about/resources/)                                                                                                         |
+| New Relic       | `saas.newrelic`       | 海外・共通技術 | [提供元](https://newrelic.com/about/media-assets)                                                                                                            |
 | Grafana         | `saas.grafana`        | 海外・共通技術 | [提供元](https://grafana.com)                                                                                                                                |
 | Prometheus      | `saas.prometheus`     | 海外・共通技術 | [提供元](https://prometheus.io)                                                                                                                              |
 | CircleCI        | `saas.circleci`       | 海外・共通技術 | [提供元](https://circleci.com/press)                                                                                                                         |

@@ -42,6 +42,65 @@ test('識別情報は明示属性だけを表示し、先頭ゼロと未知の�
     { label: 'AZ ID', value: 'apne1-az1' },
   ]);
 });
+test('ECSのリソース定義をDSL/JSONで検証して単位付き表示を往復する', async () => {
+  const d = validateDiagram(parseDSL(readFileSync('examples/ecs-beanstalk.infra', 'utf8')).diagram);
+  const restored = validateDiagram(parseDSL(serializeDSL(d)).diagram);
+  assert.deepEqual(restored.resources.map(resourceMetadata), d.resources.map(resourceMetadata));
+  const definition = d.resources.find((r) => r.id === 'definition')!;
+  assert.deepEqual(resourceMetadata(definition), [
+    { label: '互換性', value: 'FARGATE' },
+    { label: 'CPU', value: '512 units (0.5 vCPU)' },
+    { label: 'メモリ', value: '1024 MiB (1 GiB)' },
+  ]);
+  assert.equal(d.resources.find((r) => r.id === 'service')!.parentId, 'cluster');
+  assert.deepEqual(
+    resourceMetadata({
+      ...definition,
+      attributes: { cpu: 1024, 'meta.cpu': '512', 'meta.memory': '2048' },
+    }),
+    [
+      { label: 'CPU', value: '1024 units (1 vCPU)' },
+      { label: 'メモリ', value: '2048 MiB (2 GiB)' },
+    ],
+  );
+  for (const attrs of [
+    'cpu=-1',
+    'cpu=0.5',
+    'memory=0',
+    'desiredCount=-1',
+    'launchType=TYPO',
+    'capacityProviders=[""]',
+  ]) {
+    assert.equal(
+      parseDSL(`diagram "invalid" {\naws.ecs-service api ${attrs}\n}`).diagram,
+      undefined,
+    );
+  }
+  for (const attrs of [{ cpu: -1 }, { memory: 0 }, { desiredCount: 0.5 }, { launchType: 'TYPO' }]) {
+    assert.throws(() =>
+      validateDiagram({
+        ...d,
+        resources: [{ ...definition, parentId: undefined, attributes: attrs }],
+        connections: [],
+      }),
+    );
+  }
+  const zero = parseDSL(
+    'diagram "zero" {\naws.ecs-container c cpu=0\naws.ecs-service s desiredCount=0\n}',
+  ).diagram;
+  assert.ok(zero);
+  for (const collapsed of [[], ['cluster', 'definition']]) {
+    const graph = buildDisplayGraph(d, { collapsed });
+    const layout = await layoutGraph(graph);
+    for (const node of layout.nodes.filter((n) => n.parentId)) {
+      const parent = layout.nodes.find((p) => p.id === node.parentId)!;
+      assert.ok(
+        node.y >=
+          56 + resourceMetadata(graph.resources.find((r) => r.id === parent.id)!).length * 20,
+      );
+    }
+  }
+});
 test('識別情報をDSL往復し、展開中の境界ヘッダーと折りたたみカードの領域を確保', async () => {
   const d = validateDiagram(parseDSL(readFileSync('examples/identity.infra', 'utf8')).diagram);
   const restored = validateDiagram(parseDSL(serializeDSL(d)).diagram);

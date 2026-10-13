@@ -103,6 +103,22 @@ Terraform の参照と `depends_on` は `dependency` であり、通信の証拠
 
 ## 表示設定
 
+メトリクス・ログ・トレースの送信は、通信の接続に `signals` 属性で明記します。
+`metrics`、`logs`、`traces` の空でない配列を使います。
+矢印のラベルと接続の詳細に、日本語で送信データの種類を表示します。
+同じ送信元・送信先でも `signals` が異なる接続は、折りたたみ後も別接続として保持します。
+
+```text
+api -> datadog kind=traffic signals=[metrics] protocol=https port=443
+api -> datadog kind=traffic signals=[logs] protocol=https port=443
+collector -> newrelic kind=traffic signals=[metrics,logs,traces] protocol="OTLP/HTTP" port=443
+```
+
+送信先には `saas.datadog`、`saas.newrelic` を使えます。
+[observability.infra](../examples/observability.infra) は Fargate のサービスから Collector 経由で
+両サービスへ送る設計例です。送信方式・認証・Collector の対応設定は実環境で確認し、
+API キーやログの内容は DSL に記載しないでください。実際のデータ送信は行いません。
+
 `view ID level=値 overlay=sg direction=RIGHT` を図の中で宣言します。
 `level` は `overview`、`service`、`subnet`、`resource` です。
 `direction` は `RIGHT` または `DOWN` です。`overlay` は現在 `sg` のみ対応します。
@@ -120,6 +136,13 @@ Terraform の参照と `depends_on` は `dependency` であり、通信の証拠
 `originalIds` に元の接続 ID を残します。異なる kind、方向、protocol は混合しません。
 折りたたんだ内部だけの接続は省略し、展開すると原図から復元します。
 表示操作では共通モデルを変更しません。
+
+ビューアー上部の「矢印」で「直角」または「曲線」を選択できます。
+曲線はベジェ曲線で描画し、ラベルも曲線の中央へ移します。
+切り替えてもノード配置・パン・ズーム・接続の選択を保持します。
+開発画面と単一 HTML で利用できます。この選択は表示中のセッションにのみ適用され、
+DSL には保存しません。曲線では直角経路の障害物回避を利用しないため、
+密集した図では他のノードと重なる場合があります。
 
 ## 診断と修正例
 
@@ -197,7 +220,28 @@ ELK のアルゴリズム、seed、入力 ID 順序を固定します。同じ�
 タスク定義はクラスターやサービスと別ノードで宣言し、複数サービス・単発タスクから
 接続できます。サービスから定義への `dependency`、実行タスクから定義への `association`、
 環境から版への `deploy` など、意図を明記します。入れ子境界は折りたたみ・展開・詳細移動できます。
-`meta.cpu`、`meta.memory`、`meta.desiredCount`、`meta.tier` などは拡張テキスト属性で記述できます。
+`cpu` は CPU units、`memory` は MiB、`desiredCount` は希望タスク数の整数で指定します。
+`memory` は正の整数、`cpu` と `desiredCount` は非負整数です。
+`launchType=FARGATE` でサービスの実行方式を、
+`requiresCompatibilities=[FARGATE]` でタスク定義の互換性を表現できます。
+クラスターには `capacityProviders=[FARGATE,FARGATE_SPOT]` を記述できます。
+CPU・メモリはタスク定義とコンテナに指定し、クラスター全体の容量とは区別します。
+カードには CPU units と vCPU、MiB と GiB、希望タスク数を併記します。
+既存の `meta.cpu`、`meta.memory`、`meta.desiredCount` の数値文字列も表示できますが、
+標準属性を優先します。`meta.tier` などは拡張テキスト属性で記述できます。
+この DSL は構成図用で、Fargate の CPU・メモリの組み合わせ、OS・プラットフォームの
+適合性や実際の割り当ては検証しません。利用可能な組み合わせは
+[AWS の公式資料](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html)
+で確認してください。
+
+```text
+aws.ecs-task-definition api_definition "API タスク定義" cpu=512 memory=1024 requiresCompatibilities=[FARGATE]
+aws.ecs-cluster api_cluster "ECS クラスター" capacityProviders=[FARGATE,FARGATE_SPOT] {
+  aws.ecs-service api_service "API サービス" launchType=FARGATE desiredCount=2
+}
+api_service -> api_definition kind=dependency label="使用するタスク定義"
+```
+
 コンテナの環境変数や認証情報は記載しないでください。
 
 [ecs-beanstalk.infra](../examples/ecs-beanstalk.infra) はECSのサービス、単発タスク、

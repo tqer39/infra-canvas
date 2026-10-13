@@ -25,6 +25,7 @@ diagram "主要サービスのアイコンカタログ" version=1 {
   saas.terraform service_23 "Terraform"
   saas.sentry service_24 "Sentry"
   saas.datadog service_25 "Datadog"
+  saas.newrelic newrelic "New Relic"
   saas.grafana service_26 "Grafana"
   saas.prometheus service_27 "Prometheus"
   saas.circleci service_28 "CircleCI"

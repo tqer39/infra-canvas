@@ -3,7 +3,7 @@ import { resourceContent, contentDimensions } from './content.js';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import type { ElkNode, ElkExtendedEdge } from 'elkjs/lib/elk-api.js';
 import { validateResourceHierarchy } from './validate.js';
-import { isBoundary } from './model.js';
+import { isBoundary, telemetrySignalLabels } from './model.js';
 import { getRegionCountry, getResourceRegion } from '../assets/regions.js';
 import type {
   Connection,
@@ -17,7 +17,7 @@ import type {
 export interface LayoutOptions {
   direction?: 'RIGHT' | 'DOWN';
 }
-export const layoutVersion = 'infra-canvas-layout-7';
+export const layoutVersion = 'infra-canvas-layout-8';
 
 const kindLabels = {
   traffic: '通信',
@@ -27,7 +27,14 @@ const kindLabels = {
   association: '関連',
 };
 export const connectionLabel = (edge: Connection): string =>
-  [edge.attributes.label ?? kindLabels[edge.kind], edge.attributes.protocol, edge.attributes.port]
+  [
+    edge.attributes.label ?? kindLabels[edge.kind],
+    Array.isArray(edge.attributes.signals)
+      ? edge.attributes.signals.map((signal) => telemetrySignalLabels[signal] ?? signal).join(' / ')
+      : undefined,
+    edge.attributes.protocol,
+    edge.attributes.port,
+  ]
     .filter((value) => value !== undefined)
     .join(' · ');
 const textWidth = (text: string, latin = 7, wide = 12): number =>

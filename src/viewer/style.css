@@ -117,6 +117,22 @@ textarea:focus-visible {
   margin-right: auto;
   font-size: 11px;
 }
+.edge-shape-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.edge-shape-control select {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.edge-shape-control select:focus-visible {
+  outline: 2px solid #24877f;
+}
 .toolbar-button:disabled {
   cursor: default;
   color: #8b9ca8;
@@ -340,6 +356,38 @@ textarea:focus-visible {
   border-radius: 5px;
   overflow-wrap: anywhere;
 }
+.collapsed-navigation {
+  padding-bottom: 18px;
+  border-bottom: 1px solid #dce5eb;
+  margin-bottom: 18px;
+}
+.collapsed-navigation h2 {
+  font-size: 14px;
+  margin: 0 0 8px;
+}
+.collapsed-navigation p {
+  font-size: 11px;
+  color: #667789;
+}
+.collapsed-navigation button {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  border: 1px solid #c9dfd8;
+  border-radius: 6px;
+  background: #f0f8f6;
+  color: #24786f;
+  text-align: left;
+}
+.collapsed-navigation button span:first-child {
+  overflow-wrap: anywhere;
+}
+.collapsed-navigation button span:last-child {
+  flex-shrink: 0;
+}
 .empty-details {
   padding-top: 65px;
 }
@@ -395,6 +443,9 @@ textarea:focus-visible {
 .service-icon-link {
   display: flex;
   flex-shrink: 0;
+}
+.react-flow__edgelabel-renderer {
+  z-index: 12;
 }
 .connection-label {
   position: absolute;

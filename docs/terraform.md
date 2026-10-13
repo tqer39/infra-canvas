@@ -60,7 +60,11 @@ module 出力経由や曖昧な実体参照の依存は未解決のままです�
 ## 機密値と静的取り込みの範囲
 
 表示属性は availability_zone、availability_zone_id、region、CIDR、instance_type、engine、engine_version の
-形式検証つき allowlist です。任意の name、description、tags、user_data、パスワード、
+形式検証つき allowlist です。ECS タスク定義の `cpu`（CPU units）、`memory`（MiB）、
+`requires_compatibilities` とサービスの `launch_type`、`desired_count` も取り込みます。
+数値は整数または数字だけの文字列を使い、機密・未確定の属性は除外します。
+`container_definitions` の JSON 内の環境変数などは取り込みません。
+任意の name、description、tags、user_data、パスワード、
 接続文字列、outputs、variables は表示モデルへ取り込みません。
 sensitive_values / after_sensitive が true または配下に true を含む属性は除外します。
 Subnet/SG/VPC の ID は関連解決にのみ使い、値を属性へコピーしません。

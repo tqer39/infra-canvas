@@ -27,7 +27,7 @@ test('同梱アイコンは記録したハッシュと一致し、外部資産�
   }
 });
 
-test('Simple Icons の52種はブランドカラーを適用し、原本の形状を保持する', () => {
+test('Simple Icons の53種はブランドカラーを適用し、原本の形状を保持する', () => {
   const manifest = JSON.parse(readFileSync('src/assets/manifest.json', 'utf8')) as {
     type: string;
     file: string;
@@ -36,7 +36,7 @@ test('Simple Icons の52種はブランドカラーを適用し、原本の形�
     originalSha256?: string;
   }[];
   const colored = manifest.filter((icon) => icon.provider === 'Simple Icons');
-  assert.equal(colored.length, 52);
+  assert.equal(colored.length, 53);
   for (const icon of colored) {
     assert.match(icon.brandColor ?? '', /^#[0-9A-F]{6}$/);
     const svg = readFileSync(`src/assets/${icon.file}`, 'utf8');
