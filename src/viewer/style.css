@@ -117,11 +117,18 @@ textarea:focus-visible {
   margin-right: auto;
   font-size: 11px;
 }
-.clear-selection:disabled {
+.toolbar-button:disabled {
   cursor: default;
   color: #8b9ca8;
   background: #fff;
   border-color: #d9e2e9;
+}
+.boundary-actions {
+  display: flex;
+  gap: 5px;
+}
+.boundary-actions button {
+  font-size: 11px;
 }
 .region-flag {
   width: 20px;
@@ -572,10 +579,7 @@ textarea:focus-visible {
   height: 100px;
 }
 .scope-bar {
-  position: absolute;
-  top: 80px;
-  left: 24px;
-  z-index: 9;
+  flex-basis: 100%;
   background: #fff;
   border: 1px solid #dce5eb;
   padding: 6px 10px;
@@ -765,9 +769,6 @@ textarea:focus-visible {
     max-width: 85vw;
     z-index: 20;
     box-shadow: 10px 0 20px #24445822;
-  }
-  .scope-bar {
-    top: 116px;
   }
   .empty-details {
     padding-top: 125px;

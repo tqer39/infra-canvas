@@ -39,6 +39,71 @@ test.beforeAll(() => {
   ]);
 });
 for (const offline of [false, true]) {
+  test(`境界を一括で折りたたみ・展開し、詳細範囲とパン・ズームを維持する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    await page.getByRole('button', { name: 'DSL を編集' }).click();
+    await page
+      .getByRole('textbox', { name: 'DSL 入力' })
+      .fill(
+        'diagram "一括操作" {\naccount west "西アカウント" {\ngroup nested "入れ子" {\nsaas.github a "A"\nsaas.gitlab b "B"\n}\n}\naccount east "東アカウント" {\nsaas.linear c "C"\n}\nsaas.neon external "外部"\na -> c kind=traffic\nb -> external kind=deploy\n}',
+      );
+    await page.getByRole('button', { name: '解析して反映' }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('7 要素');
+    await page.getByRole('button', { name: 'DSL を編集' }).click();
+    const fold = page.getByRole('button', { name: 'すべて折りたたむ', exact: true });
+    const expand = page.getByRole('button', { name: 'すべて展開する', exact: true });
+    const viewport = () =>
+      page.locator('.react-flow__viewport').evaluate(async (element) => {
+        for (let frame = 0; frame < 35; frame++) await new Promise(requestAnimationFrame);
+        return getComputedStyle(element).transform;
+      });
+    await page.mouse.move(400, 250);
+    await viewport();
+    await page.mouse.wheel(120, 0);
+    await page.mouse.wheel(0, 100);
+    const before = await viewport();
+    await fold.click();
+    await expect(page.locator('.canvas-footer')).toContainText('3 要素 ·  2 接続');
+    await expect(fold).toBeDisabled();
+    expect(await viewport()).toBe(before);
+    await expect(
+      page.getByRole('button', { name: '西アカウント → 東アカウント: 通信', exact: true }),
+    ).toHaveCount(1);
+    await expand.click();
+    await expect(page.locator('.canvas-footer')).toContainText('7 要素 ·  2 接続');
+    await expect(expand).toBeDisabled();
+    await expect(page.locator('.collapsed-card')).toHaveCount(0);
+    expect(await viewport()).toBe(before);
+    await expect(page.getByRole('button', { name: 'A → C: 通信', exact: true })).toHaveCount(1);
+    await page.getByRole('button', { name: '概要', exact: true }).click();
+    await fold.click();
+    await expect(page.locator('.canvas-footer')).toContainText('3 要素');
+    await expand.click();
+    await expect(page.locator('.canvas-footer')).toContainText('7 要素');
+    await page.getByRole('textbox', { name: 'リソース検索' }).fill('西アカウント');
+    await page.locator('.search-results button').click();
+    await page.getByRole('button', { name: '詳細へ移動', exact: true }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('4 要素');
+    await fold.click();
+    await expect(page.locator('.canvas-footer')).toContainText('1 要素');
+    await expand.click();
+    await expect(page.locator('.canvas-footer')).toContainText('4 要素');
+    await page.getByRole('button', { name: '← 全体へ戻る', exact: true }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('7 要素');
+    await page.getByRole('button', { name: 'DSL を編集' }).click();
+    await page
+      .getByRole('textbox', { name: 'DSL 入力' })
+      .fill('diagram "境界なし" {\nsaas.github github "GitHub"\n}');
+    await page.getByRole('button', { name: '解析して反映' }).click();
+    await expect(page.locator('.canvas-footer')).toContainText('1 要素');
+    await expect(fold).toBeDisabled();
+    await expect(expand).toBeDisabled();
+  });
   test(`未選択の全体カラー・選択解除・リージョン国旗 (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
     context,

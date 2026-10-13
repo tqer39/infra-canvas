@@ -303,6 +303,24 @@ function App() {
       ),
     };
   }, [diagram, scope]);
+  const boundaryIds = useMemo(
+    () => visibleDiagram?.resources.filter(isBoundary).map((resource) => resource.id) ?? [],
+    [visibleDiagram],
+  );
+  const setAllBoundaries = (collapse: boolean) => {
+    const ids = new Set(boundaryIds);
+    pendingFocus.current = undefined;
+    setSelected(undefined);
+    setSelectedEdge(undefined);
+    setHovered(undefined);
+    setQuery('');
+    setCollapsed((current) =>
+      collapse ? [...new Set([...current, ...ids])] : current.filter((id) => !ids.has(id)),
+    );
+    setExpanded((current) =>
+      collapse ? current.filter((id) => !ids.has(id)) : [...new Set([...current, ...ids])],
+    );
+  };
   useEffect(() => {
     if (!visibleDiagram) return;
     let active = true;
@@ -639,6 +657,32 @@ function App() {
                 </button>
               ))}
             </div>
+            <div className="boundary-actions" aria-label="境界の一括操作">
+              <button
+                className="toolbar-button"
+                disabled={
+                  busy ||
+                  !boundaryIds.length ||
+                  boundaryIds.every((id) => graph?.collapsed.includes(id))
+                }
+                onClick={() => setAllBoundaries(true)}
+                title="現在の表示範囲の境界をすべて折りたたむ"
+              >
+                すべて折りたたむ
+              </button>
+              <button
+                className="toolbar-button"
+                disabled={
+                  busy ||
+                  !boundaryIds.length ||
+                  boundaryIds.every((id) => !graph?.collapsed.includes(id))
+                }
+                onClick={() => setAllBoundaries(false)}
+                title="現在の表示範囲の境界をすべて展開する"
+              >
+                すべて展開する
+              </button>
+            </div>
             <button
               className="toolbar-button clear-selection"
               disabled={!selectionActive}
@@ -672,15 +716,15 @@ function App() {
                 </div>
               )}
             </div>
+            {scope && (
+              <div className="scope-bar">
+                <button onClick={() => setScope(undefined)}>← 全体へ戻る</button>
+                <span>
+                  {diagram?.resources.find((resource) => resource.id === scope)?.label} の詳細
+                </span>
+              </div>
+            )}
           </div>
-          {scope && (
-            <div className="scope-bar">
-              <button onClick={() => setScope(undefined)}>← 全体へ戻る</button>
-              <span>
-                {diagram?.resources.find((resource) => resource.id === scope)?.label} の詳細
-              </span>
-            </div>
-          )}
           <ReactFlow<ResourceNode>
             nodes={renderedNodes}
             onNodesChange={onNodesChange}
