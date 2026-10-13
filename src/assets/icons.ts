@@ -13,7 +13,7 @@ import azure_vm from './azure-vm.svg';
 import azure_app from './azure-app.svg';
 import azure_sql from './azure-sql.svg';
 import azure_storage from './azure-storage.svg';
-const icons: Record<string,string> = {
+const icons: Record<string, string> = {
   'gcp.storage': gcp_storage,
   'aws.alb': aws_alb,
   'aws.ecs': aws_ecs,

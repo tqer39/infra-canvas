@@ -62,16 +62,16 @@ SG の関連や許可規則だけで通信成立を断定しません。
 
 ## 属性
 
-| 型 | 属性名 | 用途 |
-| --- | --- | --- |
-| 文字列 | `description`, `region`, `az`, `cidr`, `protocol` | 説明、配置設定 |
-| 文字列 | `account`, `project`, `subscription`, `scope`, `environment` | 管理スコープ |
-| 文字列 | `status`, `network`, `routeEvidence`, `provider`, `role`, `url`, `version`, `subnetType` | 表示メタデータ |
-| 文字列配列 | `subnets`, `members`, `securityGroups`, `dependsOn` | リソース ID 参照 |
-| 文字列配列 | `tags`, `unresolved` | タグ、未解決情報 |
-| 数値 | `port`, `width`, `height`, `x`, `y`, `line` | 属性情報・将来の配置保存用 |
-| boolean | `public`, `unknown`, `fixed` | 属性情報・将来の固定配置用 |
-| 文字列 | `meta.*` | 拡張用のテキスト属性 |
+| 型         | 属性名                                                                                   | 用途                       |
+| ---------- | ---------------------------------------------------------------------------------------- | -------------------------- |
+| 文字列     | `description`, `region`, `az`, `cidr`, `protocol`                                        | 説明、配置設定             |
+| 文字列     | `account`, `project`, `subscription`, `scope`, `environment`                             | 管理スコープ               |
+| 文字列     | `status`, `network`, `routeEvidence`, `provider`, `role`, `url`, `version`, `subnetType` | 表示メタデータ             |
+| 文字列配列 | `subnets`, `members`, `securityGroups`, `dependsOn`                                      | リソース ID 参照           |
+| 文字列配列 | `tags`, `unresolved`                                                                     | タグ、未解決情報           |
+| 数値       | `port`, `width`, `height`, `x`, `y`, `line`                                              | 属性情報・将来の配置保存用 |
+| boolean    | `public`, `unknown`, `fixed`                                                             | 属性情報・将来の固定配置用 |
+| 文字列     | `meta.*`                                                                                 | 拡張用のテキスト属性       |
 
 `width`、`height`、`x`、`y`、`fixed` は保持されますが、初期版の ELK 自動配置への固定指定は未対応です。
 

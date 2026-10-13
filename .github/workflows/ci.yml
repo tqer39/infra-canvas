@@ -17,6 +17,7 @@ jobs:
         with:
           node-version: '24'
       - run: npm ci --ignore-scripts
-      - run: npm run check
+      - name: 型検査・Oxlint・markdownlint・Oxfmt・テスト・ビルド
+        run: npm run check
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser

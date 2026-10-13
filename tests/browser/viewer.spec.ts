@@ -5,11 +5,28 @@ import { resolve } from 'node:path';
 
 test.beforeAll(() => {
   mkdirSync('artifacts', { recursive: true });
-  execFileSync(process.execPath, ['dist/cli.js', 'html', 'examples/aws.infra', '--out', 'artifacts/aws.html']);
-  execFileSync(process.execPath, ['dist/cli.js', 'import', 'examples/terraform', '--json', 'fixture-plan.json', '--out', 'artifacts/terraform-model.json', '--dsl', 'artifacts/terraform.infra']);
+  execFileSync(process.execPath, [
+    'dist/cli.js',
+    'html',
+    'examples/aws.infra',
+    '--out',
+    'artifacts/aws.html',
+  ]);
+  execFileSync(process.execPath, [
+    'dist/cli.js',
+    'import',
+    'examples/terraform',
+    '--json',
+    'fixture-plan.json',
+    '--out',
+    'artifacts/terraform-model.json',
+    '--dsl',
+    'artifacts/terraform.infra',
+  ]);
 });
 test('表示切替・集約復元・検索・強調・ドリルダウン', async ({ page }) => {
-  const errors: string[] = []; page.on('pageerror', e => errors.push(e.message));
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('http://127.0.0.1:5188');
   await expect(page.locator('.canvas-footer')).toContainText('19 要素');
   await expect(page.locator('.react-flow__minimap-node')).toHaveCount(19);
@@ -44,7 +61,9 @@ test('任意 DSL と取り込みモデルが図へ反映され、エラー時は
   await page.goto('http://127.0.0.1:5188');
   await page.getByRole('button', { name: 'DSL を編集' }).click();
   const editor = page.getByRole('textbox', { name: 'DSL 入力' });
-  await editor.fill('diagram "入力反映" {\naws.lambda x "独自 API"\nexternal.service y "依存先"\nx -> y kind=auth\n}');
+  await editor.fill(
+    'diagram "入力反映" {\naws.lambda x "独自 API"\nexternal.service y "依存先"\nx -> y kind=auth\n}',
+  );
   await page.getByRole('button', { name: '解析して反映' }).click();
   await expect(page.locator('.canvas-footer')).toContainText('2 要素');
   await expect(page.locator('.document-title')).toHaveText('入力反映');
@@ -55,14 +74,19 @@ test('任意 DSL と取り込みモデルが図へ反映され、エラー時は
   await page.locator('input[type=file]').setInputFiles('artifacts/terraform-model.json');
   await expect(page.locator('.document-title')).toHaveText('Terraform infrastructure');
   await expect(editor).toContainText('sourceKind="plan"');
-  await page.getByRole('textbox', { name: 'リソース検索' }).fill('module.network.aws_subnet.private');
+  await page
+    .getByRole('textbox', { name: 'リソース検索' })
+    .fill('module.network.aws_subnet.private');
   await page.locator('.search-results button').first().click();
   await expect(page.locator('.detail-panel')).toContainText('modules/network/main.tf');
   await expect(page.locator('.detail-panel')).toContainText('plan');
 });
 test('単一 HTML は file URL でネットワークなしに操作できる', async ({ page, context }) => {
   await context.setOffline(true);
-  const requests: string[] = []; page.on('request', req => { if (/^https?:/.test(req.url())) requests.push(req.url()); });
+  const requests: string[] = [];
+  page.on('request', (req) => {
+    if (/^https?:/.test(req.url())) requests.push(req.url());
+  });
   await page.goto('file://' + resolve('artifacts/aws.html'));
   await expect(page.locator('.canvas-footer')).toContainText('19 要素');
   await page.getByRole('button', { name: '概要', exact: true }).click();

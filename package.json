@@ -23,12 +23,14 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src tests scripts && node scripts/lint-markdown.mjs",
+    "lint": "oxlint --deny-warnings . && node scripts/lint-markdown.mjs",
     "test": "node --import tsx --test tests/*.test.ts",
     "build": "node scripts/build.mjs",
     "cli": "node --import tsx src/cli.ts",
-    "check": "npm run typecheck && npm run lint && npm test && npm run build",
-    "test:browser": "playwright test"
+    "check": "npm run typecheck && npm run lint && npm run fmt:check && npm test && npm run build",
+    "test:browser": "playwright test",
+    "fmt": "oxfmt --write .",
+    "fmt:check": "oxfmt --check ."
   },
   "dependencies": {
     "@xyflow/react": "12.12.0",
@@ -37,17 +39,16 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
-    "@eslint/js": "10.0.1",
     "@playwright/test": "1.64.0",
     "@types/node": "26.6.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "esbuild": "0.28.2",
-    "eslint": "10.12.0",
     "markdownlint": "0.41.1",
+    "oxfmt": "0.73.0",
+    "oxlint": "1.88.0",
     "tsx": "4.23.15",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.71.2",
     "vite": "8.3.4"
   },
   "overrides": {
