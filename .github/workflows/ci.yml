@@ -16,12 +16,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
         with:
-          node-version: '24'
-      - run: npm ci --ignore-scripts
+          version: '2026.9.9'
+          install_args: node python
+      - run: mise run install
       - name: 型検査・Oxlint・markdownlint・Oxfmt・単体テスト
-        run: npm run check:static
+        run: mise run check:static
   browser:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -33,13 +34,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c
         with:
-          node-version: '24'
-      - run: npm ci --ignore-scripts
-      - run: npm run build
-      - run: npx playwright install --with-deps --only-shell chromium
-      - run: npm run test:browser -- --shard=${{ matrix.shard }}/2
+          version: '2026.9.9'
+          install_args: node python
+      - run: mise run install
+      - run: mise run build
+      - run: mise run browser:install-ci
+      - run: mise run test:browser -- --shard=${{ matrix.shard }}/2
   workflow-result:
     needs: [checks, browser]
     if: ${{ always() }}

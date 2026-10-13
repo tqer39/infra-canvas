@@ -6,7 +6,11 @@ export interface ResourceMetadata {
 }
 /** CPUはECSのCPU units、メモリはMiB、タスク数は非負整数。 */
 export function validateComputeAttributes(resource: Resource): void {
-  for (const key of ['cpu', 'memory', 'desiredCount']) {
+  for (const key of ['cpuRequest', 'memoryRequest', 'cpuLimit', 'memoryLimit']) {
+    if (resource.attributes[key] !== undefined && typeof resource.attributes[key] !== 'string')
+      throw new Error(`${key} は Kubernetes quantity の文字列で指定してください。`);
+  }
+  for (const key of ['cpu', 'memory', 'desiredCount', 'replicas']) {
     const value = resource.attributes[key];
     if (
       value !== undefined &&
@@ -50,6 +54,17 @@ export function resourceMetadata(resource: Resource): ResourceMetadata[] {
     return [];
   });
   const compute: ResourceMetadata[] = [];
+  for (const [label, key] of [
+    ['CPU request', 'cpuRequest'],
+    ['メモリ request', 'memoryRequest'],
+    ['CPU limit', 'cpuLimit'],
+    ['メモリ limit', 'memoryLimit'],
+  ] as const) {
+    const value = resource.attributes[key];
+    if (typeof value === 'string' && value.trim()) compute.push({ label, value });
+  }
+  if (typeof resource.attributes.replicas === 'number')
+    compute.push({ label: 'レプリカ数', value: String(resource.attributes.replicas) });
   const attrs = resource.attributes;
   for (const [label, key] of [
     ['実行方式', 'launchType'],

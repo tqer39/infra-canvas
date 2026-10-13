@@ -1,0 +1,37 @@
+diagram "EKS 単一アカウント・単一クラスター" version=1 {
+account workload "Workload Account" {
+vpc net "Workload VPC" {
+aws.eks shared "EKS shared" {
+  k8s.namespace shared_a_ns "Namespace A" {
+    k8s.ingress shared_a_ingress "Ingress A"
+    k8s.service shared_a_service "Service A"
+    k8s.pod shared_a_pod "Pod A"
+    k8s.service-account shared_a_sa "ServiceAccount A"
+  }
+  k8s.namespace shared_b_ns "Namespace B" {
+    k8s.ingress shared_b_ingress "Ingress B"
+    k8s.service shared_b_service "Service B"
+    k8s.pod shared_b_pod "Pod B"
+    k8s.service-account shared_b_sa "ServiceAccount B"
+  }
+  k8s.namespace shared_admin "Admin Namespace" {
+    k8s.deployment shared_gitops "GitOps controller"
+  }
+}
+aws.rds db_a "DB A"
+aws.rds db_b "DB B"
+}
+}
+shared_a_ingress -> shared_a_service kind=traffic label="Ingress の転送先"
+shared_a_service -> shared_a_pod kind=traffic label="Service の対象"
+shared_a_pod -> shared_a_sa kind=auth label="ServiceAccount の利用"
+shared_b_ingress -> shared_b_service kind=traffic label="Ingress の転送先"
+shared_b_service -> shared_b_pod kind=traffic label="Service の対象"
+shared_b_pod -> shared_b_sa kind=auth label="ServiceAccount の利用"
+shared_a_pod -> db_a kind=traffic label="A のデータアクセス意図"
+shared_b_pod -> db_b kind=traffic label="B のデータアクセス意図"
+view overview level=overview
+view service level=service
+view network level=subnet
+view security level=resource overlay=sg
+}

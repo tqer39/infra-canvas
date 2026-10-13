@@ -34,6 +34,19 @@ const parsed = (): Diagram => {
 };
 
 describe('DSL', () => {
+  it('編集した設計値の DSL に取り込み元の参照を保持する', () => {
+    const diagram = parsed();
+    diagram.resources[0]!.provenance = {
+      kind: 'design',
+      repository: 'example/repo',
+      address: 'aws_vpc.main',
+      file: 'main.tf',
+      line: 3,
+    };
+    const result = parseDSL(serializeDSL(diagram));
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.diagram!.resources[0]!.provenance, diagram.resources[0]!.provenance);
+  });
   it('入れ子、複数 subnet、重複 SG を保持する', () => {
     const diagram = parsed();
     assert.equal(diagram.resources.find((resource) => resource.id === 'api')!.parentId, 'net');

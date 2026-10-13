@@ -911,3 +911,53 @@ textarea:focus-visible {
   white-space: pre-wrap;
   color: #345b6d;
 }
+
+.property-editor {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 20px;
+}
+.property-editor label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  font-size: 11px;
+  color: #46606f;
+}
+.property-editor input,
+.property-editor textarea,
+.property-editor select {
+  width: 100%;
+  min-width: 0;
+  padding: 7px;
+  border: 1px solid #dce5eb;
+  border-radius: 5px;
+  background: #fff;
+  color: #26394c;
+  font: inherit;
+}
+.property-editor textarea {
+  resize: vertical;
+}
+.property-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px;
+  align-items: end;
+}
+.property-remove {
+  border: 0;
+  background: transparent;
+  color: #8a5b55;
+  font-size: 10px;
+  padding: 8px 0;
+}
+.property-saved {
+  color: #247e70;
+  font-size: 11px;
+}
+.connection-editor summary {
+  cursor: pointer;
+  font-size: 11px;
+  padding: 8px 0;
+}

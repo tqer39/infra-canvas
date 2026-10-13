@@ -42,3 +42,31 @@ npm run test:browser
 ブラウザでは5件それぞれを単一HTMLとして出力し、オフラインで読み込み、表・リストのはみ出しと、一括折りたたみ・全体表示後の「＋」での展開を確認します。
 スクリーンショットは `artifacts/reference-*.png` に生成します。
 表のセルは文字列で、ターゲット欄からリソース参照・経路を自動生成しません。
+
+## Amazon EKS × AWS マルチアカウント
+
+[AWS Black Belt 2025/12 資料](https://pages.awscloud.com/rs/112-TZM-766/images/AWS-Black-Belt_2025_AmazonEKS-AWSMultiAccount-architecture-pattern_1205_v1.pdf)
+の14–17ページの4パターンをサンプルに追加しました。
+
+| パターン                       | サンプル                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------- |
+| 単一アカウント・単一クラスター | [サンプル](../examples/reference/eks-single-account-single-cluster.infra) |
+| 単一アカウント・複数クラスター | [サンプル](../examples/reference/eks-single-account-multi-cluster.infra)  |
+| 複数アカウント・共有クラスター | [サンプル](../examples/reference/eks-multi-account-single-cluster.infra)  |
+| 複数アカウント・複数クラスター | [サンプル](../examples/reference/eks-multi-account-multi-cluster.infra)   |
+
+共有クラスター例は30–33ページの Pod Identity・Access Entry と37ページの共通接続要素も参考にしています。
+Pod Identity は[現在の公式仕様](https://docs.aws.amazon.com/eks/latest/userguide/pod-id-assign-target-role.html)に合わせ、
+クラスターと同一アカウントの IAM Role から、対象アカウントの Target Role への連鎖を分けました。
+Namespace は論理的な境界です。共有クラスターをテナントのアカウントへコピーせず、実体は Platform Account に保持します。
+
+サンプルは参考構成を抽象化した設計入力です。Ingress・Service・Pod の関係、CPU request/limit、
+簡略化した認証や転送の接続は表示を検証する補足の設計値で、原図の完全な複製ではありません。
+アカウントID、リージョン、AZ、ノード数、DBエンジンや未記載ポートは推測していません。
+VPC Lattice の例はテナント間通信を許可する場合の選択肢で、デフォルトの相互通信を意味しません。
+DNS・PrivateLink・Direct Connect・TGW はサービス単位で示し、経路表・ENI・実効ポリシーの詳細は省略しています。
+共有 VPC の複数アカウント所有やテナントをまたぐ点線枠は、排他的な入れ子で重複描画せず関連線で表現します。
+
+EKS 関連の追加は DSL・共通 JSON・描画の対応です。Terraform の EKS リソースや Kubernetes manifest を
+新しく意味解析するアダプターは今回追加していません。CPU quantity、NetworkPolicy、SCP、IAM の構築妥当性や
+通信成立の自動評価も行いません。4例は DSL 往復・配置・折りたたみ復元と、オフラインHTMLの描画を検証します。

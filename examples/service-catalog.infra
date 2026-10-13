@@ -59,4 +59,6 @@ diagram "主要サービスのアイコンカタログ" version=1 {
   saas.langchain service_56 "LangChain"
   saas.langgraph service_57 "LangGraph"
   view service level=service
+  saas.nginx nginx "NGINX"
+  saas.envoyproxy envoyproxy "Envoy Proxy"
 }

@@ -1,4 +1,11 @@
+import {
+  textAttributes,
+  arrayAttributes,
+  numberAttributes,
+  boolAttributes,
+} from './attribute-schema.js';
 import { resourceContent } from './content.js';
+import { validateConfiguration } from './configuration.js';
 import { validateComputeAttributes } from './resource-metadata.js';
 import { boundaryTypes, isTelemetrySignals } from './model.js';
 import type {
@@ -19,70 +26,6 @@ interface Token extends SourceLocation {
   kind: 'word' | 'string' | 'symbol' | 'newline' | 'eof';
 }
 const edgeKinds = new Set(['traffic', 'dependency', 'auth', 'deploy', 'association']);
-const textAttributes = new Set([
-  'launchType',
-  'display',
-  'description',
-  'region',
-  'az',
-  'azId',
-  'availability_zone_id',
-  'cidr',
-  'protocol',
-  'account',
-  'project',
-  'subscription',
-  'status',
-  'scope',
-  'address',
-  'repository',
-  'commit',
-  'root',
-  'file',
-  'provenance',
-  'sourceKind',
-  'network',
-  'routeEvidence',
-  'provider',
-  'environment',
-  'role',
-  'url',
-  'version',
-  'subnetType',
-  'terraformType',
-  'availability_zone',
-  'cidr_block',
-  'instance_type',
-  'engine',
-  'engine_version',
-  'placement',
-  'subnetVisibility',
-]);
-const arrayAttributes = new Set([
-  'capacityProviders',
-  'requiresCompatibilities',
-  'columns',
-  'rows',
-  'items',
-  'subnets',
-  'members',
-  'tags',
-  'securityGroups',
-  'unresolved',
-  'dependsOn',
-]);
-const numberAttributes = new Set([
-  'cpu',
-  'memory',
-  'desiredCount',
-  'port',
-  'width',
-  'height',
-  'x',
-  'y',
-  'line',
-]);
-const boolAttributes = new Set(['public', 'unknown', 'fixed']);
 class ParseFailure extends Error {}
 
 export function parseDSL(source: string): ParseResult {
@@ -401,6 +344,7 @@ export function parseDSL(source: string): ParseResult {
           try {
             resourceContent(resource);
             validateComputeAttributes(resource);
+            validateConfiguration(resource);
           } catch (error) {
             report(
               parsed.positions.get('display') ?? first,

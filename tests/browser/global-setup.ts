@@ -5,6 +5,7 @@ import { mkdirSync } from 'node:fs';
 export default function globalSetup(): void {
   mkdirSync('artifacts', { recursive: true });
   for (const name of [
+    'proxies',
     'observability',
     'organizations',
     'aws',

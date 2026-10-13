@@ -54,5 +54,7 @@ await build({
   banner: { js: '#!/usr/bin/env node' },
 });
 await chmod('dist/cli.js', 0o755);
-execFileSync('node_modules/.bin/tsc', ['-p', 'tsconfig.build.json'], { stdio: 'inherit' });
+execFileSync(process.execPath, ['node_modules/typescript/bin/tsc', '-p', 'tsconfig.build.json'], {
+  stdio: 'inherit',
+});
 await viteBuild();
