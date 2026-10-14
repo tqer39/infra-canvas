@@ -1910,3 +1910,102 @@ for (const offline of [false, true]) {
     if (!offline) await page.screenshot({ path: 'artifacts/connection-legend-tooltip.png' });
   });
 }
+
+for (const offline of [false, true]) {
+  test(`凡例で接続種別を切り替え、フィルター・保存ビューと同期し視点を保持する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
+    const kinds = [
+      'traffic',
+      'dependency',
+      'auth',
+      'deploy',
+      'association',
+      'replication',
+      'failover',
+    ];
+    const labels = ['通信', '依存', '認証', 'デプロイ', '関連', '複製', '切替'];
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    await page.getByRole('textbox', { name: 'DSL 入力' }).fill(`diagram "凡例のフィルター" {
+      aws.ecs source "送信元"
+      ${kinds.map((kind, index) => `aws.rds target${index} "接続先${index}"\n${index === 0 ? 'source' : `target${index - 1}`} -> target${index} kind=${kind} route=web step=${index + 1} purpose=application`).join('\n')}
+      aws.rds other "別経路"
+      source -> other route=other step=1 purpose=data
+      view saved label="保存した通信経路" level=resource kinds=[traffic] routes=[web] purposes=[application]
+    }`);
+    await page.getByRole('button', { name: '解析して反映', exact: true }).click();
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    await expect(page.locator('.diagnostics')).toHaveCount(0);
+    await expect(page.locator('.connection-label[data-kind="association"]')).toHaveCount(1);
+    await expect(page.locator('.connection-label')).toHaveCount(8);
+    const viewport = page.locator('.react-flow__viewport');
+    await viewport.evaluate(async () => {
+      for (let frame = 0; frame < 35; frame++) await new Promise(requestAnimationFrame);
+    });
+    await page.locator('.react-flow__controls-zoomout').click();
+    await page.mouse.move(600, 400);
+    await page.mouse.wheel(100, 0);
+    const before = await viewport.getAttribute('style');
+    await page.getByRole('button', { name: '表示フィルター', exact: true }).click();
+    for (const [index, kind] of kinds.entries()) {
+      const button = page
+        .locator('.edge-legend')
+        .getByRole('button', { name: labels[index]!, exact: true });
+      const checkbox = page.getByRole('checkbox', { name: labels[index]!, exact: true });
+      await expect(button).toHaveAttribute('aria-pressed', 'true');
+      await page.locator(`.connection-label[data-kind="${kind}"]`).first().click();
+      await expect(page.locator('.connection-editor')).toBeVisible();
+      await button.click();
+      await expect(button).toHaveAttribute('aria-pressed', 'false');
+      await expect(checkbox).not.toBeChecked();
+      await expect(page.locator(`.connection-label[data-kind="${kind}"]`)).toHaveCount(0);
+      await expect(page.locator('.connection-editor')).toHaveCount(0);
+      await expect(viewport).toHaveAttribute('style', before!);
+      await button.press(index % 2 === 0 ? 'Enter' : 'Space');
+      await expect(button).toHaveAttribute('aria-pressed', 'true');
+      await expect(checkbox).toBeChecked();
+      await expect(page.locator('.connection-label')).toHaveCount(8);
+      await expect(viewport).toHaveAttribute('style', before!);
+    }
+    const traffic = page.locator('.edge-legend').getByRole('button', { name: '通信', exact: true });
+    await page.getByRole('checkbox', { name: '通信', exact: true }).uncheck();
+    await expect(traffic).toHaveAttribute('aria-pressed', 'false');
+    await traffic.click();
+    await expect(page.getByRole('checkbox', { name: '通信', exact: true })).toBeChecked();
+    for (const label of labels)
+      await page.locator('.edge-legend').getByRole('button', { name: label, exact: true }).click();
+    await expect(page.locator('.connection-label')).toHaveCount(0);
+    await expect(page.locator('.canvas-footer')).toContainText('0 接続');
+    await traffic.click();
+    await expect(page.locator('.connection-label')).toHaveCount(2);
+    await page.getByRole('button', { name: '保存した通信経路', exact: true }).click();
+    await expect(page.locator('.connection-label')).toHaveCount(1);
+    const replication = page
+      .locator('.edge-legend')
+      .getByRole('button', { name: '複製', exact: true });
+    await expect(replication).toHaveAttribute('aria-pressed', 'false');
+    await replication.click();
+    await expect(page.locator('.connection-label')).toHaveCount(2);
+    await expect(page.locator('.connection-label[data-kind="replication"]')).toHaveCount(1);
+    await traffic.click();
+    await expect(page.locator('.connection-label')).toHaveCount(1);
+    await page.getByRole('button', { name: 'サービス', exact: true }).click();
+    await expect(page.locator('.connection-label')).toHaveCount(8);
+    for (const label of labels)
+      await expect(
+        page.locator('.edge-legend').getByRole('button', { name: label, exact: true }),
+      ).toHaveAttribute('aria-pressed', 'true');
+    if (!offline) {
+      await traffic.click();
+      await page.mouse.move(20, 80);
+      await page.screenshot({ path: 'artifacts/connection-legend-filter.png' });
+    }
+  });
+}
