@@ -2187,6 +2187,10 @@ function App() {
               <PropertyEditor
                 key={`${documentVersion}-${selectedResource.id}`}
                 resource={selectedResource}
+                resourceIconType={getResourceIconType(
+                  selectedResource,
+                  new Map(diagram?.resources.map((resource) => [resource.id, resource])),
+                )}
                 onSave={(value) => editItem(selectedResource.id, value, true)}
               />
               <h3>

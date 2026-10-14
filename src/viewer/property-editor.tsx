@@ -64,10 +64,12 @@ const fieldsFor = (attrs: Attributes, excludeIcon = false): Field[] =>
 export function PropertyEditor({
   resource,
   connection,
+  resourceIconType,
   onSave,
 }: {
   resource?: Resource;
   connection?: Connection;
+  resourceIconType?: string;
   onSave: (value: { label: string; kind: Connection['kind']; attributes: Attributes }) => void;
 }) {
   const item = resource ?? connection!;
@@ -104,7 +106,9 @@ export function PropertyEditor({
     types: matchingIcons.filter((type) => !iconGroups[type.split('.')[0]]),
   });
   const [collapsedIconGroups, setCollapsedIconGroups] = useState<string[]>(() =>
-    groups.filter((group) => !group.types.includes(icon)).map((group) => group.name),
+    groups
+      .filter((group) => !group.types.includes(icon || resourceIconType || resource?.type || ''))
+      .map((group) => group.name),
   );
   const iconButton = (type: string) => (
     <button
