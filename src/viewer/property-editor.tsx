@@ -103,7 +103,9 @@ export function PropertyEditor({
     name: 'その他',
     types: matchingIcons.filter((type) => !iconGroups[type.split('.')[0]]),
   });
-  const [collapsedIconGroups, setCollapsedIconGroups] = useState<string[]>([]);
+  const [collapsedIconGroups, setCollapsedIconGroups] = useState<string[]>(() =>
+    groups.filter((group) => !group.types.includes(icon)).map((group) => group.name),
+  );
   const iconButton = (type: string) => (
     <button
       key={type}

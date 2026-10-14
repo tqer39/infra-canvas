@@ -555,6 +555,7 @@ test('groupにTursoサービスアイコンを指定してDSLへ保存できる'
   await expect(group.locator('.service-icon')).toHaveCount(1);
   const before = await group.locator('.service-icon').getAttribute('src');
   await group.getByText('Turso', { exact: true }).click();
+  await expect(page.locator('.icon-group[open] summary')).toHaveText([/外部サービス・SaaS/]);
   await expect(page.getByRole('button', { name: 'saas.turso', exact: true })).toHaveAttribute(
     'aria-pressed',
     'true',

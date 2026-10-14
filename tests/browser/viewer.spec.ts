@@ -39,6 +39,10 @@ for (const offline of [false, true]) {
       .locator('.icon-group')
       .filter({ has: page.locator('summary', { hasText: /^AWS/ }) });
     await expect(awsGroup).toHaveCount(1);
+    await expect(picker.locator('.icon-group[open]')).toHaveCount(0);
+    await awsGroup.locator('summary').click();
+    await expect(awsGroup).toHaveAttribute('open');
+    await expect(awsGroup.getByRole('button', { name: 'aws.ec2', exact: true })).toBeVisible();
     await awsGroup.locator('summary').click();
     await expect(awsGroup).not.toHaveAttribute('open');
     await expect(awsGroup.getByRole('button', { name: 'aws.ec2', exact: true })).toBeHidden();
@@ -100,6 +104,8 @@ for (const offline of [false, true]) {
     await page.getByRole('button', { name: 'やり直す', exact: true }).click();
     await expect(node.locator('.service-icon')).toHaveAttribute('src', selectedIcon!);
     await node.locator('.resource-label').click();
+    await expect(picker.locator('.icon-group[open] summary')).toHaveText([/外部サービス・SaaS/]);
+    await expect(picker.getByRole('button', { name: 'saas.github', exact: true })).toBeVisible();
     await picker.getByRole('button', { name: '種別から自動選択', exact: true }).click();
     await expect(editor).toHaveValue(original);
     await expect(node.locator('.service-icon')).toHaveAttribute('src', originalIcon!);

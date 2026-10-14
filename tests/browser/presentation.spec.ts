@@ -195,6 +195,7 @@ test('曲線や跨る囲みの背後のノードをクリックでき、AWSア�
   await page.locator('[data-id="db"] .resource-card').click({ position: { x: 90, y: 43 } });
   await expect(page.locator('.detail-panel h2')).toHaveText('背後のDB');
   await page.locator('[data-id="prod"] .resource-heading').click();
+  await page.getByLabel('表示アイコンを検索', { exact: true }).fill('aws.organization-account');
   await page.getByRole('button', { name: 'aws.organization-account', exact: true }).click();
   await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'DSL 入力' })).toHaveValue(
