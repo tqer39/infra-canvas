@@ -10,6 +10,244 @@ async function setArrowShape(page: Page, shape: string): Promise<void> {
 }
 
 for (const offline of [false, true]) {
+  test(`属性と接続の編集を Undo/Redo で DSL とともに復元し、視点を保持する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    const node = page.locator('.react-flow__node[data-id="api"]');
+    await expect(node).toBeVisible();
+    await node.locator('.resource-label').click();
+    const form = page.getByRole('form', { name: 'リソース情報の編集' });
+    const undo = page.getByRole('button', { name: '元に戻す', exact: true });
+    const redo = page.getByRole('button', { name: 'やり直す', exact: true });
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    const editor = page.getByRole('textbox', { name: 'DSL 入力', exact: true });
+    const original = await editor.inputValue();
+    // 自動全体表示のアニメーションが完了してから比較する。
+    await page.locator('.react-flow__viewport').evaluate(async () => {
+      for (let i = 0; i < 35; i++) await new Promise(requestAnimationFrame);
+    });
+    const viewport = page.locator('.react-flow__viewport');
+    const before = await viewport.getAttribute('style');
+    await form.getByLabel('名前', { exact: true }).fill('Undo対象API');
+    await form.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await expect(node).toContainText('Undo対象API');
+    const edited = await editor.inputValue();
+    expect(edited).not.toBe(original);
+    await undo.click();
+    await expect(node).toContainText('ECS API');
+    await expect(editor).toHaveValue(original);
+    await expect(viewport).toHaveAttribute('style', before!);
+    await redo.click();
+    await expect(node).toContainText('Undo対象API');
+    await expect(editor).toHaveValue(edited);
+    await expect(viewport).toHaveAttribute('style', before!);
+    await node.locator('.resource-label').click();
+    await expect(form.getByLabel('名前', { exact: true })).toHaveValue('Undo対象API');
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    await page
+      .getByRole('button', { name: 'Undo対象API → PostgreSQL: 通信 · tcp · 5432', exact: true })
+      .click();
+    await page.locator('.connection-editor summary').click();
+    const edgeForm = page.locator('.connection-editor form');
+    await edgeForm.getByLabel('ポート', { exact: true }).fill('6432');
+    await edgeForm.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await expect(
+      page.getByRole('button', {
+        name: 'Undo対象API → PostgreSQL: 通信 · tcp · 6432',
+        exact: true,
+      }),
+    ).toBeVisible();
+    await undo.click();
+    await expect(
+      page.getByRole('button', {
+        name: 'Undo対象API → PostgreSQL: 通信 · tcp · 5432',
+        exact: true,
+      }),
+    ).toBeVisible();
+    await redo.click();
+    await expect(
+      page.getByRole('button', {
+        name: 'Undo対象API → PostgreSQL: 通信 · tcp · 6432',
+        exact: true,
+      }),
+    ).toBeVisible();
+  });
+  test(`Undo/Redo で表示・一括境界操作・詳細範囲を復元する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    const undo = page.getByRole('button', { name: '元に戻す', exact: true });
+    const redo = page.getByRole('button', { name: 'やり直す', exact: true });
+    const footer = page.locator('.canvas-footer');
+    const shape = page.getByRole('switch', { name: '矢印を曲線にする', exact: true });
+    await expect(footer).toContainText('19 要素');
+    await expect(undo).toBeDisabled();
+    await expect(redo).toBeDisabled();
+    await setArrowShape(page, 'bezier');
+    await page.getByRole('button', { name: 'すべて折りたたむ', exact: true }).click();
+    await expect(footer).toContainText('5 要素');
+    await undo.click();
+    await expect(footer).toContainText('19 要素');
+    await expect(shape).toHaveAttribute('aria-checked', 'true');
+    await page.screenshot({ path: `artifacts/undo-redo-${offline ? 'offline' : 'dev'}.png` });
+    await undo.click();
+    await expect(shape).toHaveAttribute('aria-checked', 'false');
+    await expect(undo).toBeDisabled();
+    await redo.click();
+    await expect(shape).toHaveAttribute('aria-checked', 'true');
+    await redo.click();
+    await expect(footer).toContainText('5 要素');
+    await expect(redo).toBeDisabled();
+    await undo.click();
+    await expect(footer).toContainText('19 要素');
+    // Undo 後の新しい操作で分岐し、詳細への移動を一操作として復元する。
+    await page.locator('.react-flow__node[data-id="main"]').click();
+    await page.getByRole('button', { name: '詳細へ移動', exact: true }).click();
+    await expect(page.locator('.scope-bar')).toContainText('本番 VPC の詳細');
+    await expect(redo).toBeDisabled();
+    await undo.click();
+    await expect(page.locator('.scope-bar')).toHaveCount(0);
+    await expect(footer).toContainText('19 要素');
+    await redo.click();
+    await expect(page.locator('.scope-bar')).toContainText('本番 VPC の詳細');
+    await page.getByRole('button', { name: 'ネットワーク', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'ネットワーク', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await undo.click();
+    await expect(page.getByRole('button', { name: 'サービス', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(page.locator('.scope-bar')).toContainText('本番 VPC の詳細');
+  });
+  test(`Undo/Redo で DSL と読み込んだ図を復元し、解析エラーでは履歴を保持する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    const undo = page.getByRole('button', { name: '元に戻す', exact: true });
+    const redo = page.getByRole('button', { name: 'やり直す', exact: true });
+    await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    const editor = page.getByRole('textbox', { name: 'DSL 入力', exact: true });
+    const original = await editor.inputValue();
+    await editor.fill('diagram "変更後" version=1 { aws.ec2 app "新しいサービス" }');
+    await page.getByRole('button', { name: '解析して反映', exact: true }).click();
+    await expect(page.locator('.document-title')).toHaveText('変更後');
+    await expect(page.locator('.canvas-footer')).toContainText('1 要素');
+    const applied = await editor.inputValue();
+    await undo.click();
+    await expect(editor).toHaveValue(original);
+    await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    await editor.fill('diagram "壊れた入力" {');
+    await page.getByRole('button', { name: '解析して反映', exact: true }).click();
+    await expect(page.locator('.diagnostics')).toBeVisible();
+    await expect(undo).toBeDisabled();
+    await expect(redo).toBeEnabled();
+    await redo.click();
+    await expect(editor).toHaveValue(applied);
+    await expect(page.locator('.diagnostics')).toHaveCount(0);
+    // 同じ入力の再反映では履歴を増やさない。
+    await page.getByRole('button', { name: '解析して反映', exact: true }).click();
+    await undo.click();
+    await expect(undo).toBeDisabled();
+    await expect(editor).toHaveValue(original);
+    await page.locator('input[type=file]').setInputFiles('examples/gcp-azure.infra');
+    await expect(page.locator('.canvas-footer')).toContainText('12 要素');
+    await undo.click();
+    await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    await expect(editor).toHaveValue(original);
+    await redo.click();
+    await expect(page.locator('.canvas-footer')).toContainText('12 要素');
+    const imported = JSON.parse(readFileSync('artifacts/terraform-model.json', 'utf8'));
+    await page.locator('input[type=file]').setInputFiles('artifacts/terraform-model.json');
+    await expect(page.locator('.document-title')).toHaveText(imported.title);
+    await undo.click();
+    await expect(page.locator('.canvas-footer')).toContainText('12 要素');
+    await redo.click();
+    await expect(page.locator('.document-title')).toHaveText(imported.title);
+  });
+  test(`Undo/Redo ショートカットは入力欄の文字編集を妨げない (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    const network = page.getByRole('button', { name: 'ネットワーク', exact: true });
+    const service = page.getByRole('button', { name: 'サービス', exact: true });
+    await network.click();
+    await page.keyboard.press('Control+z');
+    await expect(service).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('Control+y');
+    await expect(network).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('Meta+z');
+    await expect(service).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('Meta+Shift+z');
+    await expect(network).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('Control+z');
+    await page.keyboard.press('Control+Shift+z');
+    await expect(network).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    const editor = page.getByRole('textbox', { name: 'DSL 入力', exact: true });
+    const draftBefore = await editor.inputValue();
+    await editor.focus();
+    await page.keyboard.press('End');
+    await page.keyboard.type('x');
+    await expect(editor).not.toHaveValue(draftBefore);
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z');
+    await expect(editor).toHaveValue(draftBefore);
+    await expect(network).toHaveAttribute('aria-pressed', 'true');
+    await editor.fill('入力途中の草稿');
+    await page.getByRole('button', { name: '元に戻す', exact: true }).click();
+    await expect(service).toHaveAttribute('aria-pressed', 'true');
+    await expect(editor).toHaveValue('入力途中の草稿');
+    const search = page.getByRole('textbox', { name: 'リソース検索', exact: true });
+    await search.focus();
+    await page.keyboard.press('Control+y');
+    await expect(service).toHaveAttribute('aria-pressed', 'true');
+  });
+  test(`展開済みリソースへの再検索は履歴を増やさず対象へ移動する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await expect(page.locator('.canvas-footer')).toContainText('19 要素');
+    const search = page.getByRole('textbox', { name: 'リソース検索', exact: true });
+    const focusAPI = async () => {
+      await search.fill('ECS API');
+      await page.locator('.search-results button').click();
+      await expect
+        .poll(() =>
+          page.locator('.react-flow__node[data-id="api"]').evaluate((node) => {
+            const rect = node.getBoundingClientRect();
+            const area = node.closest('.canvas-area')!.getBoundingClientRect();
+            return (
+              rect.left >= area.left &&
+              rect.right <= area.right &&
+              rect.top >= area.top &&
+              rect.bottom <= area.bottom
+            );
+          }),
+        )
+        .toBe(true);
+    };
+    await focusAPI();
+    await page.mouse.move(400, 250);
+    await page.mouse.wheel(5000, 0);
+    await focusAPI();
+    await page.getByRole('button', { name: '元に戻す', exact: true }).click();
+    await expect(page.getByRole('button', { name: '元に戻す', exact: true })).toBeDisabled();
+  });
   test(`右ペインで属性と接続を編集し、検証・DSL同期・画面位置の保持ができる (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
     context,
