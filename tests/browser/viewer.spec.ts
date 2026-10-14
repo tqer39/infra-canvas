@@ -32,6 +32,7 @@ for (const offline of [false, true]) {
       ['api', 'aws.ecs', 'AWS'],
       ['tokyo', 'aws.region', 'AWS'],
       ['prod', 'aws.account', 'AWS'],
+      ['db', 'aws.rds', 'AWS'],
       ['repository', 'github.repository', 'GitHub'],
       ['users', 'external.user', '利用者・外部リソース'],
     ]) {
@@ -41,6 +42,21 @@ for (const offline of [false, true]) {
         new RegExp(`^${group}`),
       ]);
       const candidate = picker.getByRole('button', { name: type, exact: true });
+      await expect
+        .poll(() =>
+          candidate.evaluate((button) => {
+            const browser = button.closest('.icon-browser')!;
+            const viewport = browser.getBoundingClientRect();
+            const target = button.getBoundingClientRect();
+            const heading = button
+              .closest('details')!
+              .querySelector('summary')!
+              .getBoundingClientRect();
+            return target.top >= viewport.top + heading.height && target.bottom <= viewport.bottom;
+          }),
+        )
+        .toBe(true);
+
       await expect(node.locator('.service-icon')).toHaveAttribute(
         'src',
         (await candidate.locator('img').getAttribute('src'))!,
@@ -49,6 +65,53 @@ for (const offline of [false, true]) {
         picker.getByRole('button', { name: '種別から自動選択', exact: true }),
       ).toHaveAttribute('aria-pressed', id === 'prod' ? 'false' : 'true');
     }
+    await page.locator('input[type=file]').setInputFiles({
+      name: 'selected.infra',
+      mimeType: 'text/plain',
+      buffer: Buffer.from(
+        'diagram "明示指定" {\n external.service selected "選択済み" icon=saas.zenn\n view service level=resource\n}',
+      ),
+    });
+    await page.locator('[data-id="selected"] .resource-label').click();
+    const selected = picker.getByRole('button', { name: 'saas.zenn', exact: true });
+    await expect
+      .poll(() =>
+        selected.evaluate((button) => {
+          const browser = button.closest('.icon-browser')!;
+          const viewport = browser.getBoundingClientRect();
+          const target = button.getBoundingClientRect();
+          return (
+            browser.scrollTop > 0 && target.top >= viewport.top && target.bottom <= viewport.bottom
+          );
+        }),
+      )
+      .toBe(true);
+    const panelScroll = await page.locator('.detail-panel').evaluate((panel) => panel.scrollTop);
+    await page.getByLabel('表示アイコンを検索', { exact: true }).fill('zenn');
+    await page.getByLabel('表示アイコンを検索', { exact: true }).fill('');
+    await expect
+      .poll(() =>
+        selected.evaluate((button) => {
+          const viewport = button.closest('.icon-browser')!.getBoundingClientRect();
+          const target = button.getBoundingClientRect();
+          return target.top >= viewport.top && target.bottom <= viewport.bottom;
+        }),
+      )
+      .toBe(true);
+    await expect(page.locator('.detail-panel')).toHaveJSProperty('scrollTop', panelScroll);
+    const githubGroup = picker.locator('.icon-group').filter({ hasText: /^GitHub/ });
+    await githubGroup.locator('summary').click();
+    await expect(githubGroup).toHaveAttribute('open');
+    await expect
+      .poll(() =>
+        githubGroup.locator('summary').evaluate((heading) => {
+          const viewport = heading.closest('.icon-browser')!.getBoundingClientRect();
+          const target = heading.getBoundingClientRect();
+          return target.top >= viewport.top && target.bottom <= viewport.bottom;
+        }),
+      )
+      .toBe(true);
+
     await page.locator('input[type=file]').setInputFiles({
       name: 'fallback.infra',
       mimeType: 'text/plain',
