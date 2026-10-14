@@ -1,3 +1,4 @@
+import { selectSavedView } from './display-controls';
 import { test, expect } from '@playwright/test';
 
 const remoteDraft = JSON.stringify({
@@ -425,7 +426,7 @@ test('Subnet実体とSGをサンプルから表示する', async ({ page }) => {
     for (let i = 0; i < 35; i++) await new Promise(requestAnimationFrame);
   });
   await page.screenshot({ path: 'artifacts/subnet-security.png' });
-  await page.getByRole('button', { name: 'セキュリティ', exact: true }).click();
+  await selectSavedView(page, 'security');
   await expect(page.locator('[data-id="app_sg"]')).toContainText('sg:web_sg');
   await expect(page.locator('[data-id="app_sg"]')).toContainText('8080');
 });

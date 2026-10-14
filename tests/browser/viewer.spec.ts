@@ -1,3 +1,4 @@
+import { setDisplayOptions, selectDetail, selectSavedView } from './display-controls';
 import { test, expect, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -5,9 +6,14 @@ import { resolve } from 'node:path';
 import { parseDSL } from '../../src/core/parser';
 
 async function setArrowShape(page: Page, shape: string): Promise<void> {
-  const toggle = page.getByRole('switch', { name: '矢印を曲線にする', exact: true });
-  if ((await toggle.getAttribute('aria-checked')) !== String(shape === 'bezier'))
-    await toggle.click();
+  await setDisplayOptions(page, true);
+  const toggle = page.getByRole('combobox', {
+    name: '矢印の形',
+    exact: true,
+    includeHidden: true,
+  });
+  await toggle.selectOption(shape);
+  await setDisplayOptions(page, false);
 }
 
 async function blurEditor(page: Page): Promise<void> {
@@ -269,7 +275,11 @@ for (const offline of [false, true]) {
     const undo = page.getByRole('button', { name: '元に戻す', exact: true });
     const redo = page.getByRole('button', { name: 'やり直す', exact: true });
     const footer = page.locator('.canvas-footer');
-    const shape = page.getByRole('switch', { name: '矢印を曲線にする', exact: true });
+    const shape = page.getByRole('combobox', {
+      name: '矢印の形',
+      exact: true,
+      includeHidden: true,
+    });
     await expect(footer).toContainText('19 要素');
     await expect(undo).toBeDisabled();
     await expect(redo).toBeDisabled();
@@ -278,13 +288,13 @@ for (const offline of [false, true]) {
     await expect(footer).toContainText('5 要素');
     await undo.click();
     await expect(footer).toContainText('19 要素');
-    await expect(shape).toHaveAttribute('aria-checked', 'true');
+    await expect(shape).toHaveValue('bezier');
     await page.screenshot({ path: `artifacts/undo-redo-${offline ? 'offline' : 'dev'}.png` });
     await undo.click();
-    await expect(shape).toHaveAttribute('aria-checked', 'false');
+    await expect(shape).toHaveValue('orthogonal');
     await expect(undo).toBeDisabled();
     await redo.click();
-    await expect(shape).toHaveAttribute('aria-checked', 'true');
+    await expect(shape).toHaveValue('bezier');
     await redo.click();
     await expect(footer).toContainText('5 要素');
     await expect(redo).toBeDisabled();
@@ -300,15 +310,13 @@ for (const offline of [false, true]) {
     await expect(footer).toContainText('19 要素');
     await redo.click();
     await expect(page.locator('.scope-bar')).toContainText('本番 VPC の詳細');
-    await page.getByRole('button', { name: 'ネットワーク', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'ネットワーク', exact: true })).toHaveAttribute(
-      'aria-pressed',
-      'true',
+    await selectDetail(page, 'subnet');
+    await expect(page.getByRole('combobox', { name: '構成の詳しさ', exact: true })).toHaveValue(
+      'subnet',
     );
     await undo.click();
-    await expect(page.getByRole('button', { name: 'サービス', exact: true })).toHaveAttribute(
-      'aria-pressed',
-      'true',
+    await expect(page.getByRole('combobox', { name: '構成の詳しさ', exact: true })).toHaveValue(
+      'service',
     );
     await expect(page.locator('.scope-bar')).toContainText('本番 VPC の詳細');
   });
@@ -375,20 +383,19 @@ for (const offline of [false, true]) {
         : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
     );
     await expect(page.locator('.canvas-footer')).toContainText('19 要素');
-    const network = page.getByRole('button', { name: 'ネットワーク', exact: true });
-    const service = page.getByRole('button', { name: 'サービス', exact: true });
-    await network.click();
+    const detail = page.getByRole('combobox', { name: '構成の詳しさ', exact: true });
+    await selectDetail(page, 'subnet');
     await page.keyboard.press('Control+z');
-    await expect(service).toHaveAttribute('aria-pressed', 'true');
+    await expect(detail).toHaveValue('service');
     await page.keyboard.press('Control+y');
-    await expect(network).toHaveAttribute('aria-pressed', 'true');
+    await expect(detail).toHaveValue('subnet');
     await page.keyboard.press('Meta+z');
-    await expect(service).toHaveAttribute('aria-pressed', 'true');
+    await expect(detail).toHaveValue('service');
     await page.keyboard.press('Meta+Shift+z');
-    await expect(network).toHaveAttribute('aria-pressed', 'true');
+    await expect(detail).toHaveValue('subnet');
     await page.keyboard.press('Control+z');
     await page.keyboard.press('Control+Shift+z');
-    await expect(network).toHaveAttribute('aria-pressed', 'true');
+    await expect(detail).toHaveValue('subnet');
     await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
     const editor = page.getByRole('textbox', { name: 'DSL 入力', exact: true });
     const draftBefore = await editor.inputValue();
@@ -398,15 +405,15 @@ for (const offline of [false, true]) {
     await expect(editor).not.toHaveValue(draftBefore);
     await page.keyboard.press(process.platform === 'darwin' ? 'Meta+z' : 'Control+z');
     await expect(editor).toHaveValue(draftBefore);
-    await expect(network).toHaveAttribute('aria-pressed', 'true');
+    await expect(detail).toHaveValue('subnet');
     await editor.fill('入力途中の草稿');
     await page.getByRole('button', { name: '元に戻す', exact: true }).click();
-    await expect(service).toHaveAttribute('aria-pressed', 'true');
+    await expect(detail).toHaveValue('service');
     await expect(editor).toHaveValue('入力途中の草稿');
     const search = page.getByRole('textbox', { name: 'リソース検索', exact: true });
     await search.focus();
     await page.keyboard.press('Control+y');
-    await expect(service).toHaveAttribute('aria-pressed', 'true');
+    await expect(detail).toHaveValue('service');
   });
   test(`展開済みリソースへの再検索は履歴を増やさず対象へ移動する (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
@@ -713,7 +720,11 @@ for (const offline of [false, true]) {
         .locator('.react-flow__node')
         .evaluateAll((nodes) => nodes.map((n) => n.getAttribute('style')));
     const nodesBefore = await positions();
-    const shape = page.getByRole('switch', { name: '矢印を曲線にする', exact: true });
+    const shape = page.getByRole('combobox', {
+      name: '矢印の形',
+      exact: true,
+      includeHidden: true,
+    });
     await setArrowShape(page, 'bezier');
     await expect.poll(async () => (await paths()).every((p) => p?.includes('C'))).toBe(true);
     expect(await viewport()).toBe(viewBefore);
@@ -732,7 +743,7 @@ for (const offline of [false, true]) {
     await page.getByRole('button', { name: 'すべて折りたたむ', exact: true }).click();
     await expect(page.locator('.canvas-footer')).toContainText('5 要素');
     await expect.poll(async () => (await paths()).every((p) => p?.includes('C'))).toBe(true);
-    await expect(shape).toHaveAttribute('aria-checked', 'true');
+    await expect(shape).toHaveValue('bezier');
   });
   test(`画面外にある折りたたみ境界を一覧から展開して表示する (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
@@ -875,7 +886,7 @@ for (const offline of [false, true]) {
     await expect(page.locator('.collapsed-card')).toHaveCount(0);
     expect(await viewport()).toBe(before);
     await expect(page.getByRole('button', { name: 'A → C: 通信', exact: true })).toHaveCount(1);
-    await page.getByRole('button', { name: '概要', exact: true }).click();
+    await selectDetail(page, 'overview');
     await fold.click();
     await expect(page.locator('.canvas-footer')).toContainText('3 要素');
     await expand.click();
@@ -1313,11 +1324,11 @@ test('表示切替・集約復元・検索・強調・ドリルダウン', async
   await page.goto(`http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`);
   await expect(page.locator('.canvas-footer')).toContainText('19 要素');
   await expect(page.locator('.react-flow__minimap-node')).toHaveCount(19);
-  await page.getByRole('button', { name: '概要', exact: true }).click();
+  await selectDetail(page, 'overview');
   await expect(page.locator('.canvas-footer')).toContainText('5 要素');
   await page.getByRole('button', { name: '本番アカウントを展開', exact: true }).click();
   await expect(page.locator('.canvas-footer')).not.toContainText('5 要素');
-  await page.getByRole('button', { name: 'セキュリティ', exact: true }).click();
+  await selectSavedView(page, 'security');
   await expect(page.locator('.canvas-footer')).toContainText('22 要素');
   await page.getByRole('button', { name: '本番 VPCを折りたたむ', exact: true }).click();
   await expect(page.locator('.react-flow__node[data-id="api"]')).toHaveCount(0);
@@ -1374,7 +1385,7 @@ test('単一 HTML は file URL でネットワークなしに操作できる', a
   });
   await page.goto('file://' + resolve('artifacts/aws.html'));
   await expect(page.locator('.canvas-footer')).toContainText('19 要素');
-  await page.getByRole('button', { name: '概要', exact: true }).click();
+  await selectDetail(page, 'overview');
   await expect(page.locator('.canvas-footer')).toContainText('5 要素');
   await page.getByRole('textbox', { name: 'リソース検索' }).fill('PostgreSQL');
   await page.locator('.search-results button').click();
@@ -1388,7 +1399,7 @@ test('大規模・GCP Azure・複数クラウドの入力が実際に描画さ�
   await page.locator('input[type=file]').setInputFiles('examples/gcp-azure.infra');
   await expect(page.locator('.document-title')).toContainText('Google Cloud');
   await expect(page.locator('.canvas-footer')).toContainText('12 要素');
-  await page.getByRole('button', { name: 'ネットワーク', exact: true }).click();
+  await selectDetail(page, 'subnet');
   await page.screenshot({ path: 'artifacts/gcp-azure.png' });
   await page.locator('input[type=file]').setInputFiles('examples/multicloud.infra');
   await expect(page.locator('.canvas-footer')).toContainText('13 要素');
@@ -1509,7 +1520,7 @@ for (const offline of [false, true]) {
           ),
       )
       .toBe(true);
-    await page.getByRole('button', { name: '概要', exact: true }).click();
+    await selectDetail(page, 'overview');
     await expect(page.locator('.canvas-footer')).toContainText('4 要素');
     await page.getByRole('button', { name: 'すべて展開する', exact: true }).click();
     await expect(page.locator('.canvas-footer')).toContainText('28 要素');
@@ -1721,10 +1732,17 @@ for (const offline of [false, true]) {
       ).toBe(true);
     }
     const parent = page.locator('.react-flow__node[data-id="tokyo"]');
-    const child = page.locator('.react-flow__node[data-id="main"]');
-    expect(await meta('tokyo').evaluate((e) => e.getBoundingClientRect().bottom)).toBeLessThan(
-      (await child.boundingBox())!.y,
-    );
+    // Fit View中も親子の座標を同じフレームで比較する。
+    await expect
+      .poll(() =>
+        meta('tokyo').evaluate((element) => {
+          const child = element
+            .closest('.react-flow')!
+            .querySelector('.react-flow__node[data-id="main"]')!;
+          return element.getBoundingClientRect().bottom - child.getBoundingClientRect().top;
+        }),
+      )
+      .toBeLessThan(0);
     await page.getByRole('textbox', { name: 'リソース検索' }).fill('アプリ Subnet');
     await page.locator('.search-results button').first().click();
     await page.getByRole('button', { name: 'アプリ Subnetを展開', exact: true }).click();
@@ -1746,7 +1764,7 @@ for (const offline of [false, true]) {
     ).toBe(true);
     await page.getByRole('button', { name: 'アプリ Subnetを展開', exact: true }).click();
     await expect(meta('private_a')).toContainText('ap-northeast-1a');
-    await page.getByRole('button', { name: '概要', exact: true }).click();
+    await selectDetail(page, 'overview');
     await page.getByRole('button', { name: 'すべて折りたたむ', exact: true }).click();
     await expect(meta('prod')).toContainText('012345678901');
     await expect(parent).toHaveCount(0);
@@ -2013,12 +2031,16 @@ for (const offline of [false, true]) {
     await page.mouse.move(600, 400);
     await page.mouse.wheel(100, 0);
     const before = await viewport.getAttribute('style');
-    await page.getByRole('button', { name: '表示フィルター', exact: true }).click();
+    await setDisplayOptions(page, true);
     for (const [index, kind] of kinds.entries()) {
       const button = page
         .locator('.edge-legend')
         .getByRole('button', { name: labels[index]!, exact: true });
-      const checkbox = page.getByRole('checkbox', { name: labels[index]!, exact: true });
+      const checkbox = page.getByRole('checkbox', {
+        name: labels[index]!,
+        exact: true,
+        includeHidden: true,
+      });
       await expect(button).toHaveAttribute('aria-pressed', 'true');
       await page.locator(`.connection-label[data-kind="${kind}"]`).first().click();
       await expect(page.locator('.connection-editor')).toBeVisible();
@@ -2035,17 +2057,20 @@ for (const offline of [false, true]) {
       await expect(viewport).toHaveAttribute('style', before!);
     }
     const traffic = page.locator('.edge-legend').getByRole('button', { name: '通信', exact: true });
+    await setDisplayOptions(page, true);
     await page.getByRole('checkbox', { name: '通信', exact: true }).uncheck();
     await expect(traffic).toHaveAttribute('aria-pressed', 'false');
     await traffic.click();
-    await expect(page.getByRole('checkbox', { name: '通信', exact: true })).toBeChecked();
+    await expect(
+      page.getByRole('checkbox', { name: '通信', exact: true, includeHidden: true }),
+    ).toBeChecked();
     for (const label of labels)
       await page.locator('.edge-legend').getByRole('button', { name: label, exact: true }).click();
     await expect(page.locator('.connection-label')).toHaveCount(0);
     await expect(page.locator('.canvas-footer')).toContainText('0 接続');
     await traffic.click();
     await expect(page.locator('.connection-label')).toHaveCount(2);
-    await page.getByRole('button', { name: '保存した通信経路', exact: true }).click();
+    await selectSavedView(page, 'saved');
     await expect(page.locator('.connection-label')).toHaveCount(1);
     const replication = page
       .locator('.edge-legend')
@@ -2056,7 +2081,7 @@ for (const offline of [false, true]) {
     await expect(page.locator('.connection-label[data-kind="replication"]')).toHaveCount(1);
     await traffic.click();
     await expect(page.locator('.connection-label')).toHaveCount(1);
-    await page.getByRole('button', { name: 'サービス', exact: true }).click();
+    await selectSavedView(page, 'service');
     await expect(page.locator('.connection-label')).toHaveCount(8);
     for (const label of labels)
       await expect(

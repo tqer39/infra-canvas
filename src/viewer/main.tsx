@@ -56,7 +56,7 @@ import './style.css';
 import { parseDSL } from '../core/parser';
 import { validateDiagram } from '../core/validate.js';
 import { serializeDSL } from '../core/serialize';
-import { buildDisplayGraph } from '../core/display';
+import { buildDisplayGraph, resolveDisplaySettings } from '../core/display';
 import { layoutGraph, connectionLabel } from '../core/layout';
 import { telemetrySignalLabels as signalLabels } from '../core/model';
 import {
@@ -64,6 +64,7 @@ import {
   type EdgeKind,
   isBoundary,
   type Diagram,
+  type View,
   type Resource,
   type DisplayGraph,
   type LayoutResult,
@@ -95,6 +96,12 @@ type ResourceData = Record<string, unknown> & {
 };
 type ResourceNode = Node<ResourceData>;
 const activeEdgeZ = 10;
+const detailLabels: Record<View['level'], string> = {
+  overview: 'アカウント単位',
+  service: 'サービス単位',
+  subnet: 'Subnet単位',
+  resource: 'リソース単位',
+};
 const viewLabels: Record<string, string> = {
   overview: '概要',
   service: 'サービス',
@@ -505,9 +512,13 @@ function App() {
     },
     createHistory,
   );
-  const { diagram, view, edgeShape, collapsed, expanded, scope } = history.present;
+  const { diagram, view, displayLevel, showSG, edgeShape, collapsed, expanded, scope } =
+    history.present;
   const setView = (next: string) =>
-    dispatchHistory({ type: 'commit', update: (current) => ({ ...current, view: next }) });
+    dispatchHistory({
+      type: 'commit',
+      update: (current) => ({ ...current, view: next, displayLevel: undefined, showSG: undefined }),
+    });
   const setEdgeShape = (next: 'orthogonal' | 'bezier') =>
     dispatchHistory({ type: 'commit', update: (current) => ({ ...current, edgeShape: next }) });
   const setDiagram = (next: Diagram) =>
@@ -539,6 +550,7 @@ function App() {
   const [filterPurpose, setFilterPurpose] = useState<string | undefined>();
   const [viewName, setViewName] = useState('');
   const activeView = diagram?.views.find((item) => item.id === view);
+  const displaySettings = resolveDisplaySettings(diagram, { view, level: displayLevel, showSG });
   const effectiveKinds = filterKinds ?? activeView?.kinds ?? [...edgeKinds];
   const toggleKind = (kind: EdgeKind) => {
     setSelectedEdge(undefined);
@@ -604,6 +616,42 @@ function App() {
   );
   const flow = useReactFlow<ResourceNode>();
   const canvas = useRef<HTMLDivElement>(null);
+  const displayOptionsAnchor = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!filtersOpen) return;
+    const anchor = displayOptionsAnchor.current;
+    const toolbar = anchor?.closest('.canvas-toolbar');
+    if (!anchor || !toolbar) return;
+    const positionPanel = () => {
+      const bounds = toolbar.getBoundingClientRect();
+      const trigger = anchor.getBoundingClientRect();
+      const width = Math.min(340, bounds.width);
+      const offset = Math.max(
+        bounds.left - trigger.left,
+        Math.min(0, bounds.right - trigger.left - width),
+      );
+      anchor.style.setProperty('--display-options-width', `${width}px`);
+      anchor.style.setProperty('--display-options-offset', `${offset}px`);
+      anchor.style.setProperty(
+        '--display-options-height',
+        `${Math.max(120, Math.min(380, window.innerHeight - trigger.bottom - 24))}px`,
+      );
+    };
+    positionPanel();
+    const observer = new ResizeObserver(positionPanel);
+    observer.observe(toolbar);
+    observer.observe(anchor);
+    window.addEventListener('resize', positionPanel);
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (event.target instanceof Node && !anchor.contains(event.target)) setFiltersOpen(false);
+    };
+    document.addEventListener('click', closeOnOutsideClick, true);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', positionPanel);
+      document.removeEventListener('click', closeOnOutsideClick, true);
+    };
+  }, [filtersOpen]);
   useEffect(() => {
     const element = canvas.current;
     if (!element) return;
@@ -731,6 +779,8 @@ function App() {
       },
       {
         view,
+        level: displayLevel,
+        showSG,
         collapsed,
         expanded,
         kinds: filterKinds,
@@ -877,6 +927,8 @@ function App() {
     diagram,
     visibleDiagram,
     view,
+    displayLevel,
+    showSG,
     collapsed,
     expanded,
     toggle,
@@ -1076,11 +1128,10 @@ function App() {
       ancestors.add(resource.parentId);
       resource = diagram?.resources.find((item) => item.id === resource!.parentId);
     }
-    const nextView =
-      diagram?.resources.find((item) => item.id === id)?.type === 'sg' ? 'security' : view;
+    const revealSG = diagram?.resources.find((item) => item.id === id)?.type === 'sg';
     const needsLayout =
       scope !== undefined ||
-      nextView !== view ||
+      (revealSG && !displaySettings.showSG) ||
       [...ancestors].some(
         (ancestor) => collapsed.includes(ancestor) || !expanded.includes(ancestor),
       );
@@ -1097,7 +1148,7 @@ function App() {
         scope: undefined,
         collapsed: current.collapsed.filter((ancestor) => !ancestors.has(ancestor)),
         expanded: [...new Set([...current.expanded, ...ancestors])],
-        view: nextView,
+        ...(revealSG ? { showSG: true } : {}),
       }),
     });
   };
@@ -1130,6 +1181,8 @@ function App() {
         ...current,
         diagram: next,
         view: 'service',
+        displayLevel: undefined,
+        showSG: undefined,
         documentKey: {},
         source: nextSource,
         collapsed: [],
@@ -1567,24 +1620,300 @@ function App() {
           style={{ '--edge-label-z-index': labelLayer } as CSSProperties}
         >
           <div className="canvas-toolbar">
-            <div className="view-tabs" aria-label="表示の切り替え">
-              {Object.entries({
-                ...viewLabels,
-                ...Object.fromEntries(
-                  (diagram?.views ?? [])
-                    .filter((item) => !viewLabels[item.id])
-                    .map((item) => [item.id, item.label ?? item.id]),
-                ),
-              }).map(([id, label]) => (
-                <button
-                  key={id}
-                  className={view === id ? 'active' : ''}
-                  aria-pressed={view === id}
-                  onClick={() => changeView(id)}
+            <div className="display-controls">
+              <label className="detail-picker">
+                構成の詳しさ
+                <select
+                  aria-label="構成の詳しさ"
+                  value={displaySettings.level}
+                  onChange={(event) => {
+                    const level = event.target.value as View['level'];
+                    dispatchHistory({
+                      type: 'commit',
+                      update: (current) => ({ ...current, displayLevel: level }),
+                    });
+                    setSelectedEdge(undefined);
+                  }}
                 >
-                  {label}
+                  {Object.entries(detailLabels).map(([level, label]) => (
+                    <option key={level} value={level}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="display-options-anchor" ref={displayOptionsAnchor}>
+                <button
+                  className="toolbar-button"
+                  aria-expanded={filtersOpen}
+                  aria-controls="display-options"
+                  onClick={() => setFiltersOpen(!filtersOpen)}
+                >
+                  表示オプション <span aria-hidden="true">{filtersOpen ? '▴' : '▾'}</span>
                 </button>
-              ))}
+                <section
+                  hidden={!filtersOpen}
+                  id="display-options"
+                  className="display-filters"
+                  aria-label="表示オプション"
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Escape' || event.defaultPrevented) return;
+                    event.stopPropagation();
+                    setFiltersOpen(false);
+                    canvas.current
+                      ?.querySelector<HTMLButtonElement>('[aria-controls="display-options"]')
+                      ?.focus();
+                  }}
+                >
+                  <fieldset className="display-additions">
+                    <legend>追加情報</legend>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={displaySettings.showSG}
+                        onChange={(event) => {
+                          const checked = event.target.checked;
+                          dispatchHistory({
+                            type: 'commit',
+                            update: (current) => ({ ...current, showSG: checked }),
+                          });
+                          setSelectedEdge(undefined);
+                        }}
+                      />
+                      セキュリティグループと所属
+                    </label>
+
+                    <label title="冗長化・信頼境界など、所属とは別の囲みを表示します">
+                      <input
+                        type="checkbox"
+                        checked={showMembership}
+                        disabled={!overlayBoxes.length}
+                        onChange={(event) => setShowMembership(event.target.checked)}
+                      />
+                      追加の囲み
+                    </label>
+
+                    <p className="display-hint">SGの所属は、通信の成立を示しません。</p>
+                  </fieldset>
+                  <label className="display-setting-row">
+                    矢印の形
+                    <select
+                      aria-label="矢印の形"
+                      value={edgeShape}
+                      onChange={(event) =>
+                        setEdgeShape(event.target.value as 'orthogonal' | 'bezier')
+                      }
+                    >
+                      <option value="orthogonal">直角</option>
+                      <option value="bezier">曲線</option>
+                    </select>
+                  </label>
+
+                  <fieldset>
+                    <legend>接続種別</legend>
+                    {edgeKinds.map((kind) => (
+                      <label key={kind}>
+                        <input
+                          type="checkbox"
+                          checked={effectiveKinds.includes(kind)}
+                          onChange={() => toggleKind(kind)}
+                        />
+                        {kindLabels[kind]}
+                      </label>
+                    ))}
+                  </fieldset>
+                  <div className="display-filter-row">
+                    <label>
+                      経路
+                      <select
+                        aria-label="経路フィルター"
+                        value={
+                          filterRoute ??
+                          (activeView?.routes?.length === 1
+                            ? activeView.routes[0]
+                            : activeView?.routes
+                              ? '__saved__'
+                              : '')
+                        }
+                        onChange={(event) => {
+                          setSelectedEdge(undefined);
+                          setFilterRoute(event.target.value);
+                        }}
+                      >
+                        <option value="">すべて</option>
+                        {filterRoute === undefined &&
+                          activeView?.routes &&
+                          activeView.routes.length !== 1 && (
+                            <option value="__saved__">保存した経路の組み合わせ</option>
+                          )}
+                        {routes.map((route) => (
+                          <option key={route}>{route}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      用途
+                      <select
+                        aria-label="用途フィルター"
+                        value={
+                          filterPurpose ??
+                          (activeView?.purposes?.length === 1
+                            ? activeView.purposes[0]
+                            : activeView?.purposes
+                              ? '__saved__'
+                              : '')
+                        }
+                        onChange={(event) => {
+                          setSelectedEdge(undefined);
+                          setFilterPurpose(event.target.value);
+                        }}
+                      >
+                        <option value="">すべて</option>
+                        {filterPurpose === undefined &&
+                          activeView?.purposes &&
+                          activeView.purposes.length !== 1 && (
+                            <option value="__saved__">保存した用途の組み合わせ</option>
+                          )}
+                        {purposes.map((purpose) => (
+                          <option key={purpose}>{purpose}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  {(filterRoute === undefined
+                    ? activeView?.routes?.length === 1
+                    : Boolean(filterRoute)) && (
+                    <ol className="route-steps" aria-label="選択経路の通過順">
+                      {(diagram?.connections ?? [])
+                        .filter(
+                          (edge) =>
+                            edge.attributes.route === (filterRoute ?? activeView?.routes?.[0]),
+                        )
+                        .sort(
+                          (a, b) =>
+                            String(a.attributes.routeDirection ?? 'forward').localeCompare(
+                              String(b.attributes.routeDirection ?? 'forward'),
+                            ) || Number(a.attributes.step) - Number(b.attributes.step),
+                        )
+                        .map((edge) => (
+                          <li key={edge.id}>
+                            {edge.attributes.routeDirection === 'return' ? '復路' : '往路'}{' '}
+                            {String(edge.attributes.step)}: {edge.source} → {edge.target}
+                          </li>
+                        ))}
+                    </ol>
+                  )}
+                  <details className="saved-views">
+                    <summary>保存した表示</summary>
+                    <div className="display-saved-content">
+                      <label>
+                        保存した表示
+                        <select
+                          aria-label="保存した表示"
+                          value={view}
+                          onChange={(event) => changeView(event.target.value)}
+                        >
+                          {!diagram?.views.some((item) => item.id === 'service') && (
+                            <option value="service">標準表示</option>
+                          )}
+                          {(diagram?.views ?? []).map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.label ?? viewLabels[item.id] ?? item.id}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      {(displayLevel !== undefined ||
+                        showSG !== undefined ||
+                        filterKinds !== undefined ||
+                        filterRoute !== undefined ||
+                        filterPurpose !== undefined) && (
+                        <>
+                          <span className="display-hint">選択した表示を調整中</span>
+                          <button className="toolbar-button" onClick={() => changeView(view)}>
+                            保存した設定に戻す
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </details>
+                  <details className="save-view">
+                    <summary>ビューの保存</summary>
+                    <div className="display-saved-content">
+                      <input
+                        aria-label="保存するビュー名"
+                        placeholder="表示名（例：アプリ通信）"
+                        value={viewDisplayName}
+                        onChange={(event) => setViewDisplayName(event.target.value)}
+                      />
+                      <input
+                        aria-label="保存するビューID"
+                        placeholder="ビューID"
+                        value={viewName}
+                        onChange={(event) => setViewName(event.target.value)}
+                      />
+                      <button
+                        className="toolbar-button"
+                        onClick={() => {
+                          if (!diagram) return;
+                          const saved = {
+                            id: viewName,
+                            label: viewDisplayName.trim() || undefined,
+                            level: displaySettings.level,
+                            direction: activeView?.direction,
+                            overlay: displaySettings.showSG ? 'sg' : undefined,
+                            kinds: effectiveKinds,
+                            routes: filterRoute
+                              ? [filterRoute]
+                              : filterRoute === undefined
+                                ? activeView?.routes
+                                : undefined,
+                            purposes: filterPurpose
+                              ? [filterPurpose]
+                              : filterPurpose === undefined
+                                ? activeView?.purposes
+                                : undefined,
+                          };
+                          const next = {
+                            ...diagram,
+                            views: [...diagram.views.filter((item) => item.id !== viewName), saved],
+                          };
+                          try {
+                            validateDiagram(next);
+                            setSource(serializeDSL(next));
+                            setDiagram(next);
+                            changeView(viewName);
+                            setViewName('');
+                          } catch (error) {
+                            setDiagnostics([(error as Error).message]);
+                          }
+                        }}
+                      >
+                        ビューを保存
+                      </button>
+                    </div>
+                  </details>
+                </section>
+              </div>
+              <span className="display-summary">
+                {effectiveKinds.length === edgeKinds.length
+                  ? '接続はすべて'
+                  : effectiveKinds.length === 1
+                    ? `接続：${kindLabels[effectiveKinds[0]!]}`
+                    : `接続 ${effectiveKinds.length} 種類`}
+                {(filterRoute === undefined ? activeView?.routes?.length : Boolean(filterRoute))
+                  ? ' · 経路を絞り込み'
+                  : ''}
+                {(
+                  filterPurpose === undefined
+                    ? activeView?.purposes?.length
+                    : Boolean(filterPurpose)
+                )
+                  ? ' · 用途を絞り込み'
+                  : ''}
+                {displaySettings.showSG ? ' · SGあり' : ''}
+                {showMembership ? ' · 囲みあり' : ''}
+              </span>
             </div>
             <div className="boundary-actions" aria-label="境界の一括操作">
               <button
@@ -1646,32 +1975,6 @@ function App() {
               固定を解除
             </button>
             <button
-              className="toolbar-button"
-              aria-expanded={filtersOpen}
-              onClick={() => setFiltersOpen(!filtersOpen)}
-            >
-              表示フィルター
-            </button>
-            <button
-              className="toolbar-button"
-              role="switch"
-              aria-label="矢印を曲線にする"
-              aria-checked={edgeShape === 'bezier'}
-              title="クリックして直線・曲線を切り替える"
-              onClick={() => setEdgeShape(edgeShape === 'bezier' ? 'orthogonal' : 'bezier')}
-            >
-              矢印：{edgeShape === 'bezier' ? '曲線' : '直線'}
-            </button>
-            <button
-              className="toolbar-button"
-              aria-pressed={showMembership}
-              disabled={!overlayBoxes.length}
-              onClick={() => setShowMembership(!showMembership)}
-              title="冗長化・信頼境界など、所属とは別の囲みを表示します"
-            >
-              追加の囲み：{showMembership ? '表示' : '非表示'}
-            </button>
-            <button
               className="toolbar-button clear-selection"
               disabled={!selectionActive}
               onClick={clearSelection}
@@ -1720,163 +2023,6 @@ function App() {
                   {diagram?.resources.find((resource) => resource.id === scope)?.label} の詳細
                 </span>
               </div>
-            )}
-            {filtersOpen && (
-              <section className="display-filters" aria-label="表示フィルター">
-                <fieldset>
-                  <legend>接続種別</legend>
-                  {edgeKinds.map((kind) => (
-                    <label key={kind}>
-                      <input
-                        type="checkbox"
-                        checked={effectiveKinds.includes(kind)}
-                        onChange={() => toggleKind(kind)}
-                      />
-                      {kindLabels[kind]}
-                    </label>
-                  ))}
-                </fieldset>
-                <label>
-                  経路
-                  <select
-                    aria-label="経路フィルター"
-                    value={
-                      filterRoute ??
-                      (activeView?.routes?.length === 1
-                        ? activeView.routes[0]
-                        : activeView?.routes
-                          ? '__saved__'
-                          : '')
-                    }
-                    onChange={(event) => {
-                      setSelectedEdge(undefined);
-                      setFilterRoute(event.target.value);
-                    }}
-                  >
-                    <option value="">すべて</option>
-                    {filterRoute === undefined &&
-                      activeView?.routes &&
-                      activeView.routes.length !== 1 && (
-                        <option value="__saved__">保存した経路の組み合わせ</option>
-                      )}
-                    {routes.map((route) => (
-                      <option key={route}>{route}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  用途
-                  <select
-                    aria-label="用途フィルター"
-                    value={
-                      filterPurpose ??
-                      (activeView?.purposes?.length === 1
-                        ? activeView.purposes[0]
-                        : activeView?.purposes
-                          ? '__saved__'
-                          : '')
-                    }
-                    onChange={(event) => {
-                      setSelectedEdge(undefined);
-                      setFilterPurpose(event.target.value);
-                    }}
-                  >
-                    <option value="">すべて</option>
-                    {filterPurpose === undefined &&
-                      activeView?.purposes &&
-                      activeView.purposes.length !== 1 && (
-                        <option value="__saved__">保存した用途の組み合わせ</option>
-                      )}
-                    {purposes.map((purpose) => (
-                      <option key={purpose}>{purpose}</option>
-                    ))}
-                  </select>
-                </label>
-                {(filterRoute === undefined
-                  ? activeView?.routes?.length === 1
-                  : Boolean(filterRoute)) && (
-                  <ol className="route-steps" aria-label="選択経路の通過順">
-                    {(diagram?.connections ?? [])
-                      .filter(
-                        (edge) =>
-                          edge.attributes.route === (filterRoute ?? activeView?.routes?.[0]),
-                      )
-                      .sort(
-                        (a, b) =>
-                          String(a.attributes.routeDirection ?? 'forward').localeCompare(
-                            String(b.attributes.routeDirection ?? 'forward'),
-                          ) || Number(a.attributes.step) - Number(b.attributes.step),
-                      )
-                      .map((edge) => (
-                        <li key={edge.id}>
-                          {edge.attributes.routeDirection === 'return' ? '復路' : '往路'}{' '}
-                          {String(edge.attributes.step)}: {edge.source} → {edge.target}
-                        </li>
-                      ))}
-                  </ol>
-                )}
-                <input
-                  aria-label="保存するビュー名"
-                  placeholder="表示名（例：アプリ通信）"
-                  value={viewDisplayName}
-                  onChange={(event) => setViewDisplayName(event.target.value)}
-                />
-                <input
-                  aria-label="保存するビューID"
-                  placeholder="ビューID"
-                  value={viewName}
-                  onChange={(event) => setViewName(event.target.value)}
-                />
-                <button
-                  className="toolbar-button"
-                  onClick={() => {
-                    if (!diagram) return;
-                    const saved = {
-                      id: viewName,
-                      label: viewDisplayName.trim() || undefined,
-                      level:
-                        activeView?.level ??
-                        (
-                          {
-                            overview: 'overview',
-                            service: 'service',
-                            network: 'subnet',
-                            security: 'resource',
-                          } as const
-                        )[view as 'overview' | 'service' | 'network' | 'security'] ??
-                        'resource',
-                      direction: activeView?.direction,
-                      overlay: activeView?.overlay ?? (view === 'security' ? 'sg' : undefined),
-                      kinds: effectiveKinds,
-                      routes: filterRoute
-                        ? [filterRoute]
-                        : filterRoute === undefined
-                          ? activeView?.routes
-                          : undefined,
-                      purposes: filterPurpose
-                        ? [filterPurpose]
-                        : filterPurpose === undefined
-                          ? activeView?.purposes
-                          : undefined,
-                    };
-                    const next = {
-                      ...diagram,
-                      views: [...diagram.views.filter((item) => item.id !== viewName), saved],
-                    };
-                    try {
-                      validateDiagram(next);
-                      setSource(serializeDSL(next));
-                      setDiagram(next);
-                      changeView(viewName);
-                      setViewName('');
-                    } catch (error) {
-                      setDiagnostics([(error as Error).message]);
-                    }
-                  }}
-                >
-                  ビューを保存
-                </button>
-              </section>
             )}
           </div>
           {editLayout && (

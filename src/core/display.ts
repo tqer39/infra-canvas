@@ -1,23 +1,27 @@
 import { isBoundary } from './model.js';
-import type { Connection, Diagram, DisplayGraph, DisplayOptions } from './model.js';
+import type { Connection, Diagram, DisplayGraph, DisplayOptions, View } from './model.js';
+
+/** 保存済みビューの設定に、ビューアーで選んだ表示設定を重ねる。 */
+export function resolveDisplaySettings(diagram: Diagram | undefined, options: DisplayOptions = {}) {
+  const view = diagram?.views.find((item) => item.id === options.view);
+  const levels: Record<string, View['level']> = {
+    overview: 'overview',
+    services: 'service',
+    service: 'service',
+    network: 'subnet',
+    security: 'resource',
+  };
+  return {
+    level: options.level ?? view?.level ?? levels[options.view ?? ''] ?? 'resource',
+    showSG: options.showSG ?? (view ? view.overlay === 'sg' : options.view === 'security'),
+  };
+}
 
 /** 表示モデルは原図を変更せず、折りたたみ解除で元の端点・方向・意味を復元する。 */
 export function buildDisplayGraph(diagram: Diagram, options: DisplayOptions = {}): DisplayGraph {
   const byId = new Map(diagram.resources.map((resource) => [resource.id, resource]));
   const view = diagram.views.find((item) => item.id === options.view);
-  const level =
-    view?.level ??
-    (
-      {
-        overview: 'overview',
-        services: 'service',
-        service: 'service',
-        network: 'subnet',
-        security: 'resource',
-      } as Record<string, string>
-    )[options.view ?? ''] ??
-    'resource';
-  const showSG = view?.overlay === 'sg' || options.view === 'security';
+  const { level, showSG } = resolveDisplaySettings(diagram, options);
   const collapsed = new Set(
     (options.collapsed ?? []).filter((id) => byId.has(id) && isBoundary(byId.get(id)!)),
   );

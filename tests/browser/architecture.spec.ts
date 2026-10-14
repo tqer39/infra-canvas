@@ -1,3 +1,9 @@
+import {
+  expandDisplaySection,
+  setDisplayOptions,
+  selectSavedView,
+  toggleMembership,
+} from './display-controls';
 import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -30,15 +36,15 @@ for (const offline of [false, true])
       await page.locator('input[type=file]').setInputFiles('examples/architecture.infra');
     await expect(page.locator('.canvas-footer')).toContainText('8 接続');
     await expect(page.locator('.membership-overlay')).toHaveCount(0);
-    await page.getByRole('button', { name: '追加の囲み：非表示', exact: true }).click();
+    await toggleMembership(page);
     await expect(page.locator('.membership-overlay')).toHaveCount(2);
     await expect(page.locator('[data-id="api_a"]')).toContainText('Active');
     await expect(page.locator('[data-id="api_a"] [data-handleid="source:backend"]')).toHaveCount(1);
-    await page.getByRole('button', { name: 'DB複製', exact: true }).click();
+    await selectSavedView(page, 'data');
     await expect(page.locator('.canvas-footer')).toContainText('1 接続');
-    await page.getByRole('button', { name: 'Web往復経路', exact: true }).click();
+    await selectSavedView(page, 'web_path');
     await expect(page.locator('.canvas-footer')).toContainText('6 接続');
-    await page.getByRole('button', { name: '表示フィルター', exact: true }).click();
+    await setDisplayOptions(page, true);
     await expect(page.getByRole('list', { name: '選択経路の通過順' })).toContainText(
       '往路 1: user → alb',
     );
@@ -48,18 +54,19 @@ for (const offline of [false, true])
     await page.getByRole('checkbox', { name: '通信', exact: true }).uncheck();
     await expect(page.locator('.canvas-footer')).toContainText('0 接続');
     await page.getByRole('checkbox', { name: '通信', exact: true }).check();
+    await expandDisplaySection(page, 'ビューの保存');
     await page.getByRole('textbox', { name: '保存するビューID' }).fill('saved_path');
     await page.getByRole('button', { name: 'ビューを保存', exact: true }).click();
-    await expect(page.getByRole('button', { name: 'saved_path', exact: true })).toHaveAttribute(
-      'aria-pressed',
-      'true',
+    await expandDisplaySection(page, '保存した表示');
+    await expect(page.getByRole('combobox', { name: '保存した表示', exact: true })).toHaveValue(
+      'saved_path',
     );
     await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
     await expect(page.getByRole('textbox', { name: 'DSL 入力' })).toHaveValue(
       /view saved_path.*routes=\["web"\]/,
     );
     await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
-    await page.getByRole('button', { name: '表示フィルター', exact: true }).click();
+    await setDisplayOptions(page, false);
     await page.getByRole('button', { name: 'すべて折りたたむ', exact: true }).click();
     await expect(page.locator('.canvas-footer')).toContainText('2 接続');
     await expect(page.locator('.membership-overlay')).toHaveCount(2);
@@ -92,7 +99,7 @@ test('配置の移動をDSLに保存し、再読込・フィルター変更で�
   expect(saved).toMatch(/external.user user.*fixed=true/);
   await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
   const position = await node.getAttribute('style');
-  await page.getByRole('button', { name: 'DB複製', exact: true }).click();
+  await selectSavedView(page, 'data');
   await expect(page.locator('.canvas-footer')).toContainText('1 接続');
   expect(await node.getAttribute('style')).toBe(position);
   const download = page.waitForEvent('download');
@@ -114,12 +121,13 @@ test('暗黙のサービス表示を保存しても表示粒度を維持する',
   await page.locator('input[type=file]').setInputFiles('examples/architecture.infra');
   await expect(page.locator('.canvas-footer')).toContainText('8 接続');
   const before = await page.locator('.react-flow__node[data-id="subnet_a"]').getAttribute('style');
-  await page.getByRole('button', { name: '表示フィルター', exact: true }).click();
+  await setDisplayOptions(page, true);
+  await expandDisplaySection(page, 'ビューの保存');
   await page.getByRole('textbox', { name: '保存するビューID' }).fill('saved_service');
   await page.getByRole('button', { name: 'ビューを保存', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'saved_service', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true',
+  await expandDisplaySection(page, '保存した表示');
+  await expect(page.getByRole('combobox', { name: '保存した表示', exact: true })).toHaveValue(
+    'saved_service',
   );
   await expect(page.locator('.layout-status')).toHaveCount(0);
   expect(await page.locator('.react-flow__node[data-id="subnet_a"]').getAttribute('style')).toBe(

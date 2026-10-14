@@ -1,3 +1,4 @@
+import { toggleArrowShape, toggleMembership } from './display-controls';
 import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync } from 'node:fs';
@@ -108,7 +109,7 @@ test('信頼境界のラベルはズーム・折りたたみ後も見出しや�
   await page.goto(`http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`);
   await page.getByRole('combobox', { name: 'サンプル', exact: true }).selectOption('architecture');
   await expect(page.locator('.membership-overlay')).toHaveCount(0);
-  await page.getByRole('button', { name: '追加の囲み：非表示', exact: true }).click();
+  await toggleMembership(page);
   await expect(page.locator('.membership-overlay')).toHaveCount(2);
   for (const fold of [false, true]) {
     if (fold) await page.getByRole('button', { name: 'すべて折りたたむ', exact: true }).click();
@@ -165,8 +166,8 @@ test('曲線や跨る囲みの背後のノードをクリックでき、AWSア�
   await expect(page.locator('.layout-status')).toHaveCount(0);
   await expect(page.locator('[data-id="prod"] .resource-type')).toHaveText('AWS アカウント');
   await expect(page.locator('[data-id="prod"] .service-icon')).toHaveCount(1);
-  await page.getByRole('switch', { name: '矢印を曲線にする', exact: true }).click();
-  await page.getByRole('button', { name: '追加の囲み：非表示', exact: true }).click();
+  await toggleArrowShape(page);
+  await toggleMembership(page);
   const crossesCard = await page.locator('.react-flow__edge-path').evaluateAll((paths) => {
     const rectangles = ['a', 'b', 'db'].map((id) =>
       document.querySelector(`[data-id="${id}"] .resource-card`)!.getBoundingClientRect(),
@@ -213,24 +214,30 @@ test('曲線や跨る囲みの背後のノードをクリックでき、AWSア�
 test('矢印トグル・囲み・配置移動の操作が図の位置を維持し説明を表示する', async ({ page }) => {
   await page.goto(`http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`);
   await page.getByRole('combobox', { name: 'サンプル', exact: true }).selectOption('architecture');
-  await expect(page.getByRole('button', { name: 'アプリ通信', exact: true })).toBeVisible();
+  await expect(page.getByRole('combobox', { name: '構成の詳しさ', exact: true })).toBeVisible();
   await expect(page.locator('.layout-status')).toHaveCount(0);
   const before = await page.locator('.react-flow__viewport').evaluate(async (el) => {
     for (let i = 0; i < 35; i++) await new Promise(requestAnimationFrame);
     return el.getAttribute('style');
   });
-  const shape = page.getByRole('switch', { name: '矢印を曲線にする', exact: true });
-  await shape.click();
-  await expect(shape).toHaveText('矢印：曲線');
-  await expect(shape).toHaveAttribute('aria-checked', 'true');
-  await shape.click();
-  await expect(shape).toHaveText('矢印：直線');
+  const shape = page.getByRole('combobox', {
+    name: '矢印の形',
+    exact: true,
+    includeHidden: true,
+  });
+  await toggleArrowShape(page);
+  await expect(shape).toHaveValue('bezier');
+  await toggleArrowShape(page);
+  await expect(shape).toHaveValue('orthogonal');
   await expect(page.locator('.membership-overlay')).toHaveCount(0);
-  await page.getByRole('button', { name: '追加の囲み：非表示', exact: true }).click();
+  await toggleMembership(page);
   await expect(page.locator('.membership-overlay')).toHaveCount(2);
+  await expect(
+    page.getByRole('checkbox', { name: '追加の囲み', exact: true, includeHidden: true }),
+  ).toBeChecked();
   expect(await page.locator('.react-flow__viewport').getAttribute('style')).toBe(before);
   await page.getByRole('button', { name: '配置を移動', exact: true }).click();
-  await expect(page.getByRole('status')).toContainText('カードをドラッグ');
+  await expect(page.locator('.layout-help')).toContainText('カードをドラッグ');
   await page.getByRole('button', { name: '移動を完了', exact: true }).click();
   await expect(page.locator('.layout-help')).toHaveCount(0);
   await page.locator('[data-id="prod"] .resource-heading').click();
@@ -263,7 +270,7 @@ test('一直線の端点でも曲線が実際に膨らみ、直線へ戻せる',
   await expect(page.locator('.layout-status')).toHaveCount(0);
   const path = page.locator('.react-flow__edge-path');
   const original = await path.getAttribute('d');
-  await page.getByRole('switch', { name: '矢印を曲線にする', exact: true }).click();
+  await toggleArrowShape(page);
   const bend = await path.evaluate((element) => {
     const p = element as SVGPathElement;
     const start = p.getPointAtLength(0),
@@ -272,8 +279,8 @@ test('一直線の端点でも曲線が実際に膨らみ、直線へ戻せる',
     return Math.abs(middle.y - (start.y + end.y) / 2);
   });
   expect(bend).toBeGreaterThan(40);
-  await page.getByRole('switch', { name: '矢印を曲線にする', exact: true }).click();
+  await toggleArrowShape(page);
   await expect(path).toHaveAttribute('d', original!);
-  await page.getByRole('switch', { name: '矢印を曲線にする', exact: true }).click();
+  await toggleArrowShape(page);
   await page.screenshot({ path: 'artifacts/curve-toggle-fixed.png' });
 });
