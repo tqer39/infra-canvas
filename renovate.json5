@@ -1,0 +1,12 @@
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: ['github>tqer39/renovate-config'],
+  packageRules: [
+    {
+      // 生成と同期検証のタスクで使う Rulesync を同じ PR で更新する。
+      matchManagers: ['mise'],
+      matchPackageNames: ['rulesync'],
+      groupName: 'Rulesync',
+    },
+  ],
+}

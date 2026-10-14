@@ -1,0 +1,57 @@
+diagram "EKS 複数アカウント・複数クラスター" version=1 {
+account workload_a "Workload A Account" {
+vpc net_a "VPC A" {
+aws.eks cluster_a "EKS cluster_a" {
+  k8s.namespace cluster_a_a_ns "Namespace A" {
+    k8s.ingress cluster_a_a_ingress "Ingress A"
+    k8s.service cluster_a_a_service "Service A"
+    k8s.pod cluster_a_a_pod "Pod A"
+    k8s.service-account cluster_a_a_sa "ServiceAccount A"
+  }
+  k8s.namespace cluster_a_admin "Admin Namespace" {
+    k8s.deployment cluster_a_gitops "GitOps controller"
+  }
+}
+aws.rds db_a "DB A"
+}
+}
+account workload_b "Workload B Account" {
+vpc net_b "VPC B" {
+aws.eks cluster_b "EKS cluster_b" {
+  k8s.namespace cluster_b_b_ns "Namespace B" {
+    k8s.ingress cluster_b_b_ingress "Ingress B"
+    k8s.service cluster_b_b_service "Service B"
+    k8s.pod cluster_b_b_pod "Pod B"
+    k8s.service-account cluster_b_b_sa "ServiceAccount B"
+  }
+  k8s.namespace cluster_b_admin "Admin Namespace" {
+    k8s.deployment cluster_b_gitops "GitOps controller"
+  }
+}
+aws.rds db_b "DB B"
+}
+}
+account network_account "Network Account" {
+aws.transit-gateway tgw "共有 Transit Gateway"
+aws.vpc-lattice lattice "VPC Lattice service network" description="テナント間接続を選択する場合の設計例"
+}
+cluster_a_a_ingress -> cluster_a_a_service kind=traffic label="Ingress の転送先"
+cluster_a_a_service -> cluster_a_a_pod kind=traffic label="Service の対象"
+cluster_a_a_pod -> cluster_a_a_sa kind=auth label="ServiceAccount の利用"
+cluster_a_a_pod -> db_a kind=traffic label="同一アカウントのアクセス意図"
+net_a -> tgw kind=association label="VPC attachment"
+net_a -> lattice kind=association label="Service network の VPC 関連付け"
+cluster_b_b_ingress -> cluster_b_b_service kind=traffic label="Ingress の転送先"
+cluster_b_b_service -> cluster_b_b_pod kind=traffic label="Service の対象"
+cluster_b_b_pod -> cluster_b_b_sa kind=auth label="ServiceAccount の利用"
+cluster_b_b_pod -> db_b kind=traffic label="同一アカウントのアクセス意図"
+net_b -> tgw kind=association label="VPC attachment"
+net_b -> lattice kind=association label="Service network の VPC 関連付け"
+cluster_a_a_pod -> lattice kind=traffic label="テナント間通信を許可する設計の場合"
+lattice -> cluster_b_b_service kind=traffic label="公開サービスへ転送（詳細設定は省略）"
+
+view overview level=overview
+view service level=service
+view network level=subnet
+view security level=resource overlay=sg
+}

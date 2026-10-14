@@ -21,19 +21,20 @@
     }
   },
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "typecheck": "tsc --noEmit",
-    "lint": "oxlint --deny-warnings . && node scripts/lint-markdown.mjs",
-    "test": "node --import tsx --test tests/*.test.ts",
-    "build": "node scripts/build.mjs",
-    "cli": "node --import tsx src/cli.ts",
-    "check": "npm run typecheck && npm run lint && npm run fmt:check && npm test && npm run test:icons && npm run build",
-    "test:browser": "playwright test",
-    "fmt": "oxfmt --write .",
-    "fmt:check": "oxfmt --check .",
-    "icons:update": "python3 scripts/update-icons.py",
-    "icons:check": "python3 scripts/update-icons.py --check",
-    "test:icons": "python3 tests/update-icons.test.py"
+    "dev": "mise run dev",
+    "typecheck": "mise run typecheck",
+    "lint": "mise run lint",
+    "test": "mise run test",
+    "build": "mise run build",
+    "cli": "mise run cli",
+    "check:static": "mise run check:static",
+    "check": "mise run check",
+    "test:browser": "mise run test:browser",
+    "fmt": "mise run fmt",
+    "fmt:check": "mise run fmt:check",
+    "icons:update": "mise run icons:update",
+    "icons:check": "mise run icons:check",
+    "test:icons": "mise run test:icons"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "3.1151.0",

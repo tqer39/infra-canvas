@@ -1,4 +1,17 @@
+import nginx from './saas-nginx.svg';
+import envoyproxy from './saas-envoyproxy.svg';
+import aws_eks from './aws-eks.svg';
+import aws_vpc_lattice from './aws-vpc-lattice.svg';
+import aws_privatelink from './aws-privatelink.svg';
+import aws_route53 from './aws-route53.svg';
+import aws_direct_connect from './aws-direct-connect.svg';
+import aws_dynamodb from './aws-dynamodb.svg';
+import aws_control_tower from './aws-control-tower.svg';
+import aws_identity_center from './aws-identity-center.svg';
 import aws_vpc from './aws-vpc.svg';
+import aws_account from './aws-account.svg';
+import aws_cloud from './aws-cloud.svg';
+import aws_region from './aws-region.svg';
 import aws_public_subnet from './aws-public-subnet.svg';
 import aws_private_subnet from './aws-private-subnet.svg';
 import claude from './saas-claude.svg';
@@ -87,10 +100,40 @@ import gcp_cloud_run from './gcp-cloud_run.svg';
 import gcp_compute from './gcp-compute.svg';
 import gcp_sql from './gcp-sql.svg';
 import azure_vm from './azure-vm.svg';
+import azure_cloud from './azure-cloud.svg';
+import gcp_cloud from './gcp-cloud.png';
 import azure_app from './azure-app.svg';
 import azure_sql from './azure-sql.svg';
 import azure_storage from './azure-storage.svg';
 const icons: Record<string, string> = {
+  'aws.eks': aws_eks,
+  'aws.vpc-lattice': aws_vpc_lattice,
+  'aws.privatelink': aws_privatelink,
+  'aws.route53': aws_route53,
+  'aws.direct-connect': aws_direct_connect,
+  'aws.dynamodb': aws_dynamodb,
+  'aws.control-tower': aws_control_tower,
+  'aws.identity-center': aws_identity_center,
+  'aws.eks-cluster': aws_eks,
+  'aws.eks-node-group': aws_eks,
+  'aws.eks-fargate-profile': aws_eks,
+  'aws.eks-pod-identity-association': aws_iam,
+  'aws.eks-access-entry': aws_iam,
+  'aws.eks-access-policy': aws_iam,
+  'k8s.namespace': kubernetes,
+  'k8s.deployment': kubernetes,
+  'k8s.pod': kubernetes,
+  'k8s.service': kubernetes,
+  'k8s.ingress': kubernetes,
+  'k8s.service-account': kubernetes,
+  'k8s.node': kubernetes,
+  'k8s.role': kubernetes,
+  'k8s.role-binding': kubernetes,
+  'k8s.network-policy': kubernetes,
+  'saas.nginx': nginx,
+  'saas.envoyproxy': envoyproxy,
+  'software.nginx': nginx,
+  'software.envoy': envoyproxy,
   'aws.vpc': aws_vpc,
   'aws.subnet-public': aws_public_subnet,
   'aws.subnet-private': aws_private_subnet,
@@ -113,6 +156,9 @@ const icons: Record<string, string> = {
   'aws.organization-root': aws_organizations,
   'aws.organizational-unit': aws_organizational_unit,
   'aws.organization-account': aws_organization_account,
+  'aws.account': aws_account,
+  'aws.cloud': aws_cloud,
+  'aws.region': aws_region,
   'aws.organization-policy': aws_organizations,
   'aws.organization-policy-attachment': aws_organizations,
   'external.user': user,
@@ -185,6 +231,7 @@ const icons: Record<string, string> = {
   'saas.kibana': kibana,
 
   'gcp.storage': gcp_storage,
+  'gcp.cloud': gcp_cloud,
   'aws.alb': aws_alb,
   'aws.ecs': aws_ecs,
   'aws.ecs-cluster': aws_ecs,
@@ -205,12 +252,14 @@ const icons: Record<string, string> = {
   'gcp.compute': gcp_compute,
   'gcp.sql': gcp_sql,
   'azure.vm': azure_vm,
+  'azure.cloud': azure_cloud,
   'azure.app': azure_app,
   'azure.sql': azure_sql,
   'azure.storage': azure_storage,
 };
 export const getIconTypes = (): string[] => Object.keys(icons).sort();
 export const getIcon = (type: string): string | undefined => icons[type];
+export const iconTypes = Object.keys(icons).sort();
 
 export const getIconHomepage = (type: string): string | undefined =>
   type === 'saas.fly' ? 'https://fly.io' : undefined;

@@ -6,18 +6,30 @@ React Flow が探索操作を、ELK.js が境界を含む自動配置を担当�
 
 ## 起動
 
-Node.js 24 以上を使います。
+mise を導入し、リポジトリを clone したディレクトリで実行します。Node.js 24.21.0、Python 3.14.7、Lefthook 2.2.1 は mise が管理します。
 
 ```bash
-npm ci --ignore-scripts
-npm run build
-npm run dev
+mise bootstrap
+mise run dev
 ```
+
+セットアップは依存インストール、Git フック登録、AIルール生成、headless Chromium の準備、ビルドを行い、再実行できます。
+Linux で Chromium の OS 依存が不足する場合は `mise run browser:install-ci` を使います。
+macOS・Linux・Windows の共通入口は mise です（動作実測は macOS）。
 
 表示先は `http://127.0.0.1:5178/` です。終了はターミナルで `Ctrl+C` を押します。
 サンプルから始まり、上部の「DSL を編集」で任意の入力を解析できます。
 「ファイルを開く」から `.infra` または取り込み済みのモデル JSON を選べます。
 Terraform の生の JSON は CLI で取り込んでください。
+
+要素を選択すると、右ペインで名前と属性を直接編集できます。
+CPU は units、メモリは MiB、配列は1行に1項目で入力します。
+右ペインの選択項目は選択時、テキスト・数値・配列は入力欄を離れた時に図と DSL へ自動反映します。
+表示アイコンは検索で絞り込んで選択でき、取り消しには「元に戻す」を使います。
+属性の追加・削除と、接続の種類・ポート・送信データなどの編集も可能です。
+不正な数値や存在しない参照は反映せず、現在の図を保持します。
+Terraform 由来の要素を編集すると設計値として扱い、元の Terraform には書き戻しません。
+変更はブラウザー内で保持します。再読み込み前に DSL エディターの内容を保存してください。
 
 概要・サービス・ネットワーク・セキュリティを切り替えられます。
 境界の `−` / `+` で折りたたみ・展開できます。選択詳細の「詳細へ移動」は境界内に絞ります。
@@ -26,6 +38,10 @@ Terraform の生の JSON は CLI で取り込んでください。
 選択解除はパン・ズームを維持します。パン・ズーム・全体表示・ミニマップから広い図を探索できます。
 「すべて折りたたむ」「すべて展開する」で、現在の表示範囲の境界を入れ子も含め一括操作できます。
 概要表示でもすべて展開でき、詳細へ移動した状態ではその範囲だけを操作します。パン・ズームは維持します。
+「元に戻す」「やり直す」で、属性編集・DSL の反映・ファイル読み込み・表示切り替え・境界操作・詳細への移動・矢印形状の変更を戻せます。
+履歴は画面を開いている間の最大100操作で、Undo 後の新しい操作で Redo を破棄します。選択・パン・ズーム・入力途中の文字編集は図の履歴に含めません。
+入力欄以外では `Ctrl / ⌘ + Z` で Undo、`Ctrl / ⌘ + Shift + Z` または `Ctrl + Y` で Redo を実行できます。
+入力欄ではブラウザ標準の文字編集の Undo/Redo を使います。DSL やファイルの変更を戻すと、入力欄も反映済みの内容に復元します。
 `region` 属性を持つ境界やサービスには、対応する国・地域の国旗を表示します（[対応範囲と出典](docs/regions.md)）。
 
 アカウントID・リージョン・AZ・AZ ID・CIDRなどの明示属性は、名前の下に表示します。
@@ -51,7 +67,7 @@ node dist/cli.js preview artifacts/terraform-model.json --port 5181
 node dist/cli.js dsl artifacts/terraform-model.json --out artifacts/terraform.infra
 ```
 
-`npm run cli -- ...` も利用できます。
+`mise run cli -- ...` も利用できます。
 HTML は JavaScript・CSS・アイコンを同梱した単一ファイルで、直接開いてオフラインで操作できます。
 横ホイールと Shift＋縦ホイールで左右にパンし、通常の縦ホイールでズームします。
 矢印のラベルはクリックまたは Tab でフォーカスでき、Enter／Space でも選択できます。
@@ -85,14 +101,30 @@ npm 公開はしていません。ビルド後、ローカルのパス依存と�
 
 ## サンプルと仕様
 
-| 入力                                          | 内容                                                                           |
-| --------------------------------------------- | ------------------------------------------------------------------------------ |
-| [aws.infra](examples/aws.infra)               | AWS 2 アカウント、2 AZ、ALB・ECS・RDS、重複 SG、GitHub Actions・OIDC           |
-| [gcp-azure.infra](examples/gcp-azure.infra)   | Google Cloud と Azure の小規模構成                                             |
-| [multicloud.infra](examples/multicloud.infra) | 複数クラウドと外部サービス                                                     |
-| [saas.infra](examples/saas.infra)             | GitHub・1Password・Linear・GitLab・Neon・Fly.io・Resend・Elasticsearch・Kibana |
-| [large.infra](examples/large.infra)           | 300 サービスと18境界                                                           |
-| [terraform](examples/terraform)               | module、count、for_each、複数 provider、未確定値を含む合成入力                 |
+| 入力                                                    | 内容                                                                           |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| [aws.infra](examples/aws.infra)                         | AWS 2 アカウント、2 AZ、ALB・ECS・RDS、重複 SG、GitHub Actions・OIDC           |
+| [gcp-azure.infra](examples/gcp-azure.infra)             | Google Cloud と Azure の小規模構成                                             |
+| [gcp-web.infra](examples/gcp-web.infra)                 | Google Cloud: Cloud Run・Cloud SQL・Cloud Storage と実行サービスアカウント     |
+| [gcp-analytics.infra](examples/gcp-analytics.infra)     | Google Cloud: Pub/Sub から BigQuery subscription によるイベント分析            |
+| [azure-web.infra](examples/azure-web.infra)             | Azure: App Service・SQL Database・Blob Storage とマネージドID                  |
+| [azure-functions.infra](examples/azure-functions.infra) | Azure: Blob アップロードを契機に Functions で画像を変換・保存                  |
+| [multicloud.infra](examples/multicloud.infra)           | 複数クラウドと外部サービス                                                     |
+| [saas.infra](examples/saas.infra)                       | GitHub・1Password・Linear・GitLab・Neon・Fly.io・Resend・Elasticsearch・Kibana |
+| [large.infra](examples/large.infra)                     | 300 サービスと18境界                                                           |
+| [terraform](examples/terraform)                         | module、count、for_each、複数 provider、未確定値を含む合成入力                 |
+
+追加した4件は架空の設計例です。「ファイルを開く」で読み込むか、
+`node dist/cli.js preview examples/gcp-web.infra --port 5180` のように表示できます。
+概要・サービス・ネットワーク・セキュリティの4ビューで、通信・認可・配備の関係を確認できます。
+各サービスの接続設定・権限・通信成立を検証するものではありません。
+未対応アイコンのサービスも種別名付きで表示します。
+
+構成の根拠は [Cloud Run と Cloud SQL の接続](https://docs.cloud.google.com/sql/docs/postgres/connect-run)、
+[BigQuery subscription](https://docs.cloud.google.com/pubsub/docs/bigquery)、
+[App Service のマネージドIDによるSQL接続](https://learn.microsoft.com/en-us/azure/app-service/tutorial-connect-msi-sql-database)、
+[Functions の Blob trigger](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-storage-blob-trigger) と
+[Blob 出力binding](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-storage-blob-output) です。
 
 [公開構成図5件の対応確認](docs/architecture-coverage.md) と [再記述サンプル](examples/reference) では、3クラウド公式・クラスメソッド・サーバーワークスの図を検証しています。
 
@@ -104,15 +136,22 @@ npm 公開はしていません。ビルド後、ローカルのパス依存と�
 ## 検証
 
 コードの検査は Oxlint、整形は Oxfmt、型検査は `tsc --noEmit`、文書規約の検査は markdownlint を使います。
-`npm run fmt` で整形し、`npm run fmt:check` は書き換えず差分を検査します。
+`mise run fmt` で整形し、`mise run fmt:check` は書き換えず差分を検査します。
 独自 DSL・Terraform のサンプル、公式 SVG・資産 manifest、生成物、lockfile は整形対象から除外します。
 Markdown 内のサンプルコードも自動整形しません。
 
+Lefthook の `pre-commit` は `mise run lint` と `mise run rules:check` を並列に実行し、
+失敗するとコミットを止めます。ステージ済みファイルに限定せず、作業ツリー全体を検証します。
+自動修正や再ステージは行わないため、整形エラーは `mise run fmt` で修正してから必要な変更をステージしてください。
+既存の作業環境では `mise run hooks:install` でフックを登録・更新でき、
+`mise run hooks:check` で同じチェックを手動実行できます。
+単体テスト・ビルド・ブラウザテストは次のコマンドと CI で実行します。
+
 ```bash
-npm run check
+mise run check
 mise run lint
 npx playwright install chromium
-npm run test:browser
+mise run test:browser
 ```
 
 CI は同じ型検査・lint・整形チェック・回帰テスト・ビルド・ブラウザテストを実行します。
@@ -225,7 +264,7 @@ commitと取得ファイルを表示し、モデルの入力上限に合わせ�
 既存の `.infra` があればモデルを起動せず候補として読み込めます。
 Terraformのresource宣言とWranglerのJSON/JSONC/TOML設定から、モデルを起動せず最大20要素の概要候補を作ります。
 DNS・個別権限は集約し、Wranglerのバインディングと検出した通知・デプロイ・DB接続・シークレット取得定義以外の通信は推定しません。
-変数・式・モジュール・環境差分の評価やWrangler TOMLの概要解析には対応していません。
+TOMLを含む設定の宣言を読み取りますが、変数・式・モジュール・環境差分の実行時評価には対応していません。
 「LLMで概要を補足」で取得ファイルを基に候補を編集できます。
 設計情報からの推定なので、生成した接続やサービスを確認してください。
 
@@ -256,3 +295,16 @@ tsconfigのローカルextends（配列を含む）、paths・baseUrl・ワイ�
 値や実行条件が未確定なら打ち切り、eval・外部API・対象コードは実行しません。ループ・クラス/プロトタイプ・反射の完全な評価は未対応です。
 呼び出しは深さ12・512回、値の訪問は25,000回で打ち切り、動的参照の取得は最大4巡・16入口までです。
 LLMへは秘密値を含まない引数受け渡し位置と解決数を、既存の根拠と一緒に渡します。
+
+## AI 開発ルール
+
+共通ルールは `.rulesync/rules/overview.md` にまとめています。
+`mise run rules:generate` で Codex、Claude Code、Copilot、Cursor 向けに rulesync 33.0.0 から生成し、
+Gemini CLI 向けの `GEMINI.md` には共通の `AGENTS.md` と同じ内容を同期します。
+現行 rulesync に Gemini CLI 専用ターゲットがないため、この同期を mise タスクで補っています。
+`mise run rules:check` で差分を検出し、`mise run check` と CI でも検証します。
+生成ファイルは直接編集せず、正本を更新してから生成してください。権限・MCP・認証設定は生成しません。
+
+実行コマンドは `mise.toml` が正本で、npm scripts は互換入口です。
+ビルド・アイコン収集など、まとまった処理の実装は既存スクリプトを保ち、mise から呼び出します。
+公開用の Bash 処理は GitHub Actions の Linux 専用です。

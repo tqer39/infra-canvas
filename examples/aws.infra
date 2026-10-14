@@ -1,5 +1,5 @@
 diagram "AWS 2アカウント Web アプリケーション" version=1 {
-  account prod "本番アカウント" icon=aws.organization-account account="111111111111" {
+  account prod "本番アカウント" icon=aws.account account="111111111111" {
     region tokyo "東京" region="ap-northeast-1" {
       vpc main "本番 VPC" cidr="10.0.0.0/16" {
         subnet public_a "Public AZ-a" public az="ap-northeast-1a" cidr="10.0.0.0/24"
@@ -17,7 +17,7 @@ diagram "AWS 2アカウント Web アプリケーション" version=1 {
       aws.s3 uploads "アップロード"
     }
   }
-  account dev "開発アカウント" icon=aws.organization-account account="222222222222" {
+  account dev "開発アカウント" icon=aws.account account="222222222222" {
     vpc development "開発 VPC" region="ap-northeast-1" {
       subnet dev_private "開発 Subnet" private az="ap-northeast-1a"
       aws.ecs dev_api "開発 ECS" subnets=[dev_private]

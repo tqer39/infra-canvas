@@ -1,7 +1,14 @@
 import { validateArchitecture } from './architecture.js';
+import {
+  textAttributes,
+  arrayAttributes,
+  numberAttributes,
+  boolAttributes,
+} from './attribute-schema.js';
 import { resourceContent } from './content.js';
+import { validateConfiguration } from './configuration.js';
 import { validateComputeAttributes } from './resource-metadata.js';
-import { isBoundary, isTelemetrySignals, edgeKinds as supportedKinds } from './model.js';
+import { isBoundary, isTelemetrySignals, edgeKinds as supportedEdgeKinds } from './model.js';
 import type {
   Attribute,
   Attributes,
@@ -19,88 +26,7 @@ interface Token extends SourceLocation {
   value: string;
   kind: 'word' | 'string' | 'symbol' | 'newline' | 'eof';
 }
-const edgeKinds = new Set<string>(supportedKinds);
-const textAttributes = new Set([
-  'icon',
-  'exposure',
-  'trustZone',
-  'evidence',
-  'change',
-  'appearance',
-  'columnsBy',
-  'logicalService',
-  'anchor',
-  'anchorEdge',
-  'redundancyRole',
-  'launchType',
-  'display',
-  'description',
-  'region',
-  'az',
-  'azId',
-  'availability_zone_id',
-  'cidr',
-  'protocol',
-  'account',
-  'project',
-  'subscription',
-  'status',
-  'scope',
-  'address',
-  'repository',
-  'commit',
-  'root',
-  'file',
-  'provenance',
-  'sourceKind',
-  'network',
-  'routeEvidence',
-  'provider',
-  'environment',
-  'role',
-  'url',
-  'version',
-  'subnetType',
-  'terraformType',
-  'availability_zone',
-  'cidr_block',
-  'instance_type',
-  'engine',
-  'engine_version',
-  'placement',
-  'subnetVisibility',
-]);
-const arrayAttributes = new Set([
-  'ingress',
-  'egress',
-  'ports',
-  'capacityProviders',
-  'requiresCompatibilities',
-  'columns',
-  'rows',
-  'items',
-  'subnets',
-  'members',
-  'tags',
-  'securityGroups',
-  'unresolved',
-  'dependsOn',
-]);
-const numberAttributes = new Set([
-  'count',
-  'countMin',
-  'countMax',
-  'cpu',
-  'memory',
-  'desiredCount',
-  'port',
-  'width',
-  'height',
-  'x',
-  'y',
-  'line',
-]);
-const boolAttributes = new Set(['public', 'unknown', 'fixed', 'boundary']);
+const edgeKinds: ReadonlySet<string> = new Set(supportedEdgeKinds);
 class ParseFailure extends Error {}
 
 export function parseDSL(source: string): ParseResult {
@@ -462,6 +388,7 @@ export function parseDSL(source: string): ParseResult {
           try {
             resourceContent(resource);
             validateComputeAttributes(resource);
+            validateConfiguration(resource);
           } catch (error) {
             report(
               parsed.positions.get('display') ?? first,

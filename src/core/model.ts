@@ -39,6 +39,15 @@ export const edgeKinds = [
   'failover',
 ] as const;
 export type EdgeKind = (typeof edgeKinds)[number];
+export const edgeKindLabels: Record<EdgeKind, string> = {
+  traffic: '通信',
+  dependency: '依存',
+  auth: '認証',
+  deploy: 'デプロイ',
+  association: '関連',
+  replication: '複製',
+  failover: '切替',
+};
 export const telemetrySignals = ['metrics', 'logs', 'traces'] as const;
 export const telemetrySignalLabels: Record<string, string> = {
   metrics: 'メトリクス',
@@ -152,6 +161,12 @@ export const boundaryTypes = new Set([
   'aws.organization-root',
   'aws.organizational-unit',
   'aws.organization-account',
+  'aws.eks',
+  'aws.eks-cluster',
+  'aws.eks-node-group',
+  'aws.eks-fargate-profile',
+  'k8s.namespace',
+  'k8s.deployment',
   'aws.ecs-cluster',
   'aws.ecs-service',
   'aws.ecs-task-definition',

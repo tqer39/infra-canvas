@@ -7,6 +7,7 @@ import {
   serializeDSL,
   validateDiagram,
 } from '../src/core/index.js';
+import { connectionLabel } from '../src/core/layout.js';
 import type { Diagram } from '../src/core/index.js';
 
 const source = `diagram "安全な設計 <script>" version=1 {
@@ -34,6 +35,40 @@ const parsed = (): Diagram => {
 };
 
 describe('DSL', () => {
+  it('複製と切替の接続を解析・JSON検証・DSL往復・表示で保持する', async () => {
+    const result = parseDSL(`diagram "冗長構成" {
+      aws.rds primary
+      aws.rds replica
+      aws.rds standby
+      primary -> replica kind=replication
+      primary -> standby kind=failover
+    }`);
+    assert.deepEqual(result.diagnostics, []);
+    const diagram = validateDiagram(JSON.parse(JSON.stringify(result.diagram)));
+    const restored = parseDSL(serializeDSL(diagram));
+    assert.deepEqual(restored.diagnostics, []);
+    assert.deepEqual(
+      restored.diagram!.connections.map((edge) => edge.kind),
+      ['replication', 'failover'],
+    );
+    const graph = buildDisplayGraph(restored.diagram!);
+    assert.deepEqual(graph.connections.map(connectionLabel), ['複製', '切替']);
+    assert.equal((await layoutGraph(graph)).edges!.length, 2);
+  });
+
+  it('編集した設計値の DSL に取り込み元の参照を保持する', () => {
+    const diagram = parsed();
+    diagram.resources[0]!.provenance = {
+      kind: 'design',
+      repository: 'example/repo',
+      address: 'aws_vpc.main',
+      file: 'main.tf',
+      line: 3,
+    };
+    const result = parseDSL(serializeDSL(diagram));
+    assert.deepEqual(result.diagnostics, []);
+    assert.deepEqual(result.diagram!.resources[0]!.provenance, diagram.resources[0]!.provenance);
+  });
   it('入れ子、複数 subnet、重複 SG を保持する', () => {
     const diagram = parsed();
     assert.equal(diagram.resources.find((resource) => resource.id === 'api')!.parentId, 'net');

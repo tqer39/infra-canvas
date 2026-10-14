@@ -126,6 +126,7 @@ export function validatePresentation(resource: Resource): void {
   const attrs = resource.attributes;
   if (
     attrs.icon !== undefined &&
+    attrs.icon !== '' &&
     (typeof attrs.icon !== 'string' || !/^[A-Za-z_][A-Za-z0-9_.:-]*$/.test(attrs.icon))
   )
     throw new Error('icon は同梱アイコンの種別IDを指定してください。');

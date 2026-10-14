@@ -1,7 +1,8 @@
 import { validateArchitecture } from './architecture.js';
 import { resourceContent } from './content.js';
+import { validateConfiguration } from './configuration.js';
 import { validateComputeAttributes } from './resource-metadata.js';
-import { isBoundary, isTelemetrySignals, edgeKinds } from './model.js';
+import { isBoundary, isTelemetrySignals, edgeKinds as supportedEdgeKinds } from './model.js';
 import type { Diagram, Resource } from './model.js';
 
 const idPattern = /^[A-Za-z_][A-Za-z0-9_.:-]*$/;
@@ -32,7 +33,7 @@ const location = (value: unknown): boolean =>
   positiveInteger(value.line) &&
   positiveInteger(value.column) &&
   (value.file === undefined || typeof value.file === 'string');
-const kinds = new Set<string>(edgeKinds);
+const kinds: ReadonlySet<string> = new Set(supportedEdgeKinds);
 
 /** 外部 JSON とライブラリ利用者の入力を、推測や修正をせず共通モデルとして検証する。 */
 export function validateDiagram(value: unknown): Diagram {
@@ -62,6 +63,7 @@ export function validateDiagram(value: unknown): Diagram {
       throw new Error('リソースの ID・種別・ラベル・有限値属性・ソース位置を確認してください。');
     resourceContent(resource);
     validateComputeAttributes(resource);
+    validateConfiguration(resource);
     if (ids.has(resource.id)) throw new Error(`ID が重複しています: ${resource.id}`);
     ids.add(resource.id);
     if (resource.provenance !== undefined) {

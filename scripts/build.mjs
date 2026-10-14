@@ -11,7 +11,7 @@ await build({
   platform: 'browser',
   minify: true,
   outfile: 'dist/viewer.js',
-  loader: { '.svg': 'dataurl', '.infra': 'text' },
+  loader: { '.svg': 'dataurl', '.png': 'dataurl', '.infra': 'text' },
   define: { 'process.env.NODE_ENV': '"production"' },
   plugins: [
     {
@@ -49,12 +49,12 @@ await build({
   bundle: true,
   format: 'esm',
   platform: 'node',
-  loader: { '.svg': 'dataurl' },
+  loader: { '.svg': 'dataurl', '.png': 'dataurl' },
   outfile: 'dist/icon-assets.mjs',
 });
 await build({
   entryPoints: ['src/cli.ts'],
-  loader: { '.svg': 'dataurl' },
+  loader: { '.svg': 'dataurl', '.png': 'dataurl' },
   bundle: true,
   platform: 'node',
   format: 'esm',
@@ -63,5 +63,7 @@ await build({
   banner: { js: '#!/usr/bin/env node' },
 });
 await chmod('dist/cli.js', 0o755);
-execFileSync('node_modules/.bin/tsc', ['-p', 'tsconfig.build.json'], { stdio: 'inherit' });
+execFileSync(process.execPath, ['node_modules/typescript/bin/tsc', '-p', 'tsconfig.build.json'], {
+  stdio: 'inherit',
+});
 await viteBuild();

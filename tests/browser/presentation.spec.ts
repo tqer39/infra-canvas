@@ -165,7 +165,7 @@ test('曲線や跨る囲みの背後のノードをクリックでき、AWSア�
   await expect(page.locator('.layout-status')).toHaveCount(0);
   await expect(page.locator('[data-id="prod"] .resource-type')).toHaveText('AWS アカウント');
   await expect(page.locator('[data-id="prod"] .service-icon')).toHaveCount(1);
-  await page.getByRole('button', { name: '矢印の形状', exact: true }).click();
+  await page.getByRole('switch', { name: '矢印を曲線にする', exact: true }).click();
   await page.getByRole('button', { name: '追加の囲み：非表示', exact: true }).click();
   const crossesCard = await page.locator('.react-flow__edge-path').evaluateAll((paths) => {
     const rectangles = ['a', 'b', 'db'].map((id) =>
@@ -220,10 +220,10 @@ test('矢印トグル・囲み・配置移動の操作が図の位置を維持�
     for (let i = 0; i < 35; i++) await new Promise(requestAnimationFrame);
     return el.getAttribute('style');
   });
-  const shape = page.getByRole('button', { name: '矢印の形状', exact: true });
+  const shape = page.getByRole('switch', { name: '矢印を曲線にする', exact: true });
   await shape.click();
   await expect(shape).toHaveText('矢印：曲線');
-  await expect(shape).toHaveAttribute('aria-pressed', 'true');
+  await expect(shape).toHaveAttribute('aria-checked', 'true');
   await shape.click();
   await expect(shape).toHaveText('矢印：直線');
   await expect(page.locator('.membership-overlay')).toHaveCount(0);
@@ -264,7 +264,7 @@ test('一直線の端点でも曲線が実際に膨らみ、直線へ戻せる',
   await expect(page.locator('.layout-status')).toHaveCount(0);
   const path = page.locator('.react-flow__edge-path');
   const original = await path.getAttribute('d');
-  await page.getByRole('button', { name: '矢印の形状', exact: true }).click();
+  await page.getByRole('switch', { name: '矢印を曲線にする', exact: true }).click();
   const bend = await path.evaluate((element) => {
     const p = element as SVGPathElement;
     const start = p.getPointAtLength(0),
@@ -273,8 +273,8 @@ test('一直線の端点でも曲線が実際に膨らみ、直線へ戻せる',
     return Math.abs(middle.y - (start.y + end.y) / 2);
   });
   expect(bend).toBeGreaterThan(40);
-  await page.getByRole('button', { name: '矢印の形状', exact: true }).click();
+  await page.getByRole('switch', { name: '矢印を曲線にする', exact: true }).click();
   await expect(path).toHaveAttribute('d', original!);
-  await page.getByRole('button', { name: '矢印の形状', exact: true }).click();
+  await page.getByRole('switch', { name: '矢印を曲線にする', exact: true }).click();
   await page.screenshot({ path: 'artifacts/curve-toggle-fixed.png' });
 });

@@ -3,6 +3,12 @@
 初回取得日は2026年10月13日です。最新版の取得日・配布元はマニフェストを参照してください。`src/assets/manifest.json` に元パスと SHA-256 を記録しています。
 アイコンはサービス識別用です。各社の商標・アイコンの権利は各社に帰属します。
 元の形状と配色を保ち、縮尺を保って表示します。
+`aws.cloud` は AWS の文字とスマイル入りの `AWS-Cloud-logo_32.svg` を使います。
+同じ公式配布物の雲形のみの `AWS-Cloud_32.svg` とは区別します。
+`gcp.cloud` は [Google Cloud 公式サイト](https://cloud.google.com/) のカラフルな雲アイコン
+`super_cloud_gradient.png`、`azure.cloud` は Azure 公式配布物の `10018-icon-service-Azure-A.svg` です。
+Google Cloud は文字入りロゴを使わず、公式 PNG の色・形・透明背景を維持します。
+マニフェストの公式配布 URL を月次更新で確認し、PNG の署名・寸法・チャンク・CRC を検証します。
 
 ## 初回のクラウド配布物
 
@@ -70,9 +76,13 @@ Fly.io のカードのアイコンと名前には、条件に従って公式ホ�
 ## 追加カタログ
 
 [主要サービスのアイコン一覧](service-icons.md) に追加50種と、日本のサービスを含む公開カタログをまとめています。
-既存9種・Tursoと合わせ60種に対応しています。
+既存9種・Tursoと合わせ62種に対応しています。
 
 ## 仕様の確認先
+
+AWS の `account` と AWS の所属・リージョンコードが明示された `region` は、
+公式配布物の `AWS-Account_32.svg`、`Region_32.svg` を使います。
+リージョンの国旗と表示名は併記します。Google Cloud・Azure の境界には流用しません。
 
 - [React Flow の Sub Flows](https://reactflow.dev/learn/layouting/sub-flows)：親 ID、相対座標、親を先に並べる規則。
 - [ELK.js](https://github.com/kieler/elkjs)：compound graph と自動配置。版は lockfile に固定しています。
@@ -94,7 +104,7 @@ AWS・Google Cloud・Azure の公式ページから最新 ZIP のリンクを解
 Simple Icons・flag-icons は npm の最新安定版を取得し、レジストリの integrity を確認します。
 Simple Icons は同じ配布物の slug と hex で形状とブランドカラーを適用します。
 ライセンス・免責事項・出典・版・SHA-256 も更新します。独自の利用者アイコンは保持します。
-全取得・SVG検証が成功してから書き込むため、取得失敗やブランド削除・曖昧なパスでは部分的な更新を適用しません。
+全取得・SVG/PNG検証が成功してから書き込むため、取得失敗やブランド削除・曖昧なパスでは部分的な更新を適用しません。
 変更がない場合、取得日だけの差分や新しいPRを作りません。
 
 型検査・lint・単体テスト・更新処理の回帰テスト・ビルド・通常画面とオフラインHTMLのブラウザーテストを実行します。

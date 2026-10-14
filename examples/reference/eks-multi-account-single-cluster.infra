@@ -1,0 +1,97 @@
+diagram "EKS 複数アカウント・共有クラスター" version=1 {
+account platform "Platform Account" {
+vpc platform_net "Platform VPC" {
+aws.eks shared "EKS shared" {
+  k8s.namespace shared_a_ns "Namespace A" {
+    k8s.ingress shared_a_ingress "Ingress A"
+    k8s.service shared_a_service "Service A"
+    k8s.pod shared_a_pod "Pod A" cpuRequest="250m" memoryRequest="256Mi" cpuLimit="1" memoryLimit="512Mi"
+    k8s.service-account shared_a_sa "ServiceAccount A"
+  }
+  k8s.namespace shared_b_ns "Namespace B" {
+    k8s.ingress shared_b_ingress "Ingress B"
+    k8s.service shared_b_service "Service B"
+    k8s.pod shared_b_pod "Pod B"
+    k8s.service-account shared_b_sa "ServiceAccount B"
+  }
+  k8s.namespace shared_admin "Admin Namespace" {
+    k8s.deployment shared_gitops "GitOps controller"
+  }
+}
+}
+aws.iam primary "Pod Identity role（クラスターと同じアカウント）"
+aws.eks-pod-identity-association identity_a "Pod Identity association A"
+aws.eks-pod-identity-association identity_b "Pod Identity association B"
+aws.eks-access-entry access "EKS Access Entry"
+aws.eks-access-policy policy "Namespace のアクセス方針" display=list items=["Namespace A をスコープに設定", "実効権限の評価は別途必要"]
+}
+account workload_a "Workload A Account" {
+vpc net_a "Workload A VPC" {
+aws.rds db_a "DB A"
+}
+aws.s3 bucket_a "S3 A"
+aws.iam target_a "Target IAM Role A"
+}
+account workload_b "Workload B Account" {
+vpc net_b "Workload B VPC" {
+aws.rds db_b "DB B"
+}
+aws.dynamodb table_b "DynamoDB B"
+aws.iam target_b "Target IAM Role B"
+}
+account network_account "Network Account" {
+aws.transit-gateway tgw "共有 Transit Gateway"
+aws.ram-share share "TGW の RAM 共有"
+vpc hub "共通接続 VPC" {
+aws.privatelink endpoint "共通 VPC Interface Endpoint"
+aws.route53 resolver "Route 53 Inbound Endpoint"
+}
+aws.route53 dns "共通 Hosted Zone"
+aws.direct-connect dx "Direct Connect"
+}
+account security_account "Security Account" {
+aws.identity-center idc "IAM Identity Center"
+}
+external.user developers "開発チーム"
+external.network premises "オンプレミス"
+shared_a_ingress -> shared_a_service kind=traffic label="Ingress の転送先"
+shared_a_service -> shared_a_pod kind=traffic label="Service の対象"
+shared_a_pod -> shared_a_sa kind=auth label="ServiceAccount の利用"
+shared_b_ingress -> shared_b_service kind=traffic label="Ingress の転送先"
+shared_b_service -> shared_b_pod kind=traffic label="Service の対象"
+shared_b_pod -> shared_b_sa kind=auth label="ServiceAccount の利用"
+
+shared_a_pod -> db_a kind=traffic label="TGW 接続を使うデータアクセス意図"
+shared_b_pod -> db_b kind=traffic label="TGW 接続を使うデータアクセス意図"
+platform_net -> tgw kind=association label="VPC attachment"
+net_a -> tgw kind=association label="VPC attachment"
+net_b -> tgw kind=association label="VPC attachment"
+hub -> tgw kind=association label="VPC attachment"
+share -> tgw kind=association label="リソース共有（到達性を示さない）"
+share -> platform kind=association label="参加者アカウント"
+share -> workload_a kind=association label="参加者アカウント"
+share -> workload_b kind=association label="参加者アカウント"
+premises -> dx kind=association label="専用線接続"
+dx -> tgw kind=association label="ネットワーク接続（経路詳細を省略）"
+resolver -> dns kind=dependency label="名前解決設定"
+developers -> idc kind=auth label="従業員アクセス"
+idc -> access kind=auth label="IAM ロール経由（詳細を省略）"
+access -> shared kind=auth label="クラスターへのアクセス設定"
+access -> policy kind=association label="Access Policy の関連付け"
+policy -> shared_a_ns kind=association label="Namespace スコープ（権限の評価ではない）"
+shared_a_sa -> identity_a kind=auth label="Pod Identity の関連付け"
+identity_a -> primary kind=auth label="最初に引き受ける IAM Role"
+primary -> target_a kind=auth label="クロスアカウント AssumeRole"
+shared_a_pod -> bucket_a kind=traffic label="認証後のアクセス意図"
+target_a -> bucket_a kind=association label="許可対象（実効権限は未評価）"
+shared_b_sa -> identity_b kind=auth label="Pod Identity の関連付け"
+identity_b -> primary kind=auth label="最初に引き受ける IAM Role"
+primary -> target_b kind=auth label="クロスアカウント AssumeRole"
+shared_b_pod -> table_b kind=traffic label="認証後のアクセス意図"
+target_b -> table_b kind=association label="許可対象（実効権限は未評価）"
+
+view overview level=overview
+view service level=service
+view network level=subnet
+view security level=resource overlay=sg
+}

@@ -18,7 +18,16 @@ import {
 } from '../core/geometry';
 import { resourceMetadata } from '../core/resource-metadata';
 import { resourceContent } from '../core/content';
-import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  StrictMode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useReducer,
+  type CSSProperties,
+} from 'react';
 import { createRoot } from 'react-dom/client';
 import {
   ReactFlow,
@@ -63,7 +72,11 @@ import { getIcon, getIconHomepage, getIconTypes } from '../assets/icons';
 import { getResourceIconType } from '../assets/resource-icons';
 import { getCountryFlag } from '../assets/flags';
 import { getRegionCountry, getResourceRegion } from '../assets/regions';
+import { createHistory, historyReducer } from './history';
 import defaultSource from '../../examples/aws.infra?raw';
+import { PropertyEditor } from './property-editor';
+import { edgeKindLabels as kindLabels, type Attributes, type Connection } from '../core/model';
+import { connectionStyles, connectionDescriptions } from './connection-style';
 
 declare global {
   interface Window {
@@ -80,30 +93,142 @@ type ResourceData = Record<string, unknown> & {
   contentTop?: number;
 };
 type ResourceNode = Node<ResourceData>;
-const kindLabels: Record<string, string> = {
-  traffic: '通信',
-  dependency: '依存',
-  auth: '認証',
-  deploy: 'デプロイ',
-  association: '関連',
-  replication: '複製',
-  failover: '切替',
-};
-const kindColors: Record<string, string> = {
-  traffic: '#55749a',
-  dependency: '#8b93a3',
-  auth: '#ad7633',
-  deploy: '#8165b0',
-  association: '#258d81',
-  replication: '#287ca0',
-  failover: '#bb5d43',
-};
+const activeEdgeZ = 10;
 const viewLabels: Record<string, string> = {
   overview: '概要',
   service: 'サービス',
   network: 'ネットワーク',
   security: 'セキュリティ',
 };
+
+function ConnectionSample({ kind }: { kind: Connection['kind'] }) {
+  return (
+    <svg
+      width="42"
+      height="12"
+      viewBox="0 0 42 12"
+      aria-hidden="true"
+      style={{ color: connectionStyles[kind].color }}
+    >
+      <path
+        d="M 0 6 H 36"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeDasharray={connectionStyles[kind].dash}
+        fill="none"
+      />
+      <path d="M 36 3 L 41 6 L 36 9 Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ConnectionLegend() {
+  const [hovered, setHovered] = useState<Connection['kind']>();
+  const [focused, setFocused] = useState<Connection['kind']>();
+  const [dismissed, setDismissed] = useState(false);
+  const active = dismissed ? undefined : (hovered ?? focused);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const enter = (kind: Connection['kind']) => {
+    clearTimeout(hoverTimer.current);
+    setHovered(kind);
+    setDismissed(false);
+  };
+  const leave = () => {
+    clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => setHovered(undefined), 150);
+  };
+  useEffect(() => () => clearTimeout(hoverTimer.current), []);
+  useEffect(() => {
+    if (!active) return;
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        clearTimeout(hoverTimer.current);
+        setHovered(undefined);
+        setDismissed(true);
+      }
+    };
+    document.addEventListener('keydown', dismiss);
+    return () => document.removeEventListener('keydown', dismiss);
+  }, [active]);
+  return (
+    <div className="edge-legend">
+      {edgeKinds.map((kind) => (
+        <span
+          key={kind}
+          className="edge-legend-item"
+          data-kind={kind}
+          style={{ color: connectionStyles[kind].color }}
+          tabIndex={0}
+          aria-describedby={active === kind ? 'connection-legend-tooltip' : undefined}
+          onMouseEnter={() => enter(kind)}
+          onMouseLeave={leave}
+          onFocus={() => {
+            clearTimeout(hoverTimer.current);
+            setHovered(undefined);
+            setFocused(kind);
+            setDismissed(false);
+          }}
+          onBlur={() => setFocused(undefined)}
+        >
+          <ConnectionSample kind={kind} />
+          {kindLabels[kind]}
+        </span>
+      ))}
+      {active && (
+        <div
+          className="edge-legend-tooltip"
+          id="connection-legend-tooltip"
+          role="tooltip"
+          onMouseEnter={() => enter(active)}
+          onMouseLeave={leave}
+        >
+          <strong>
+            {kindLabels[active]} · {connectionDescriptions[active].pattern}
+          </strong>
+          <p>{connectionDescriptions[active].meaning}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ConnectionHelp() {
+  return (
+    <details
+      className="connection-help"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.currentTarget.open = false;
+          event.currentTarget.querySelector('summary')?.focus();
+        }
+      }}
+    >
+      <summary>線種の意味</summary>
+      <section className="connection-help-panel" aria-label="線種の意味と例">
+        <h2>線種の意味</h2>
+        <p>矢印は送信元から接続先へ向きます。色と線の模様を組み合わせて、次の関係を表します。</p>
+        <dl>
+          {edgeKinds.map((kind) => (
+            <div key={kind} data-kind={kind}>
+              <dt>
+                <ConnectionSample kind={kind} />
+                {kindLabels[kind]}
+                <small>{connectionDescriptions[kind].pattern}</small>
+              </dt>
+              <dd>
+                {connectionDescriptions[kind].meaning}
+                <small>{connectionDescriptions[kind].example}</small>
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <p>
+          線は構成上の関係や設計の意図を表します。実際の通信・権限・複製・切替の成立を保証するものではありません。
+        </p>
+      </section>
+    </details>
+  );
+}
 
 function RegionFlag({ resource }: { resource: Resource }) {
   const region = getResourceRegion(resource);
@@ -327,11 +452,15 @@ function RoutedConnection(props: EdgeProps) {
       <EdgeLabelRenderer>
         <button
           className="connection-label nodrag nopan"
-          style={{
-            transform: `translate(-50%, -50%) translate(${labelPosition.x}px, ${labelPosition.y}px)`,
-            opacity: props.style?.opacity,
-            zIndex: props.selected ? 11 : 2,
-          }}
+          style={
+            {
+              transform: `translate(-50%, -50%) translate(${labelPosition.x}px, ${labelPosition.y}px)`,
+              opacity: props.style?.opacity,
+              zIndex: props.selected ? 'var(--edge-label-z-index)' : 2,
+              '--connection-color': String(props.style?.stroke ?? '#35556b'),
+            } as CSSProperties
+          }
+          data-kind={String(props.data?.kind)}
           aria-label={String(props.data?.accessibleLabel ?? props.label)}
           aria-pressed={props.selected}
           onFocus={() => select?.(props.id)}
@@ -350,13 +479,34 @@ const edgeTypes = { routed: RoutedConnection };
 
 function App() {
   const initial = useMemo(() => window.__INFRA_CANVAS__ ?? parseDSL(defaultSource).diagram, []);
-  const [diagram, setDiagram] = useState<Diagram | undefined>(initial);
+  const [history, dispatchHistory] = useReducer(
+    historyReducer,
+    {
+      diagram: initial,
+      documentKey: {},
+      source: initial ? serializeDSL(initial) : defaultSource,
+      view: 'service',
+      edgeShape: 'orthogonal' as const,
+      collapsed: [],
+      expanded: [],
+    },
+    createHistory,
+  );
+  const { diagram, view, edgeShape, collapsed, expanded, scope } = history.present;
+  const setView = (next: string) =>
+    dispatchHistory({ type: 'commit', update: (current) => ({ ...current, view: next }) });
+  const setEdgeShape = (next: 'orthogonal' | 'bezier') =>
+    dispatchHistory({ type: 'commit', update: (current) => ({ ...current, edgeShape: next }) });
+  const setDiagram = (next: Diagram) =>
+    dispatchHistory({
+      type: 'commit',
+      update: (current) => ({ ...current, diagram: next, source: serializeDSL(next) }),
+    });
+  const [documentVersion, setDocumentVersion] = useState(0);
   const [source, setSource] = useState(() => (initial ? serializeDSL(initial) : defaultSource));
   const [editorOpen, setEditorOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [diagnostics, setDiagnostics] = useState<string[]>([]);
-  const [view, setView] = useState('service');
-  const [edgeShape, setEdgeShape] = useState<'orthogonal' | 'bezier'>('orthogonal');
   const [lastLayout, setLastLayout] = useState<LayoutResult>();
   const [exportOpen, setExportOpen] = useState(false);
   const [paper, setPaper] = useState<NonNullable<PrintOptions['paper']>>('A4');
@@ -398,9 +548,6 @@ function App() {
     setFilterPurpose(undefined);
     setSelectedEdge(undefined);
   };
-  const [collapsed, setCollapsed] = useState<string[]>([]);
-  const [expanded, setExpanded] = useState<string[]>([]);
-  const [scope, setScope] = useState<string>();
   const [selected, setSelected] = useState<string>();
   const [selectedEdge, setSelectedEdge] = useState<string>();
   const [hovered, setHovered] = useState<string>();
@@ -409,6 +556,7 @@ function App() {
   const [edges, setEdges] = useState<Edge[]>([]);
   const [graph, setGraph] = useState<DisplayGraph>();
   const [layoutTime, setLayoutTime] = useState(0);
+  const [labelLayer, setLabelLayer] = useState(activeEdgeZ + 2);
   const [busy, setBusy] = useState(false);
   const autoFitContext = useRef<{ diagram?: Diagram; view: string; scope?: string } | undefined>(
     undefined,
@@ -468,12 +616,18 @@ function App() {
   graphRef.current = graph;
   const toggle = useCallback((id: string) => {
     const isCollapsed = graphRef.current?.collapsed.includes(id) ?? false;
-    setCollapsed((current) =>
-      isCollapsed ? current.filter((item) => item !== id) : [...current, id],
-    );
-    setExpanded((current) =>
-      isCollapsed ? [...new Set([...current, id])] : current.filter((item) => item !== id),
-    );
+    dispatchHistory({
+      type: 'commit',
+      update: (current) => ({
+        ...current,
+        collapsed: isCollapsed
+          ? current.collapsed.filter((item) => item !== id)
+          : [...current.collapsed, id],
+        expanded: isCollapsed
+          ? [...new Set([...current.expanded, id])]
+          : current.expanded.filter((item) => item !== id),
+      }),
+    });
   }, []);
   const visibleDiagram = useMemo(() => {
     if (!diagram || !scope) return diagram;
@@ -525,12 +679,18 @@ function App() {
     setSelectedEdge(undefined);
     setHovered(undefined);
     setQuery('');
-    setCollapsed((current) =>
-      collapse ? [...new Set([...current, ...ids])] : current.filter((id) => !ids.has(id)),
-    );
-    setExpanded((current) =>
-      collapse ? current.filter((id) => !ids.has(id)) : [...new Set([...current, ...ids])],
-    );
+    dispatchHistory({
+      type: 'commit',
+      update: (current) => ({
+        ...current,
+        collapsed: collapse
+          ? [...new Set([...current.collapsed, ...ids])]
+          : current.collapsed.filter((id) => !ids.has(id)),
+        expanded: collapse
+          ? current.expanded.filter((id) => !ids.has(id))
+          : [...new Set([...current.expanded, ...ids])],
+      }),
+    });
   };
   useEffect(() => {
     if (!visibleDiagram) return;
@@ -582,6 +742,7 @@ function App() {
           return count;
         };
         sorted.sort((a, b) => depth(a) - depth(b));
+        setLabelLayer(activeEdgeZ + Math.max(0, ...sorted.map(depth)) + 2);
         setLastLayout(layout);
         setOverlayBoxes(layout.overlays ?? []);
         const annotationNodes: ResourceNode[] = (layout.annotations ?? []).map((note) => ({
@@ -653,7 +814,7 @@ function App() {
                     ? '#ad4848'
                     : edge.attributes.change === 'modify'
                       ? '#b27616'
-                      : kindColors[edge.kind],
+                      : connectionStyles[edge.kind].color,
             },
             style: {
               stroke:
@@ -663,25 +824,17 @@ function App() {
                     ? '#ad4848'
                     : edge.attributes.change === 'modify'
                       ? '#b27616'
-                      : kindColors[edge.kind],
+                      : connectionStyles[edge.kind].color,
               strokeWidth: 1.7,
-              strokeDasharray:
-                edge.attributes.change === 'remove' ||
-                edge.attributes.change === 'add' ||
-                edge.attributes.change === 'modify' ||
-                edge.kind === 'failover'
-                  ? '8 5'
-                  : edge.kind === 'dependency'
-                    ? '5 4'
-                    : edge.kind === 'association'
-                      ? '2 4'
-                      : undefined,
+              strokeDasharray: ['add', 'remove', 'modify'].includes(String(edge.attributes.change))
+                ? '8 5'
+                : connectionStyles[edge.kind].dash,
             },
             labelStyle: { fill: '#4a5870', fontSize: 10 },
             labelBgStyle: { fill: '#fff', fillOpacity: 0.95 },
             labelBgPadding: [5, 3] as [number, number],
             type: 'routed',
-            data: { route: routes.get(edge.id) },
+            data: { route: routes.get(edge.id), kind: edge.kind },
           })),
         );
         setGraph(display);
@@ -852,7 +1005,7 @@ function App() {
             onSelect: selectConnection,
             accessibleLabel: `${graph?.resources.find((resource) => resource.id === edge.source)?.label ?? edge.source} → ${graph?.resources.find((resource) => resource.id === edge.target)?.label ?? edge.target}: ${edge.label}`,
           },
-          zIndex: 1,
+          zIndex: match ? activeEdgeZ : 1,
           style: {
             ...edge.style,
             strokeWidth: match ? 2.2 : 1.7,
@@ -896,17 +1049,36 @@ function App() {
     setSelectedEdge(undefined);
     setSelected(id);
     setQuery('');
-    pendingFocus.current = { id, previousGraph: graph };
-    setScope(undefined);
     const ancestors = new Set<string>();
     let resource = diagram?.resources.find((item) => item.id === id);
     while (resource?.parentId && !ancestors.has(resource.parentId)) {
       ancestors.add(resource.parentId);
       resource = diagram?.resources.find((item) => item.id === resource!.parentId);
     }
-    setCollapsed((current) => current.filter((ancestor) => !ancestors.has(ancestor)));
-    setExpanded((current) => [...new Set([...current, ...ancestors])]);
-    if (diagram?.resources.find((item) => item.id === id)?.type === 'sg') setView('security');
+    const nextView =
+      diagram?.resources.find((item) => item.id === id)?.type === 'sg' ? 'security' : view;
+    const needsLayout =
+      scope !== undefined ||
+      nextView !== view ||
+      [...ancestors].some(
+        (ancestor) => collapsed.includes(ancestor) || !expanded.includes(ancestor),
+      );
+    if (!needsLayout) {
+      pendingFocus.current = undefined;
+      void flow.fitView({ nodes: [{ id }], padding: 0.7, maxZoom: 1.2, duration: 450 });
+      return;
+    }
+    pendingFocus.current = { id, previousGraph: graph };
+    dispatchHistory({
+      type: 'commit',
+      update: (current) => ({
+        ...current,
+        scope: undefined,
+        collapsed: current.collapsed.filter((ancestor) => !ancestors.has(ancestor)),
+        expanded: [...new Set([...current.expanded, ...ancestors])],
+        view: nextView,
+      }),
+    });
   };
   useEffect(() => {
     const pending = pendingFocus.current;
@@ -930,12 +1102,24 @@ function App() {
     setFilterKinds(undefined);
     setFilterRoute(undefined);
     setFilterPurpose(undefined);
-    setView('service');
     setSource(nextSource);
-    setDiagram(next);
-    setCollapsed([]);
-    setExpanded([]);
-    setScope(undefined);
+    dispatchHistory({
+      type: 'commit',
+      update: (current) => ({
+        ...current,
+        diagram: next,
+        view: 'service',
+        documentKey: {},
+        source: nextSource,
+        collapsed: [],
+        expanded: [],
+        scope: undefined,
+      }),
+    });
+    pendingFocus.current = undefined;
+    setHovered(undefined);
+    setQuery('');
+    setDocumentVersion((current) => current + 1);
     setSelected(undefined);
     setSelectedEdge(undefined);
     setDiagnostics(next.diagnostics.map((item) => `${item.line}:${item.column} ${item.message}`));
@@ -944,6 +1128,62 @@ function App() {
     const result = parseDSL(source);
     setDiagnostics(result.diagnostics.map((item) => `${item.line}:${item.column} ${item.message}`));
     if (result.diagram) acceptDiagram(result.diagram);
+  };
+  const editItem = (
+    id: string,
+    value: { label: string; kind: Connection['kind']; attributes: Attributes },
+    resource: boolean,
+  ) => {
+    if (!diagram) return;
+    if (source !== serializeDSL(diagram))
+      throw new Error('DSL エディターに未反映の変更があります。先に解析して反映してください。');
+    const next: Diagram = {
+      ...diagram,
+      resources: diagram.resources.map((item) =>
+        resource && item.id === id
+          ? {
+              ...item,
+              label: value.label,
+              attributes: value.attributes,
+              provenance: item.provenance ? { ...item.provenance, kind: 'design' } : undefined,
+              unresolved:
+                item.provenance && item.provenance.kind !== 'design'
+                  ? [
+                      ...new Set([
+                        ...(item.unresolved ?? []),
+                        'ビューアで編集した設計値です。取り込み元には反映していません。',
+                      ]),
+                    ]
+                  : item.unresolved,
+            }
+          : item,
+      ),
+      connections: diagram.connections.map((item) =>
+        !resource && item.id === id
+          ? { ...item, kind: value.kind, attributes: value.attributes }
+          : item,
+      ),
+    };
+    validateDiagram(next);
+    const nextSource = serializeDSL(next);
+    const parsed = parseDSL(nextSource);
+    if (!parsed.diagram) throw new Error(parsed.diagnostics.map((item) => item.message).join('\n'));
+    // 正規化した DSL の位置を同期し、接続の ID と取り込み根拠は保持する。
+    next.resources = next.resources.map((item) => ({
+      ...item,
+      location: parsed.diagram!.resources.find((r) => r.id === item.id)?.location,
+    }));
+    next.connections = next.connections.map((item, index) => ({
+      ...item,
+      location: parsed.diagram!.connections[index]?.location,
+    }));
+    autoFitContext.current = { diagram: next, view, scope };
+    dispatchHistory({
+      type: 'commit',
+      update: (current) => ({ ...current, diagram: next, source: nextSource }),
+    });
+    setSource(nextSource);
+    setDiagnostics([]);
   };
   const importFile = async (file?: File) => {
     if (!file) return;
@@ -1050,6 +1290,70 @@ function App() {
       setDiagnostics([(error as Error).message]);
     }
   };
+  const restoreHistory = useCallback(
+    (direction: 'undo' | 'redo') => {
+      const target = direction === 'undo' ? history.past.at(-1) : history.future[0];
+      if (!target) return;
+      if (target.diagram !== diagram || target.source !== history.present.source) {
+        setSource(target.source);
+      }
+      if (
+        target.documentKey === history.present.documentKey &&
+        target.view === view &&
+        target.scope === scope
+      ) {
+        autoFitContext.current = {
+          diagram: target.diagram,
+          view: target.view,
+          scope: target.scope,
+        };
+      }
+      setDocumentVersion((current) => current + 1);
+      pendingFocus.current = undefined;
+      setSelected(undefined);
+      setSelectedEdge(undefined);
+      setHovered(undefined);
+      setQuery('');
+      setDiagnostics(
+        target.diagram?.diagnostics.map((item) => `${item.line}:${item.column} ${item.message}`) ??
+          [],
+      );
+      dispatchHistory({ type: direction });
+    },
+    [history, diagram, view, scope],
+  );
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.isComposing ||
+        event.altKey ||
+        !(event.metaKey || event.ctrlKey)
+      )
+        return;
+      if (
+        event.target instanceof Element &&
+        event.target.closest(
+          'input, textarea, select, [contenteditable]:not([contenteditable="false"])',
+        )
+      )
+        return;
+      const key = event.key.toLowerCase();
+      const direction =
+        key === 'z'
+          ? event.shiftKey
+            ? 'redo'
+            : 'undo'
+          : key === 'y' && event.ctrlKey && !event.shiftKey
+            ? 'redo'
+            : undefined;
+      if (!direction) return;
+      event.preventDefault();
+      restoreHistory(direction);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [restoreHistory]);
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -1061,6 +1365,24 @@ function App() {
           <span>インフラを、見渡す。</span>
         </div>
         <div className="document-title">{diagram?.title ?? '構成図'}</div>
+        <div className="history-actions" role="group" aria-label="操作履歴">
+          <button
+            className="toolbar-button"
+            disabled={!history.past.length}
+            onClick={() => restoreHistory('undo')}
+            title="元に戻す（Ctrl / ⌘ + Z）"
+          >
+            元に戻す
+          </button>
+          <button
+            className="toolbar-button"
+            disabled={!history.future.length}
+            onClick={() => restoreHistory('redo')}
+            title="やり直す（Ctrl / ⌘ + Shift + Z、Ctrl + Y）"
+          >
+            やり直す
+          </button>
+        </div>
         <button className="toolbar-button" onClick={() => upload.current?.click()}>
           ファイルを開く
         </button>
@@ -1218,7 +1540,11 @@ function App() {
             <p className="editor-hint">構文エラーがある場合は、現在の図を保持します。</p>
           </aside>
         )}
-        <div className="canvas-area" ref={canvas}>
+        <div
+          className="canvas-area"
+          ref={canvas}
+          style={{ '--edge-label-z-index': labelLayer } as CSSProperties}
+        >
           <div className="canvas-toolbar">
             <div className="view-tabs" aria-label="表示の切り替え">
               {Object.entries({
@@ -1307,8 +1633,9 @@ function App() {
             </button>
             <button
               className="toolbar-button"
-              aria-label="矢印の形状"
-              aria-pressed={edgeShape === 'bezier'}
+              role="switch"
+              aria-label="矢印を曲線にする"
+              aria-checked={edgeShape === 'bezier'}
               title="クリックして直線・曲線を切り替える"
               onClick={() => setEdgeShape(edgeShape === 'bezier' ? 'orthogonal' : 'bezier')}
             >
@@ -1358,7 +1685,16 @@ function App() {
             </div>
             {scope && (
               <div className="scope-bar">
-                <button onClick={() => setScope(undefined)}>← 全体へ戻る</button>
+                <button
+                  onClick={() =>
+                    dispatchHistory({
+                      type: 'commit',
+                      update: (current) => ({ ...current, scope: undefined }),
+                    })
+                  }
+                >
+                  ← 全体へ戻る
+                </button>
                 <span>
                   {diagram?.resources.find((resource) => resource.id === scope)?.label} の詳細
                 </span>
@@ -1583,6 +1919,8 @@ function App() {
             maxZoom={2.5}
             nodesDraggable={editLayout && !scope}
             nodesConnectable={false}
+            elevateNodesOnSelect={false}
+            elevateEdgesOnSelect={false}
           >
             <ViewportPortal>
               {(showMembership ? overlayBoxes : []).map((box, index) => (
@@ -1673,14 +2011,8 @@ function App() {
             <span>
               {graph?.resources.length ?? 0} 要素 · {graph?.connections.length ?? 0} 接続
             </span>
-            <div className="edge-legend">
-              {Object.entries(kindLabels).map(([kind, label]) => (
-                <span key={kind}>
-                  <i style={{ background: kindColors[kind] }} />
-                  {label}
-                </span>
-              ))}
-            </div>
+            <ConnectionLegend />
+            <ConnectionHelp />
             <span>配置 {Math.round(layoutTime)} ms</span>
           </div>
         </div>
@@ -1745,6 +2077,21 @@ function App() {
               <h3>
                 元の接続 <span>{selectedConnection.originalIds.length}</span>
               </h3>
+              {selectedConnection.originalIds.map((id) => {
+                const original = diagram?.connections.find((edge) => edge.id === id);
+                return original ? (
+                  <details className="connection-editor" key={id}>
+                    <summary>
+                      {original.source} → {original.target} を編集
+                    </summary>
+                    <PropertyEditor
+                      key={`${documentVersion}-${id}`}
+                      connection={original}
+                      onSave={(value) => editItem(id, value, false)}
+                    />
+                  </details>
+                ) : null;
+              })}
               <dl>
                 {selectedConnection.originalIds.map((id) => {
                   const original = diagram?.connections.find((edge) => edge.id === id);
@@ -1809,9 +2156,15 @@ function App() {
                   <button
                     className="toolbar-button"
                     onClick={() => {
-                      setCollapsed((current) => current.filter((id) => id !== selectedResource.id));
-                      setExpanded((current) => [...new Set([...current, selectedResource.id])]);
-                      setScope(selectedResource.id);
+                      dispatchHistory({
+                        type: 'commit',
+                        update: (current) => ({
+                          ...current,
+                          collapsed: current.collapsed.filter((id) => id !== selectedResource.id),
+                          expanded: [...new Set([...current.expanded, selectedResource.id])],
+                          scope: selectedResource.id,
+                        }),
+                      });
                     }}
                   >
                     詳細へ移動
@@ -1849,18 +2202,11 @@ function App() {
                 </select>
               </label>
               <h3>属性</h3>
-              {Object.entries(selectedResource.attributes).length ? (
-                <dl>
-                  {Object.entries(selectedResource.attributes).map(([key, value]) => (
-                    <div key={key}>
-                      <dt>{key}</dt>
-                      <dd>{Array.isArray(value) ? value.join(', ') : String(value)}</dd>
-                    </div>
-                  ))}
-                </dl>
-              ) : (
-                <p className="muted-copy">追加属性なし</p>
-              )}
+              <PropertyEditor
+                key={`${documentVersion}-${selectedResource.id}`}
+                resource={selectedResource}
+                onSave={(value) => editItem(selectedResource.id, value, true)}
+              />
               <h3>
                 関係 <span>{selectedRelations.length}</span>
               </h3>

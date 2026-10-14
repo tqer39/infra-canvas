@@ -7,7 +7,7 @@ import { resourceContent, contentDimensions } from './content.js';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import type { ElkNode, ElkExtendedEdge } from 'elkjs/lib/elk-api.js';
 import { validateResourceHierarchy } from './validate.js';
-import { isBoundary, telemetrySignalLabels } from './model.js';
+import { isBoundary, telemetrySignalLabels, edgeKindLabels } from './model.js';
 import { getRegionCountry, getResourceRegion } from '../assets/regions.js';
 import type {
   Connection,
@@ -23,21 +23,12 @@ export interface LayoutOptions {
 }
 export const layoutVersion = 'infra-canvas-layout-11';
 
-const kindLabels = {
-  traffic: '通信',
-  dependency: '依存',
-  auth: '認証',
-  deploy: 'デプロイ',
-  association: '関連',
-  replication: '複製',
-  failover: '切替',
-};
 export const connectionLabel = (edge: Connection): string =>
   [
     edge.attributes.route
       ? `${edge.attributes.route} ${edge.attributes.routeDirection === 'return' ? '復路' : '往路'} ${edge.attributes.step}`
       : undefined,
-    edge.attributes.label ?? kindLabels[edge.kind],
+    edge.attributes.label ?? edgeKindLabels[edge.kind],
     Array.isArray(edge.attributes.signals)
       ? edge.attributes.signals.map((signal) => telemetrySignalLabels[signal] ?? signal).join(' / ')
       : undefined,

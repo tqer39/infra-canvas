@@ -5,19 +5,76 @@ on:
     branches: [main]
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
-  workflow-result:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      browser: ${{ steps.changes.outputs.browser }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: ブラウザー検証が必要な変更を判定
+        id: changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: node scripts/ci-policy.mjs changes >> "$GITHUB_OUTPUT"
+  checks:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
         with:
-          node-version: '24'
-      - run: npm ci --ignore-scripts
-      - name: 型検査・Oxlint・markdownlint・Oxfmt・テスト・ビルド
-        run: npm run check
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser
+          version: '2026.9.9'
+          install_args: node python
+      - run: mise run install
+      - name: 型検査・Oxlint・markdownlint・Oxfmt・単体テスト
+        run: mise run check:static
+  browser:
+    needs: changes
+    if: ${{ needs.changes.outputs.browser == 'true' }}
+    name: ブラウザテスト（分割 ${{ matrix.shard }}/2）
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: '2026.9.9'
+          install_args: node python
+      - run: mise run install
+      - run: mise run build
+      - run: mise run browser:install-ci
+      - run: mise run test:browser -- --shard=${{ matrix.shard }}/2
+  workflow-result:
+    needs: [changes, checks, browser]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: 全検証の成功を確認
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CHECKS_RESULT: ${{ needs.checks.result }}
+          BROWSER_RESULT: ${{ needs.browser.result }}
+          BROWSER_REQUIRED: ${{ needs.changes.outputs.browser }}
+        run: node scripts/ci-policy.mjs result

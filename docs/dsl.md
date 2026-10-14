@@ -65,6 +65,15 @@ SG の関連や許可規則だけで通信成立を断定しません。
 
 ## 属性
 
+`icon="saas.github"` のように同梱アイコンの種別名を指定すると、リソースの表示アイコンを変更できます。
+リソース自体の種別・所属は変わりません。未指定または空文字列の場合は種別・所属による自動選択に戻ります。
+右ペインの「表示アイコンを検索」で大文字・小文字を区別せず部分一致で絞り込み、
+「表示アイコン」を選ぶと自動反映します。検索だけでは選択値や DSL は変わりません。
+右ペインの選択項目と属性削除は即時、テキスト・数値・配列は入力欄を離れると自動反映します。
+不正な入力や未反映の DSL 下書きがある場合はエラーを表示し、現在の図を保持します。
+反映した変更は「元に戻す」で取り消せます。
+未知のアイコン名は保持されますが、同梱アイコンがないため代替表示になります。
+
 | 型         | 属性名                                                                                   | 用途                 |
 | ---------- | ---------------------------------------------------------------------------------------- | -------------------- |
 | 文字列     | `description`, `region`, `az`, `cidr`, `protocol`                                        | 説明、配置設定       |
@@ -95,9 +104,26 @@ api -> database kind=dependency label="構成上の依存"
 pipeline -> role kind=auth protocol=oidc
 role -> api kind=deploy
 sg -> api kind=association
+database -> replica kind=replication
+primary -> standby kind=failover
 ```
 
-`kind` は `traffic`、`dependency`、`auth`、`deploy`、`association`、`replication`、`failover` です。省略時は `traffic` です。
+`kind` は次の7種類です。省略時は `traffic` です。
+
+| kind          | 種類     | 色     | 線種     |
+| ------------- | -------- | ------ | -------- |
+| `traffic`     | 通信     | 青     | 実線     |
+| `dependency`  | 依存     | 灰     | 破線     |
+| `auth`        | 認証     | 橙     | 一点鎖線 |
+| `deploy`      | デプロイ | 紫     | 長い破線 |
+| `association` | 関連     | 青緑   | 点線     |
+| `replication` | 複製     | ピンク | 二点鎖線 |
+| `failover`    | 切替     | 赤     | 短い破線 |
+
+線・矢印・ラベル・凡例の色を揃え、色と線種の両方で接続を区別します。
+`replication` はデータの複製、`failover` は主系から待機系への切替を表す設計上の接続です。
+これらの指定は実際の複製や切替の成立を保証しません。
+
 接続には `protocol`、`port`、`label`、`description` も指定できます。
 `port` は 0 から 65535 の整数です。端点は宣言されたリソースの ID を指定します。
 Terraform の参照と `depends_on` は `dependency` であり、通信の証拠として扱いません。
@@ -376,3 +402,34 @@ ICMP/allのポート欄は `*` を指定します。相手はIPv4/IPv6 CIDRま�
 `egress=[]` は明示的な空のルールです。省略した方向についてAWSの既定値を補完しません。
 SGの所属は複数指定でき、リソースの詳細から所属SGへ移動できます。
 許可ルールと実際の通信線は独立しており、通信成立やAWS設定の適法性を検証するものではありません。
+
+## EKS と Kubernetes の境界
+
+`aws.eks` / `aws.eks-cluster`、`aws.eks-node-group`、`aws.eks-fargate-profile`、
+`k8s.namespace`、`k8s.deployment` は入れ子を持ち、個別・一括で展開できます。
+Pod、Service、Ingress、ServiceAccount、Node、Role、RoleBinding、NetworkPolicy は
+`k8s.pod`、`k8s.service`、`k8s.ingress`、`k8s.service-account`、`k8s.node`、
+`k8s.role`、`k8s.role-binding`、`k8s.network-policy` として表現できます。
+Namespace と Node の所属は同じ意味ではありません。Namespace 内の Pod と Node は関連線で結びます。
+EKS の VPC 内の囲みはネットワークとの論理的な関係であり、AWS 管理コントロールプレーンの物理配置を断定しません。
+
+`replicas` は非負整数、`cpuRequest` / `cpuLimit` / `memoryRequest` / `memoryLimit` は Kubernetes quantity の文字列です。
+quantity は表示用に保持し、Kubernetes の全構文・単位の妥当性は評価しません。
+ECS の `cpu`（units）・`memory`（MiB）とは別の属性を使います。
+Pod Identity や Access Entry は専用カードと `auth` / `association` の接続で表現します。
+認証設定や Namespace の囲みだけでは、通信成立・分離・実効権限を保証しません。
+
+## サービスの設定文字列
+
+`config` に設定の全文を JSON 形式で引用し、改行を `\n` として記述できます。
+`configFormat` は `nginx`、`yaml`、`json`、`text` のいずれかで、`config` と合わせて使います。
+省略時は通常のテキストです。右ペインから複数行で編集できます。
+
+```text
+software.nginx proxy "NGINX" configFormat=nginx config="events {}\nhttp { server { listen 8080; } }\n"
+software.envoy mesh "Envoy" configFormat=yaml config="static_resources: {}\n"
+```
+
+設定内容は不活性な文字列として保持します。Nginx・Envoy の構文検査・デプロイ・設定からの通信線生成は行いません。
+ファイル参照、シェル、テンプレート、HTML は実行せず、往復と単一HTMLで同じテキストを保ちます。
+共有用HTMLに含まれるため、秘密鍵・トークン・パスワードを埋め込まないでください。

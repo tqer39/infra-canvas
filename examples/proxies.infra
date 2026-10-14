@@ -1,0 +1,9 @@
+diagram "Nginx・Envoy の設定付き構成" {
+external.user user "利用者"
+software.nginx nginx "NGINX" configFormat=nginx config="events {}\nhttp {\n  upstream api { server api:8080; }\n  server {\n    listen 8080;\n    location /api/ {\n      proxy_pass http://api;\n      proxy_set_header Host $host;\n    }\n  }\n}\n"
+software.envoy envoy "Envoy Proxy" configFormat=yaml config="static_resources:\n  listeners:\n  - name: ingress\n    address:\n      socket_address: { address: 0.0.0.0, port_value: 10000 }\n    filter_chains:\n    - filters:\n      - name: envoy.filters.network.http_connection_manager\n        typed_config:\n          \"@type\": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager\n          stat_prefix: ingress_http\n          route_config:\n            name: routes\n            virtual_hosts:\n            - name: api\n              domains: [\"*\"]\n              routes:\n              - match: { prefix: \"/\" }\n                route: { cluster: api }\n          http_filters:\n          - name: envoy.filters.http.router\n            typed_config:\n              \"@type\": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router\n  clusters:\n  - name: api\n    connect_timeout: 1s\n    type: STRICT_DNS\n    lb_policy: ROUND_ROBIN\n    load_assignment:\n      cluster_name: api\n      endpoints:\n      - lb_endpoints:\n        - endpoint:\n            address:\n              socket_address: { address: api, port_value: 8080 }\n"
+custom.api api "Backend API"
+user -> nginx kind=traffic protocol=http port=8080
+nginx -> envoy kind=traffic protocol=http port=10000
+envoy -> api kind=traffic protocol=http port=8080
+}
