@@ -40,7 +40,7 @@ run = "oxfmt --write ."
 run = "oxfmt --check ."
 
 [tasks.test]
-run = "node --import tsx --test tests/*.test.ts"
+run = "node --import tsx --test tests/*.test.ts tests/*.test.mjs"
 
 [tasks."test:icons"]
 run = "python tests/update-icons.test.py"
