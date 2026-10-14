@@ -299,9 +299,11 @@ LLMへは秘密値を含まない引数受け渡し位置と解決数を、既�
 ## AI 開発ルール
 
 共通ルールは `.rulesync/rules/overview.md` にまとめています。
-`mise run rules:generate` で Codex、Claude Code、Copilot、Cursor 向けに rulesync 33.0.0 から生成し、
-Gemini CLI 向けの `GEMINI.md` には共通の `AGENTS.md` と同じ内容を同期します。
-現行 rulesync に Gemini CLI 専用ターゲットがないため、この同期を mise タスクで補っています。
+`mise run rules:generate` で Codex、Claude Code、Devin、Copilot 向けに rulesync 33.0.0 から生成します。
+Codex・Devin は共通の `AGENTS.md`、Copilot は `.github/copilot-instructions.md` を使います。
+Claude Code は `AGENTS.md` を読み込む構成とし、`includeRoot: false` で `CLAUDE.md` の出力を無効にしています。
+Claude Code の `AGENTS.md` 対応には v2.1.277 以降が必要です。
+非ルートのルールを追加した場合は `.claude/rules/` と `.devin/rules/` にも生成します。
 `mise run rules:check` で差分を検出し、`mise run check` と CI でも検証します。
 生成ファイルは直接編集せず、正本を更新してから生成してください。権限・MCP・認証設定は生成しません。
 

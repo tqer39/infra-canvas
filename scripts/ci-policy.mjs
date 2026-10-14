@@ -7,8 +7,6 @@ export function needsBrowser(files) {
   const staticFiles = new Set([
     'README.md',
     'AGENTS.md',
-    'CLAUDE.md',
-    'GEMINI.md',
     'renovate.json5',
     'rulesync.jsonc',
     '.github/copilot-instructions.md',
@@ -23,7 +21,9 @@ export function needsBrowser(files) {
   return files.some(
     (file) =>
       !staticFiles.has(file) &&
-      !['docs/', '.rulesync/', '.cursor/rules/'].some((prefix) => file.startsWith(prefix)) &&
+      !['docs/', '.rulesync/', '.claude/rules/', '.devin/rules/'].some((prefix) =>
+        file.startsWith(prefix),
+      ) &&
       !/^tests\/[^/]+\.test\.(?:ts|mjs)$/.test(file),
   );
 }
