@@ -1222,14 +1222,6 @@ textarea:focus-visible {
   margin: 18px 0;
   font-size: 12px;
 }
-.icon-picker select {
-  max-width: 100%;
-  padding: 8px;
-  color: #345b6d;
-  border: 1px solid #d9e1ea;
-  border-radius: 6px;
-  background: white;
-}
 
 .layout-help {
   position: absolute;
@@ -1380,16 +1372,36 @@ textarea:focus-visible {
   color: #46606f;
   font-size: 11px;
 }
-.icon-candidates {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  max-height: 280px;
+.icon-browser {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 360px;
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 3px;
   border: 1px solid #dce5eb;
   border-radius: 5px;
+}
+.icon-group summary {
+  position: sticky;
+  top: -3px;
+  padding: 9px 4px;
+  background: #f0f7f6;
+  color: #345b6d;
+  font-weight: 600;
+  cursor: pointer;
+}
+.icon-group summary span {
+  float: right;
+  font-size: 11px;
+  font-weight: 400;
+}
+.icon-candidates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px 0;
 }
 .icon-candidate {
   display: flex;

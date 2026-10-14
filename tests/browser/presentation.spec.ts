@@ -72,23 +72,23 @@ for (const offline of [false, true])
     await expect(page.locator('[data-id="az_a"]')).toContainText('×2');
     await page.getByRole('button', { name: 'AZ A / API 実体を展開', exact: true }).click();
     await expect(page.locator('[data-id="api_a"]')).toHaveCount(1);
-    await page.getByRole('button', { name: '書き出し', exact: true }).click();
+    await page.getByRole('button', { name: 'ダウンロード・印刷', exact: true }).click();
     const svgDownload = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'SVG を書き出す', exact: true }).click();
+    await page.getByRole('button', { name: 'SVG をダウンロード', exact: true }).click();
     const svg = readFileSync((await (await svgDownload).path())!, 'utf8');
     expect(svg).toContain('data-note-id="rollout"');
     expect(svg).toContain('台数');
     expect(svg).not.toContain('foreignObject');
     await page.getByRole('combobox', { name: '縮尺', exact: true }).selectOption('0.5');
     const pngDownload = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'PNG を書き出す', exact: true }).click();
+    await page.getByRole('button', { name: 'PNG をダウンロード', exact: true }).click();
     const png = readFileSync((await (await pngDownload).path())!);
     expect(png.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
     await page.getByRole('combobox', { name: '用紙', exact: true }).selectOption('A3');
     await page.getByRole('combobox', { name: '印刷方式', exact: true }).selectOption('tile');
     await page.getByRole('combobox', { name: '縮尺', exact: true }).selectOption('2');
     const popupEvent = page.waitForEvent('popup');
-    await page.getByRole('button', { name: 'PDF を書き出す', exact: true }).click();
+    await page.getByRole('button', { name: '印刷 / PDF を保存', exact: true }).click();
     const popup = await popupEvent;
     await expect(popup.locator('.sheet')).not.toHaveCount(1);
     await expect
@@ -100,7 +100,7 @@ for (const offline of [false, true])
     expect(errors).toEqual([]);
     expect(readFileSync('artifacts/expressions-cli.pdf').subarray(0, 5).toString()).toBe('%PDF-');
     if (!offline) {
-      await page.getByRole('button', { name: '書き出し', exact: true }).click();
+      await page.getByRole('button', { name: 'ダウンロード・印刷', exact: true }).click();
       await page.screenshot({ path: 'artifacts/expressions-viewer.png' });
     }
   });
@@ -195,9 +195,7 @@ test('曲線や跨る囲みの背後のノードをクリックでき、AWSア�
   await page.locator('[data-id="db"] .resource-card').click({ position: { x: 90, y: 43 } });
   await expect(page.locator('.detail-panel h2')).toHaveText('背後のDB');
   await page.locator('[data-id="prod"] .resource-heading').click();
-  await page
-    .getByRole('combobox', { name: '表示アイコン', exact: true })
-    .selectOption('aws.organization-account');
+  await page.getByRole('button', { name: 'aws.organization-account', exact: true }).click();
   await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'DSL 入力' })).toHaveValue(
     /icon="aws.organization-account"/,

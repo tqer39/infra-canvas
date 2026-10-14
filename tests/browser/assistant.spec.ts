@@ -555,12 +555,11 @@ test('groupにTursoサービスアイコンを指定してDSLへ保存できる'
   await expect(group.locator('.service-icon')).toHaveCount(1);
   const before = await group.locator('.service-icon').getAttribute('src');
   await group.getByText('Turso', { exact: true }).click();
-  await expect(page.getByRole('combobox', { name: '表示アイコン', exact: true })).toHaveValue(
-    'saas.turso',
+  await expect(page.getByRole('button', { name: 'saas.turso', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
   );
-  await page
-    .getByRole('combobox', { name: '表示アイコン', exact: true })
-    .selectOption('saas.discord');
+  await page.getByRole('button', { name: 'saas.discord', exact: true }).click();
   await expect(group.locator('.service-icon')).not.toHaveAttribute('src', before!);
   await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
   await expect(page.getByRole('textbox', { name: 'DSL 入力', exact: true })).toHaveValue(
