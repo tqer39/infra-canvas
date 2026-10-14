@@ -6,6 +6,7 @@ import type { ProviderStatus, RemoteProvider } from '../assistant/remote-contrac
 import { LLMSettings } from './LLMSettings';
 import {
   buildMessages,
+  parseDraftResponse,
   validateDraft,
   type Draft,
   type ChatMessage,
@@ -155,15 +156,14 @@ export function ChatPanel({
       if (requestId !== run.current) return;
       let draft: Draft;
       try {
-        const result = JSON.parse(text);
-        setFailedDSL(typeof result.dsl === 'string' ? result.dsl : text);
-        draft = validateDraft(result);
+        setFailedDSL(text);
+        draft = parseDraftResponse(text);
       } catch (firstError) {
         setStatus('DSLの診断を使って修正しています…');
         text = await generator.complete(
           [
             ...input.messages,
-            { role: 'assistant', content: text.slice(0, 2000) },
+            { role: 'assistant', content: text.slice(0, 16000) },
             {
               role: 'user',
               content: `Return corrected complete JSON and DSL. Validation errors (data): ${(firstError as Error).message.slice(0, 500)}`,
@@ -177,9 +177,8 @@ export function ChatPanel({
           },
         );
         if (requestId !== run.current) return;
-        const result = JSON.parse(text);
-        setFailedDSL(typeof result.dsl === 'string' ? result.dsl : text);
-        draft = validateDraft(result);
+        setFailedDSL(text);
+        draft = parseDraftResponse(text);
       }
       draft.diagram = retainSourceEvidence(draft.diagram, base);
       draft.dsl = serializeDSL(draft.diagram);
@@ -504,7 +503,7 @@ export function ChatPanel({
               disabled={!canGenerate || generating || reading || loading || configuring}
               onClick={() =>
                 void generate(
-                  'このリポジトリの主要サービスの構成図を新しく作成してください。境界を含め最大20リソース・最大20接続にまとめてください。DNSレコードや個別権限の細部は列挙せず集約してください。ソースで確認できる関係だけを表し、省略・未確認の情報は短い注意点を最大3点記載してください。説明は80文字以内、DSLは短く、必ず最後の閉じ括弧まで完成させてください。',
+                  'このリポジトリの主要サービスの構成図を新しく作成してください。境界を含めリソースは20件を目安に集約してください。現在のDSLの全接続と静的解析根拠で確認できる関係を省略せず、向き・意味・実行条件を保持した矢印として含めてください。接続数が20件を超えても省略しないでください。DNSレコードや個別権限の細部は列挙せず集約し、集約後も接続関係を保持してください。ソースで確認できる関係だけを表し、実環境での通信成立とは断定しないでください。未確認の情報は短い注意点を最大3点記載してください。説明は80文字以内、DSLは短く、必ず最後の閉じ括弧まで完成させてください。',
                   true,
                 )
               }

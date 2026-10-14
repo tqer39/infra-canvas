@@ -1,7 +1,7 @@
 import { it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildMessages, validateDraft } from '../src/assistant/contract.js';
+import { buildMessages, validateDraft, parseDraftResponse } from '../src/assistant/contract.js';
 import {
   loadRepository,
   parseRepositoryURL,
@@ -17,6 +17,36 @@ import {
   layoutGraph,
 } from '../src/core/index.js';
 const sample = readFileSync('examples/subnet-security.infra', 'utf8');
+it('モデルのJSON文字列内の改行・タブを内容を保持して回復し、DSLを検証する', () => {
+  const raw = { message: '概要\t作成\r\n完了', dsl: sample, warnings: [] };
+  const valid = JSON.stringify(raw);
+  const malformed = valid.replaceAll('\\n', '\n').replaceAll('\\r', '\r').replaceAll('\\t', '\t');
+  const result = parseDraftResponse(malformed);
+  assert.equal(result.message, raw.message);
+  assert.equal(result.dsl, validateDraft(raw).dsl);
+  assert.equal(result.warnings.length, 1);
+  assert.deepEqual(parseDraftResponse(valid), validateDraft(raw));
+});
+it('JSONの引用符・不正エスケープ・切断・DSL参照不正は推測で修復しない', () => {
+  for (const text of [
+    '{"message":"x","dsl":"diagram "broken" {\n}","warnings":[]}',
+    '{"message":"\\q","dsl":"diagram \\"x\\" {\n}","warnings":[]}',
+    '{"message":"x","dsl":"diagram',
+    JSON.stringify({
+      message: 'x',
+      dsl: 'diagram "x" {\n a -> missing\n}',
+      warnings: [],
+    }).replaceAll('\\n', '\n'),
+  ])
+    assert.throws(() => parseDraftResponse(text));
+});
+it('単一の明示的JSONコードブロックを検証し、複数の応答候補は拒否する', () => {
+  const json = JSON.stringify({ message: '生成しました。', dsl: sample, warnings: [] });
+  const block = '```json\n' + json + '\n```';
+  assert.equal(parseDraftResponse('生成結果：\n' + block).dsl, validateDraft(JSON.parse(json)).dsl);
+  assert.throws(() => parseDraftResponse(block + '\n' + block));
+  assert.throws(() => parseDraftResponse('```json\n{}\n```'));
+});
 it('Subnet内の実体と複数SG所属はサービス表示・JSON/DSL往復でも保持する', async () => {
   const parsed = parseDSL(sample);
   assert.deepEqual(parsed.diagnostics, []);

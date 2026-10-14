@@ -18,6 +18,49 @@ async function remoteStatus(page: import('@playwright/test').Page, configured = 
   );
 }
 
+test('JSON文字列内の改行をローカルで回復し、再生成せず候補だけを表示する', async ({ page }) => {
+  await remoteStatus(page);
+  let calls = 0;
+  await page.route('**/api/llm/complete', (route) => {
+    calls++;
+    return route.fulfill({ json: { text: remoteDraft.replaceAll('\\n', '\n') } });
+  });
+  await page.goto(`http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`);
+  await page.getByRole('button', { name: 'チャット', exact: true }).click();
+  await page.getByRole('combobox', { name: 'LLM接続先' }).selectOption('bedrock');
+  await page.getByRole('textbox', { name: 'チャットの依頼' }).fill('構成図を作成');
+  await page.getByRole('button', { name: 'DSLを生成', exact: true }).click();
+  await expect(page.getByLabel('生成したDSLの内容', { exact: true })).toHaveValue(
+    /remote_worker -> remote_db/,
+  );
+  await expect(page.getByLabel('生成したDSL', { exact: true })).toContainText(
+    '制御文字をエスケープ',
+  );
+  await expect(page.locator('[data-id="remote_worker"]')).toHaveCount(0);
+  expect(calls).toBe(1);
+});
+
+test('壊れた引用符は拒否し、修正失敗時にも未検証の応答と現在の図を保持する', async ({ page }) => {
+  await remoteStatus(page);
+  const text = '{"message":"x","dsl":"diagram "broken" {\n}","warnings":[]}';
+  let calls = 0;
+  await page.route('**/api/llm/complete', (route) => {
+    calls++;
+    return route.fulfill({ json: { text } });
+  });
+  await page.goto(`http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`);
+  const nodes = await page.locator('.react-flow__node').count();
+  await page.getByRole('button', { name: 'チャット', exact: true }).click();
+  await page.getByRole('combobox', { name: 'LLM接続先' }).selectOption('bedrock');
+  await page.getByRole('textbox', { name: 'チャットの依頼' }).fill('構成図を作成');
+  await page.getByRole('button', { name: 'DSLを生成', exact: true }).click();
+  await expect(page.locator('.chat-status')).toContainText('現在の図は保持');
+  await page.getByText('生成されたDSL（未検証）', { exact: true }).click();
+  await expect(page.getByLabel('未検証のDSL', { exact: true })).toHaveValue(text);
+  await expect(page.locator('.react-flow__node')).toHaveCount(nodes);
+  expect(calls).toBe(2);
+});
+
 test('接続テストは保存済み設定だけを送信し、結果表示・編集時の無効化・中止ができる', async ({
   page,
 }) => {
@@ -636,6 +679,12 @@ test('LLMにファイルの抜粋だけでなくASTで検出した関係と根�
   const evidence =
     messages.find((message) => message.content.includes('STRUCTURED STATIC EVIDENCE'))?.content ??
     '';
+  expect(messages.at(-1)?.content).toContain('現在のDSLの全接続');
+  expect(messages.at(-1)?.content).toContain('接続数が20件を超えても省略しない');
+  expect(messages.at(-1)?.content).toContain('向き・意味・実行条件を保持');
+  expect(
+    messages.some((message) => message.content.includes('repo_github_actions -> repo_cf_app')),
+  ).toBe(true);
   expect(evidence).toContain('ops/custom.mjs');
   expect(evidence).toContain('"kind":"deployment"');
   expect(evidence).toContain('"line":');
