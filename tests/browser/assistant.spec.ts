@@ -61,6 +61,38 @@ test('壊れた引用符は拒否し、修正失敗時にも未検証の応答�
   expect(calls).toBe(2);
 });
 
+test('version=2を拒否して対応バージョンを修正に渡し、接続を残す候補を表示する', async ({
+  page,
+}) => {
+  await remoteStatus(page);
+  let calls = 0;
+  await page.route('**/api/llm/complete', (route) => {
+    const request = route.request().postDataJSON();
+    calls++;
+    if (calls === 2) {
+      expect(request.messages.at(-1).content).toContain('version=1 のみ');
+      expect(request.messages.at(-1).content).toContain('preserving all directed connections');
+    }
+    return route.fulfill({
+      json: {
+        text:
+          calls === 1 ? remoteDraft.replace('Remote\\" {', 'Remote\\" version=2 {') : remoteDraft,
+      },
+    });
+  });
+  await page.goto(`http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`);
+  await page.getByRole('button', { name: 'チャット', exact: true }).click();
+  await page.getByRole('combobox', { name: 'LLM接続先' }).selectOption('bedrock');
+  await page.getByRole('textbox', { name: 'チャットの依頼' }).fill('構成図を作成');
+  await page.getByRole('button', { name: 'DSLを生成', exact: true }).click();
+  await expect(page.getByLabel('生成したDSLの内容', { exact: true })).toHaveValue(/version=1/);
+  await expect(page.getByLabel('生成したDSLの内容', { exact: true })).toHaveValue(
+    /remote_worker -> remote_db/,
+  );
+  expect(calls).toBe(2);
+  await expect(page.locator('[data-id="remote_worker"]')).toHaveCount(0);
+});
+
 test('接続テストは保存済み設定だけを送信し、結果表示・編集時の無効化・中止ができる', async ({
   page,
 }) => {
@@ -680,6 +712,7 @@ test('LLMにファイルの抜粋だけでなくASTで検出した関係と根�
     messages.find((message) => message.content.includes('STRUCTURED STATIC EVIDENCE'))?.content ??
     '';
   expect(messages.at(-1)?.content).toContain('現在のDSLの全接続');
+  expect(messages.at(-1)?.content).toContain('必ず version=1');
   expect(messages.at(-1)?.content).toContain('接続数が20件を超えても省略しない');
   expect(messages.at(-1)?.content).toContain('向き・意味・実行条件を保持');
   expect(

@@ -166,7 +166,7 @@ export function ChatPanel({
             { role: 'assistant', content: text.slice(0, 16000) },
             {
               role: 'user',
-              content: `Return corrected complete JSON and DSL. Validation errors (data): ${(firstError as Error).message.slice(0, 500)}`,
+              content: `Return corrected complete JSON and DSL, preserving all directed connections. Only DSL version=1 is supported; never output version=2. Validation errors (data): ${(firstError as Error).message.slice(0, 500)}`,
             },
           ],
           (count, measurement) => {
@@ -503,7 +503,7 @@ export function ChatPanel({
               disabled={!canGenerate || generating || reading || loading || configuring}
               onClick={() =>
                 void generate(
-                  'このリポジトリの主要サービスの構成図を新しく作成してください。境界を含めリソースは20件を目安に集約してください。現在のDSLの全接続と静的解析根拠で確認できる関係を省略せず、向き・意味・実行条件を保持した矢印として含めてください。接続数が20件を超えても省略しないでください。DNSレコードや個別権限の細部は列挙せず集約し、集約後も接続関係を保持してください。ソースで確認できる関係だけを表し、実環境での通信成立とは断定しないでください。未確認の情報は短い注意点を最大3点記載してください。説明は80文字以内、DSLは短く、必ず最後の閉じ括弧まで完成させてください。',
+                  'このリポジトリの主要サービスの構成図を新しく作成してください。DSLのバージョンは必ず version=1 にしてください。境界を含めリソースは20件を目安に集約してください。現在のDSLの全接続と静的解析根拠で確認できる関係を省略せず、向き・意味・実行条件を保持した矢印として含めてください。接続数が20件を超えても省略しないでください。DNSレコードや個別権限の細部は列挙せず集約し、集約後も接続関係を保持してください。ソースで確認できる関係だけを表し、実環境での通信成立とは断定しないでください。未確認の情報は短い注意点を最大3点記載してください。説明は80文字以内、DSLは短く、必ず最後の閉じ括弧まで完成させてください。',
                   true,
                 )
               }

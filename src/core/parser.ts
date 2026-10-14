@@ -274,7 +274,14 @@ export function parseDSL(source: string): ParseResult {
           'attribute.unknown',
           `未知の属性 ${key} です。拡張テキスト属性には meta. 接頭辞を使用してください。`,
         );
-      else if (!valid) report(token, 'attribute.type', `属性 ${key} の値または型が不正です。`);
+      else if (!valid)
+        report(
+          token,
+          'attribute.type',
+          context === 'diagram' && key === 'version'
+            ? 'DSLの対応バージョンは version=1 のみです。version を省略するか、数値の1を指定してください。'
+            : `属性 ${key} の値または型が不正です。`,
+        );
     }
   };
   const resources: Resource[] = [],

@@ -17,6 +17,25 @@ import {
   layoutGraph,
 } from '../src/core/index.js';
 const sample = readFileSync('examples/subnet-security.infra', 'utf8');
+it('未対応DSLバージョンは対応値を示して拒否し、生成指示にもversion=1を明示する', () => {
+  for (const version of ['2', '0', '"1"']) {
+    assert.throws(
+      () =>
+        validateDraft({ message: 'x', dsl: `diagram "x" version=${version} {\n}`, warnings: [] }),
+      /version=1 のみ/,
+    );
+  }
+  for (const header of ['diagram "x" {', 'diagram "x" version=1 {']) {
+    assert.equal(
+      validateDraft({ message: 'x', dsl: header + '\n}', warnings: [] }).diagram.version,
+      1,
+    );
+  }
+  assert.match(
+    buildMessages(sample, '構成図を作成', []).messages[0].content,
+    /supports only version=1/,
+  );
+});
 it('モデルのJSON文字列内の改行・タブを内容を保持して回復し、DSLを検証する', () => {
   const raw = { message: '概要\t作成\r\n完了', dsl: sample, warnings: [] };
   const valid = JSON.stringify(raw);

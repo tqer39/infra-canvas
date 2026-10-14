@@ -124,7 +124,7 @@ async function complete(
         '\nReturn the response data itself, with exactly these top-level fields: message (Japanese string), dsl (complete DSL string), warnings (Japanese string array). Do not return a JSON schema or wrap the fields in properties. Escape all quotes and newlines inside strings. Response shape example: ' +
         JSON.stringify({
           message: '構成図を生成しました。',
-          dsl: 'diagram "Example" {\n external.service app "App"\n view service level=resource\n}',
+          dsl: 'diagram "Example" version=1 {\n external.service app "App"\n view service level=resource\n}',
           warnings: [],
         });
   // Converse models may require a user first and alternating turns.
