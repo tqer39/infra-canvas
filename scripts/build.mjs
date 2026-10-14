@@ -11,7 +11,7 @@ await build({
   platform: 'browser',
   minify: true,
   outfile: 'dist/viewer.js',
-  loader: { '.svg': 'dataurl', '.infra': 'text' },
+  loader: { '.svg': 'dataurl', '.png': 'dataurl', '.infra': 'text' },
   define: { 'process.env.NODE_ENV': '"production"' },
   plugins: [
     {

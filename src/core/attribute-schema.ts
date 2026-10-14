@@ -1,4 +1,5 @@
 export const textAttributes = new Set([
+  'icon',
   'config',
   'configFormat',
   'cpuRequest',

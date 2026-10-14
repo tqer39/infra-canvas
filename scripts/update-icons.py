@@ -9,6 +9,7 @@ import re
 import subprocess
 import tarfile
 import zipfile
+import zlib
 from datetime import date
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -94,6 +95,30 @@ def color_svg(data, color):
     return text.replace('<svg ', '<svg fill="' + color + '" ', 1).encode()
 
 
+def validate_png(data):
+    if len(data) > MAX_FILE or not data.startswith(b'\x89PNG\r\n\x1a\n'):
+        raise ValueError('PNG サイズまたは署名が不正')
+    offset, seen_image = 8, False
+    while offset + 12 <= len(data):
+        size = int.from_bytes(data[offset:offset + 4], 'big')
+        tag = data[offset + 4:offset + 8]
+        end = offset + 12 + size
+        if end > len(data) or zlib.crc32(data[offset + 4:end - 4]) != int.from_bytes(data[end - 4:end], 'big'):
+            raise ValueError('PNG チャンクまたは CRC が不正')
+        if offset == 8:
+            width = int.from_bytes(data[offset + 8:offset + 12], 'big')
+            height = int.from_bytes(data[offset + 12:offset + 16], 'big')
+            if tag != b'IHDR' or size != 13 or not (0 < width <= 4096 and 0 < height <= 4096):
+                raise ValueError('PNG ヘッダーまたは寸法が不正')
+        seen_image = seen_image or tag == b'IDAT'
+        if tag == b'IEND':
+            if size != 0 or end != len(data) or not seen_image:
+                raise ValueError('PNG 終端または画像データが不正')
+            return data
+        offset = end
+    raise ValueError('PNG 終端がない')
+
+
 def npm_package(name, fetch):
     metadata = json.loads(fetch('https://registry.npmjs.org/' + name + '/latest'))
     version = metadata['version']
@@ -164,7 +189,10 @@ def plan(root, fetch=download):
                 data = blob
         else:
             continue
-        validate_svg(data)
+        if entry['file'].endswith('.png'):
+            validate_png(data)
+        else:
+            validate_svg(data)
         if entry.get('archiveSha256') != archive_hash or entry['sha256'] != digest(data):
             entry.update(source=page, downloadURL=url, sha256=digest(data), retrievedAt=today,
                          version='配布物 SHA-256 ' + archive_hash, archiveSha256=archive_hash)

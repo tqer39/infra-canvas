@@ -10,7 +10,116 @@ async function setArrowShape(page: Page, shape: string): Promise<void> {
     await toggle.click();
 }
 
+async function blurEditor(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  });
+}
+
 for (const offline of [false, true]) {
+  test(`表示アイコンの検索は選択を変えず、選択は自動反映・Undo/Redoできる (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    const node = page.locator('.react-flow__node[data-id="api"]');
+    await node.locator('.resource-label').click();
+    const form = page.getByRole('form', { name: 'リソース情報の編集' });
+    const search = form.getByLabel('表示アイコンを検索', { exact: true });
+    const picker = form.getByRole('group', { name: '表示アイコン', exact: true });
+    const options = picker.locator('.icon-candidate > span:last-child');
+    await expect(form.getByRole('button', { name: '変更を反映', exact: true })).toHaveCount(0);
+    const originalIcon = await node.locator('.service-icon').getAttribute('src');
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    const editor = page.getByRole('textbox', { name: 'DSL 入力', exact: true });
+    const original = await editor.inputValue();
+    await form.getByLabel('名前', { exact: true }).focus();
+    await blurEditor(page);
+    await expect(editor).toHaveValue(original);
+    await search.fill('  GITHUB  ');
+    await expect(options).toHaveText([
+      '種別から自動選択',
+      'github.actions',
+      'github.repository',
+      'saas.github',
+    ]);
+    await expect(picker.locator('img')).toHaveCount(3);
+    await expect
+      .poll(() =>
+        picker
+          .locator('img')
+          .evaluateAll((images) =>
+            images.every((img) => (img as HTMLImageElement).naturalWidth > 0),
+          ),
+      )
+      .toBe(true);
+    await picker.screenshot({
+      path: `artifacts/icon-candidates-${offline ? 'offline' : 'dev'}.png`,
+    });
+    await search.press('Enter');
+    await expect(editor).toHaveValue(original);
+    await expect(page.getByRole('button', { name: '元に戻す', exact: true })).toBeDisabled();
+    const github = picker.getByRole('button', { name: 'saas.github', exact: true });
+    await expect(github.locator('img')).toBeVisible();
+    await expect
+      .poll(() => github.locator('img').evaluate((img) => (img as HTMLImageElement).naturalWidth))
+      .toBeGreaterThan(0);
+    await github.focus();
+    await github.press('Enter');
+    await expect(form.getByAltText('saas.github のプレビュー')).toBeVisible();
+    await expect(editor).toHaveValue(/icon="saas.github"/);
+    await expect(node.locator('.service-icon')).not.toHaveAttribute('src', originalIcon!);
+    const selectedIcon = await node.locator('.service-icon').getAttribute('src');
+    const selectedSource = await editor.inputValue();
+    await search.fill('no-matching-icon');
+    await expect(form).toContainText('該当するアイコンはありません');
+    await expect(github).toHaveAttribute('aria-pressed', 'true');
+    await expect(options).toHaveText(['種別から自動選択', 'saas.github（現在の選択）']);
+    await expect(editor).toHaveValue(selectedSource);
+    await page.getByRole('button', { name: '元に戻す', exact: true }).click();
+    await expect(editor).toHaveValue(original);
+    await expect(node.locator('.service-icon')).toHaveAttribute('src', originalIcon!);
+    await page.getByRole('button', { name: 'やり直す', exact: true }).click();
+    await expect(node.locator('.service-icon')).toHaveAttribute('src', selectedIcon!);
+    await node.locator('.resource-label').click();
+    await picker.getByRole('button', { name: '種別から自動選択', exact: true }).click();
+    await expect(editor).toHaveValue(original);
+    await expect(node.locator('.service-icon')).toHaveAttribute('src', originalIcon!);
+    await search.fill('aws.cloud');
+    const cloud = picker.getByRole('button', { name: 'aws.cloud', exact: true });
+    await expect(cloud.locator('img')).toBeVisible();
+    const cloudSvg = await cloud
+      .locator('img')
+      .evaluate(async (img) => (await fetch((img as HTMLImageElement).src)).text());
+    expect(cloudSvg).toContain('AWS-Cloud-logo_32');
+    await cloud.click();
+    await expect(editor).toHaveValue(/icon="aws.cloud"/);
+    await expect(node.locator('.service-icon')).toHaveAttribute(
+      'src',
+      (await cloud.locator('img').getAttribute('src')) ?? '',
+    );
+    for (const type of ['gcp.cloud', 'azure.cloud']) {
+      await search.fill(type);
+      const brand = picker.getByRole('button', { name: type, exact: true });
+      await expect
+        .poll(() => brand.locator('img').evaluate((img) => (img as HTMLImageElement).naturalWidth))
+        .toBeGreaterThan(0);
+      await brand.click();
+      if (type === 'gcp.cloud') {
+        const image = brand.locator('img');
+        await expect(image).toHaveAttribute('src', /(?:gcp-cloud\.png|^data:image\/png)/);
+        await expect(form.getByAltText('gcp.cloud のプレビュー')).toBeVisible();
+      }
+      await expect(brand).toHaveAttribute('aria-pressed', 'true');
+      await expect(editor).toHaveValue(new RegExp(`icon="${type.replace('.', '\\.')}"`));
+      await expect(node.locator('.service-icon')).toHaveAttribute(
+        'src',
+        (await brand.locator('img').getAttribute('src')) ?? '',
+      );
+    }
+  });
+
   test(`属性と接続の編集を Undo/Redo で DSL とともに復元し、視点を保持する (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
     context,
@@ -33,7 +142,10 @@ for (const offline of [false, true]) {
     const viewport = page.locator('.react-flow__viewport');
     const before = await viewport.getAttribute('style');
     await form.getByLabel('名前', { exact: true }).fill('Undo対象API');
-    await form.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await expect(form.getByLabel('名前', { exact: true })).toBeFocused();
+    await expect(node).toContainText('ECS API');
+    await expect(editor).toHaveValue(original);
+    await blurEditor(page);
     await expect(node).toContainText('Undo対象API');
     const edited = await editor.inputValue();
     expect(edited).not.toBe(original);
@@ -54,7 +166,7 @@ for (const offline of [false, true]) {
     await page.locator('.connection-editor summary').click();
     const edgeForm = page.locator('.connection-editor form');
     await edgeForm.getByLabel('ポート', { exact: true }).fill('6432');
-    await edgeForm.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await blurEditor(page);
     await expect(
       page.getByRole('button', {
         name: 'Undo対象API → PostgreSQL: 通信 · tcp · 6432',
@@ -268,27 +380,29 @@ for (const offline of [false, true]) {
     await form.getByLabel('CPU (units)', { exact: true }).fill('2048');
     await add('memory');
     await form.getByLabel('メモリ (MiB)', { exact: true }).fill('-1');
-    await form.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await blurEditor(page);
     await expect(form.getByRole('alert')).toContainText('memory');
-    await expect(node('api')).toContainText('ECS API');
+    await expect(node('api')).toContainText('編集したAPI');
     await form.getByLabel('メモリ (MiB)', { exact: true }).fill('4096');
     await form.getByLabel('Subnet の ID', { exact: true }).fill('missing');
-    await form.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await blurEditor(page);
     await expect(form.getByRole('alert')).toContainText('存在しない参照');
     await form.getByLabel('Subnet の ID', { exact: true }).fill('private_a\nprivate_c');
     const viewport = page.locator('.react-flow__viewport');
     const before = await viewport.getAttribute('style');
-    await form.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await blurEditor(page);
     await expect(form.getByRole('status')).toHaveText('変更を反映しました');
     await expect(node('api')).toContainText('編集したAPI');
     await expect(node('api')).toContainText('2048 units (2 vCPU)');
     await expect(node('api')).toContainText('4096 MiB (4 GiB)');
     await expect(viewport).toHaveAttribute('style', before!);
     await form.getByLabel('CPU (units)', { exact: true }).fill('1024');
-    await form.getByRole('button', { name: '変更を取り消す', exact: true }).click();
-    await expect(form.getByLabel('CPU (units)', { exact: true })).toHaveValue('2048');
+    await blurEditor(page);
+    await expect(node('api')).toContainText('1024 units');
+    await form.getByLabel('CPU (units)', { exact: true }).fill('2048');
+    await blurEditor(page);
     await form.getByRole('button', { name: 'memory を削除', exact: true }).click();
-    await form.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await blurEditor(page);
     await expect(node('api')).not.toContainText('4096 MiB');
     await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
     const dsl = page.getByRole('textbox', { name: 'DSL 入力' });
@@ -296,7 +410,7 @@ for (const offline of [false, true]) {
     expect(await dsl.inputValue()).toContain('"編集したAPI"');
     await dsl.fill((await dsl.inputValue()) + '\n# 未反映の下書き');
     await form.getByLabel('名前', { exact: true }).fill('上書きしない');
-    await form.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await blurEditor(page);
     await expect(form.getByRole('alert')).toContainText('未反映');
     await page.getByRole('button', { name: '解析して反映', exact: true }).click();
     await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
@@ -308,10 +422,10 @@ for (const offline of [false, true]) {
     await page.locator('.connection-editor summary').click();
     const edgeForm = page.locator('.connection-editor form');
     await edgeForm.getByLabel('ポート', { exact: true }).fill('70000');
-    await edgeForm.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await blurEditor(page);
     await expect(edgeForm.getByRole('alert')).toContainText('65535');
     await edgeForm.getByLabel('ポート', { exact: true }).fill('6432');
-    await edgeForm.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await blurEditor(page);
     await expect(
       page.getByRole('button', {
         name: '編集したAPI → PostgreSQL: 通信 · tcp · 6432',
@@ -349,7 +463,7 @@ for (const offline of [false, true]) {
     await expect(node('task')).toBeVisible();
     await node('task').locator('.resource-label').click();
     await form.getByLabel('CPU (units)', { exact: true }).fill('1024');
-    await form.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await blurEditor(page);
     await expect(page.locator('.detail-panel')).toContainText('design');
     await expect(page.locator('.detail-panel')).toContainText('取り込み元には反映していません');
     await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
@@ -1341,7 +1455,7 @@ for (const offline of [false, true]) {
     }
     const content = 'static_resources:\n# <script>window.configExecuted=true</script>\n';
     await page.getByLabel('サービス設定', { exact: true }).fill(content);
-    await page.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await blurEditor(page);
     await expect(page.getByLabel('サービス設定', { exact: true })).toHaveValue(content);
     await expect(page.locator('.detail-panel script')).toHaveCount(0);
     expect(
@@ -1596,7 +1710,7 @@ for (const offline of [false, true]) {
     const form = page.locator('.connection-editor form');
     await expect(form.getByLabel('接続の種類')).toHaveValue('failover');
     await form.getByLabel('接続の種類').selectOption('replication');
-    await form.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await blurEditor(page);
     await expect(page.locator('.connection-label[data-kind="replication"]')).toHaveCount(2);
     await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
     const restored = parseDSL(await page.getByRole('textbox', { name: 'DSL 入力' }).inputValue());
