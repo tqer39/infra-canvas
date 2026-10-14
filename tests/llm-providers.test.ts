@@ -312,6 +312,12 @@ it('Bedrockの入出力をConverse形式へ変換し、会話をuserから交互
       assert.equal(input.modelId, 'example-bedrock');
       assert.equal(input.inferenceConfig?.maxTokens, 4096);
       assert.ok(input.system?.[0].text?.includes('JSON'));
+      const example = input.system?.[0].text?.split('Response shape example: ')[1];
+      assert.ok(example);
+      const responseData = JSON.parse(example);
+      assert.deepEqual(Object.keys(responseData), ['message', 'dsl', 'warnings']);
+      assert.equal(typeof responseData.dsl, 'string');
+      assert.ok(Array.isArray(responseData.warnings));
       assert.deepEqual(
         input.messages?.map((message) => message.role),
         ['user', 'assistant', 'user'],
