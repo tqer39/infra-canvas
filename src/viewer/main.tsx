@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useReducer,
   type CSSProperties,
 } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -44,6 +45,7 @@ import { getIcon, getIconHomepage } from '../assets/icons';
 import { getResourceIconType } from '../assets/resource-icons';
 import { getCountryFlag } from '../assets/flags';
 import { getRegionCountry, getResourceRegion } from '../assets/regions';
+import { createHistory, historyReducer } from './history';
 import defaultSource from '../../examples/aws.infra?raw';
 import { PropertyEditor } from './property-editor';
 import type { Attributes, Connection } from '../core/model';
@@ -291,16 +293,24 @@ const edgeTypes = { routed: RoutedConnection };
 
 function App() {
   const initial = useMemo(() => window.__INFRA_CANVAS__ ?? parseDSL(defaultSource).diagram, []);
-  const [diagram, setDiagram] = useState<Diagram | undefined>(initial);
+  const [history, dispatchHistory] = useReducer(
+    historyReducer,
+    {
+      diagram: initial,
+      documentKey: {},
+      source: initial ? serializeDSL(initial) : defaultSource,
+      view: 'service',
+      edgeShape: 'orthogonal' as const,
+      collapsed: [],
+      expanded: [],
+    },
+    createHistory,
+  );
+  const { diagram, view, edgeShape, collapsed, expanded, scope } = history.present;
   const [documentVersion, setDocumentVersion] = useState(0);
   const [source, setSource] = useState(() => (initial ? serializeDSL(initial) : defaultSource));
   const [editorOpen, setEditorOpen] = useState(false);
   const [diagnostics, setDiagnostics] = useState<string[]>([]);
-  const [view, setView] = useState('service');
-  const [edgeShape, setEdgeShape] = useState<'orthogonal' | 'bezier'>('orthogonal');
-  const [collapsed, setCollapsed] = useState<string[]>([]);
-  const [expanded, setExpanded] = useState<string[]>([]);
-  const [scope, setScope] = useState<string>();
   const [selected, setSelected] = useState<string>();
   const [selectedEdge, setSelectedEdge] = useState<string>();
   const [hovered, setHovered] = useState<string>();
@@ -367,12 +377,18 @@ function App() {
   graphRef.current = graph;
   const toggle = useCallback((id: string) => {
     const isCollapsed = graphRef.current?.collapsed.includes(id) ?? false;
-    setCollapsed((current) =>
-      isCollapsed ? current.filter((item) => item !== id) : [...current, id],
-    );
-    setExpanded((current) =>
-      isCollapsed ? [...new Set([...current, id])] : current.filter((item) => item !== id),
-    );
+    dispatchHistory({
+      type: 'commit',
+      update: (current) => ({
+        ...current,
+        collapsed: isCollapsed
+          ? current.collapsed.filter((item) => item !== id)
+          : [...current.collapsed, id],
+        expanded: isCollapsed
+          ? [...new Set([...current.expanded, id])]
+          : current.expanded.filter((item) => item !== id),
+      }),
+    });
   }, []);
   const visibleDiagram = useMemo(() => {
     if (!diagram || !scope) return diagram;
@@ -409,12 +425,18 @@ function App() {
     setSelectedEdge(undefined);
     setHovered(undefined);
     setQuery('');
-    setCollapsed((current) =>
-      collapse ? [...new Set([...current, ...ids])] : current.filter((id) => !ids.has(id)),
-    );
-    setExpanded((current) =>
-      collapse ? current.filter((id) => !ids.has(id)) : [...new Set([...current, ...ids])],
-    );
+    dispatchHistory({
+      type: 'commit',
+      update: (current) => ({
+        ...current,
+        collapsed: collapse
+          ? [...new Set([...current.collapsed, ...ids])]
+          : current.collapsed.filter((id) => !ids.has(id)),
+        expanded: collapse
+          ? current.expanded.filter((id) => !ids.has(id))
+          : [...new Set([...current.expanded, ...ids])],
+      }),
+    });
   };
   useEffect(() => {
     if (!visibleDiagram) return;
@@ -631,17 +653,36 @@ function App() {
     setSelectedEdge(undefined);
     setSelected(id);
     setQuery('');
-    pendingFocus.current = { id, previousGraph: graph };
-    setScope(undefined);
     const ancestors = new Set<string>();
     let resource = diagram?.resources.find((item) => item.id === id);
     while (resource?.parentId && !ancestors.has(resource.parentId)) {
       ancestors.add(resource.parentId);
       resource = diagram?.resources.find((item) => item.id === resource!.parentId);
     }
-    setCollapsed((current) => current.filter((ancestor) => !ancestors.has(ancestor)));
-    setExpanded((current) => [...new Set([...current, ...ancestors])]);
-    if (diagram?.resources.find((item) => item.id === id)?.type === 'sg') setView('security');
+    const nextView =
+      diagram?.resources.find((item) => item.id === id)?.type === 'sg' ? 'security' : view;
+    const needsLayout =
+      scope !== undefined ||
+      nextView !== view ||
+      [...ancestors].some(
+        (ancestor) => collapsed.includes(ancestor) || !expanded.includes(ancestor),
+      );
+    if (!needsLayout) {
+      pendingFocus.current = undefined;
+      void flow.fitView({ nodes: [{ id }], padding: 0.7, maxZoom: 1.2, duration: 450 });
+      return;
+    }
+    pendingFocus.current = { id, previousGraph: graph };
+    dispatchHistory({
+      type: 'commit',
+      update: (current) => ({
+        ...current,
+        scope: undefined,
+        collapsed: current.collapsed.filter((ancestor) => !ancestors.has(ancestor)),
+        expanded: [...new Set([...current.expanded, ...ancestors])],
+        view: nextView,
+      }),
+    });
   };
   useEffect(() => {
     const pending = pendingFocus.current;
@@ -663,11 +704,22 @@ function App() {
   const acceptDiagram = (next: Diagram) => {
     const nextSource = serializeDSL(next);
     setSource(nextSource);
-    setDiagram(next);
+    dispatchHistory({
+      type: 'commit',
+      update: (current) => ({
+        ...current,
+        diagram: next,
+        documentKey: {},
+        source: nextSource,
+        collapsed: [],
+        expanded: [],
+        scope: undefined,
+      }),
+    });
+    pendingFocus.current = undefined;
+    setHovered(undefined);
+    setQuery('');
     setDocumentVersion((current) => current + 1);
-    setCollapsed([]);
-    setExpanded([]);
-    setScope(undefined);
     setSelected(undefined);
     setSelectedEdge(undefined);
     setDiagnostics(next.diagnostics.map((item) => `${item.line}:${item.column} ${item.message}`));
@@ -726,7 +778,10 @@ function App() {
       location: parsed.diagram!.connections[index]?.location,
     }));
     autoFitContext.current = { diagram: next, view, scope };
-    setDiagram(next);
+    dispatchHistory({
+      type: 'commit',
+      update: (current) => ({ ...current, diagram: next, source: nextSource }),
+    });
     setSource(nextSource);
     setDiagnostics([]);
   };
@@ -750,6 +805,70 @@ function App() {
     }
     if (upload.current) upload.current.value = '';
   };
+  const restoreHistory = useCallback(
+    (direction: 'undo' | 'redo') => {
+      const target = direction === 'undo' ? history.past.at(-1) : history.future[0];
+      if (!target) return;
+      if (target.diagram !== diagram || target.source !== history.present.source) {
+        setSource(target.source);
+      }
+      if (
+        target.documentKey === history.present.documentKey &&
+        target.view === view &&
+        target.scope === scope
+      ) {
+        autoFitContext.current = {
+          diagram: target.diagram,
+          view: target.view,
+          scope: target.scope,
+        };
+      }
+      setDocumentVersion((current) => current + 1);
+      pendingFocus.current = undefined;
+      setSelected(undefined);
+      setSelectedEdge(undefined);
+      setHovered(undefined);
+      setQuery('');
+      setDiagnostics(
+        target.diagram?.diagnostics.map((item) => `${item.line}:${item.column} ${item.message}`) ??
+          [],
+      );
+      dispatchHistory({ type: direction });
+    },
+    [history, diagram, view, scope],
+  );
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.isComposing ||
+        event.altKey ||
+        !(event.metaKey || event.ctrlKey)
+      )
+        return;
+      if (
+        event.target instanceof Element &&
+        event.target.closest(
+          'input, textarea, select, [contenteditable]:not([contenteditable="false"])',
+        )
+      )
+        return;
+      const key = event.key.toLowerCase();
+      const direction =
+        key === 'z'
+          ? event.shiftKey
+            ? 'redo'
+            : 'undo'
+          : key === 'y' && event.ctrlKey && !event.shiftKey
+            ? 'redo'
+            : undefined;
+      if (!direction) return;
+      event.preventDefault();
+      restoreHistory(direction);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [restoreHistory]);
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -761,6 +880,24 @@ function App() {
           <span>インフラを、見渡す。</span>
         </div>
         <div className="document-title">{diagram?.title ?? '構成図'}</div>
+        <div className="history-actions" role="group" aria-label="操作履歴">
+          <button
+            className="toolbar-button"
+            disabled={!history.past.length}
+            onClick={() => restoreHistory('undo')}
+            title="元に戻す（Ctrl / ⌘ + Z）"
+          >
+            元に戻す
+          </button>
+          <button
+            className="toolbar-button"
+            disabled={!history.future.length}
+            onClick={() => restoreHistory('redo')}
+            title="やり直す（Ctrl / ⌘ + Shift + Z、Ctrl + Y）"
+          >
+            やり直す
+          </button>
+        </div>
         <button className="toolbar-button" onClick={() => upload.current?.click()}>
           ファイルを開く
         </button>
@@ -811,7 +948,12 @@ function App() {
                   key={id}
                   className={view === id ? 'active' : ''}
                   aria-pressed={view === id}
-                  onClick={() => setView(id)}
+                  onClick={() =>
+                    dispatchHistory({
+                      type: 'commit',
+                      update: (current) => ({ ...current, view: id }),
+                    })
+                  }
                 >
                   {label}
                 </button>
@@ -849,7 +991,13 @@ function App() {
               aria-label="矢印を曲線にする"
               aria-checked={edgeShape === 'bezier'}
               onClick={() =>
-                setEdgeShape((current) => (current === 'bezier' ? 'orthogonal' : 'bezier'))
+                dispatchHistory({
+                  type: 'commit',
+                  update: (current) => ({
+                    ...current,
+                    edgeShape: current.edgeShape === 'bezier' ? 'orthogonal' : 'bezier',
+                  }),
+                })
               }
               title="直線（直角）と曲線を切り替える"
             >
@@ -891,7 +1039,16 @@ function App() {
             </div>
             {scope && (
               <div className="scope-bar">
-                <button onClick={() => setScope(undefined)}>← 全体へ戻る</button>
+                <button
+                  onClick={() =>
+                    dispatchHistory({
+                      type: 'commit',
+                      update: (current) => ({ ...current, scope: undefined }),
+                    })
+                  }
+                >
+                  ← 全体へ戻る
+                </button>
                 <span>
                   {diagram?.resources.find((resource) => resource.id === scope)?.label} の詳細
                 </span>
@@ -1061,9 +1218,15 @@ function App() {
                   <button
                     className="toolbar-button"
                     onClick={() => {
-                      setCollapsed((current) => current.filter((id) => id !== selectedResource.id));
-                      setExpanded((current) => [...new Set([...current, selectedResource.id])]);
-                      setScope(selectedResource.id);
+                      dispatchHistory({
+                        type: 'commit',
+                        update: (current) => ({
+                          ...current,
+                          collapsed: current.collapsed.filter((id) => id !== selectedResource.id),
+                          expanded: [...new Set([...current.expanded, selectedResource.id])],
+                          scope: selectedResource.id,
+                        }),
+                      });
                     }}
                   >
                     詳細へ移動

@@ -73,6 +73,11 @@ textarea:focus-visible {
   flex: 1;
   font-weight: 500;
 }
+.history-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
 .toolbar-button {
   border: 1px solid #d9e2e9;
   background: white;
