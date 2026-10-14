@@ -96,6 +96,8 @@ export interface ParseResult {
 }
 export interface DisplayOptions {
   view?: string;
+  level?: View['level'];
+  showSG?: boolean;
   collapsed?: string[];
   expanded?: string[];
   direction?: 'RIGHT' | 'DOWN';

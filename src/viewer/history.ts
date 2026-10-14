@@ -1,4 +1,4 @@
-import type { Diagram } from '../core/model';
+import type { Diagram, View } from '../core/model';
 
 export interface ViewerState {
   diagram?: Diagram;
@@ -6,6 +6,8 @@ export interface ViewerState {
   documentKey?: object;
   source: string;
   view: string;
+  displayLevel?: View['level'];
+  showSG?: boolean;
   edgeShape: 'orthogonal' | 'bezier';
   collapsed: string[];
   expanded: string[];
@@ -44,6 +46,8 @@ function sameState(a: ViewerState, b: ViewerState): boolean {
   return (
     a.source === b.source &&
     a.view === b.view &&
+    a.displayLevel === b.displayLevel &&
+    a.showSG === b.showSG &&
     a.edgeShape === b.edgeShape &&
     a.scope === b.scope &&
     sameIds(a.collapsed, b.collapsed) &&

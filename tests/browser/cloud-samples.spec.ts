@@ -1,3 +1,4 @@
+import { selectSavedView } from './display-controls';
 import { test, expect } from '@playwright/test';
 import { resolve } from 'node:path';
 
@@ -47,8 +48,8 @@ for (const sample of samples) {
         await page.locator('input[type=file]').setInputFiles(`examples/${sample.name}.infra`);
       await expect(page.locator('.document-title')).toHaveText(sample.title);
       await expect(page.locator(`.react-flow__node[data-id="${sample.target}"]`)).toBeVisible();
-      for (const view of ['概要', 'サービス', 'ネットワーク', 'セキュリティ']) {
-        await page.getByRole('button', { name: view, exact: true }).click();
+      for (const view of ['overview', 'service', 'network', 'security']) {
+        await selectSavedView(page, view);
         await expect(page.locator('.react-flow__node')).not.toHaveCount(0);
       }
       await page.getByRole('button', { name: 'すべて折りたたむ', exact: true }).click();
