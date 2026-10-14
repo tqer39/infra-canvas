@@ -1773,6 +1773,20 @@
     "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）"
   },
   {
+    "type": "saas.turso",
+    "title": "Turso",
+    "file": "saas-turso.svg",
+    "aliases": [],
+    "source": "https://github.com/tursodatabase/turso-docs",
+    "downloadURL": "https://raw.githubusercontent.com/tursodatabase/turso-docs/3711bc365dca4605b5308d849635fc14a6415a4b/favicon.svg",
+    "version": "公式docs commit 3711bc365dca4605b5308d849635fc14a6415a4b",
+    "retrievedAt": "2026-10-14",
+    "provider": "Turso",
+    "usage": "サービス識別用途。商標権は提供元に帰属し、提供元の利用条件に従う。",
+    "sha256": "c2363862114961b1a89f1a5ca2563df8c78065e07734f959cd96d72b4a24fbcb",
+    "archiveSha256": "c2363862114961b1a89f1a5ca2563df8c78065e07734f959cd96d72b4a24fbcb"
+  },
+  {
     "type": "aws.account",
     "file": "aws-account.svg",
     "archivePath": "Architecture-Group-Icons_07312026/AWS-Account_32.svg",

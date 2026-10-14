@@ -22,7 +22,11 @@ for (const offline of [false, true]) {
     context,
   }) => {
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     const node = page.locator('.react-flow__node[data-id="api"]');
     await node.locator('.resource-label').click();
     const form = page.getByRole('form', { name: 'リソース情報の編集' });
@@ -125,7 +129,11 @@ for (const offline of [false, true]) {
     context,
   }) => {
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     const node = page.locator('.react-flow__node[data-id="api"]');
     await expect(node).toBeVisible();
     await node.locator('.resource-label').click();
@@ -193,7 +201,11 @@ for (const offline of [false, true]) {
     context,
   }) => {
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     const undo = page.getByRole('button', { name: '元に戻す', exact: true });
     const redo = page.getByRole('button', { name: 'やり直す', exact: true });
     const footer = page.locator('.canvas-footer');
@@ -245,7 +257,11 @@ for (const offline of [false, true]) {
     context,
   }) => {
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     const undo = page.getByRole('button', { name: '元に戻す', exact: true });
     const redo = page.getByRole('button', { name: 'やり直す', exact: true });
     await expect(page.locator('.canvas-footer')).toContainText('19 要素');
@@ -293,7 +309,11 @@ for (const offline of [false, true]) {
     context,
   }) => {
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     await expect(page.locator('.canvas-footer')).toContainText('19 要素');
     const network = page.getByRole('button', { name: 'ネットワーク', exact: true });
     const service = page.getByRole('button', { name: 'サービス', exact: true });
@@ -333,7 +353,11 @@ for (const offline of [false, true]) {
     context,
   }) => {
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     await expect(page.locator('.canvas-footer')).toContainText('19 要素');
     const search = page.getByRole('textbox', { name: 'リソース検索', exact: true });
     const focusAPI = async () => {
@@ -366,7 +390,11 @@ for (const offline of [false, true]) {
     context,
   }) => {
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     const node = (id: string) => page.locator(`.react-flow__node[data-id="${id}"]`);
     await expect(node('api')).toBeVisible();
     await node('api').locator('.resource-label').click();
@@ -480,7 +508,11 @@ for (const offline of [false, true]) {
     context,
   }) => {
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     await expect(page.locator('.canvas-footer')).toContainText('19 要素');
     const node = (id: string) => page.locator(`.react-flow__node[data-id="${id}"]`);
     for (const [id, name] of [
@@ -549,7 +581,9 @@ for (const offline of [false, true]) {
   }) => {
     if (offline) await context.setOffline(true);
     await page.goto(
-      offline ? 'file://' + resolve('artifacts/observability.html') : 'http://127.0.0.1:5188',
+      offline
+        ? 'file://' + resolve('artifacts/observability.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
     );
     if (!offline)
       await page.locator('input[type=file]').setInputFiles('examples/observability.infra');
@@ -597,7 +631,11 @@ for (const offline of [false, true]) {
     context,
   }) => {
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     await expect(page.locator('.canvas-footer')).toContainText('19 要素');
     const paths = () =>
       page
@@ -641,7 +679,11 @@ for (const offline of [false, true]) {
     context,
   }) => {
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     await expect(page.locator('.canvas-footer')).toContainText('19 要素');
     await page.mouse.move(400, 250);
     await page.mouse.wheel(5000, 0);
@@ -689,7 +731,11 @@ for (const offline of [false, true]) {
     context,
   }) => {
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     await expect(page.locator('.canvas-footer')).toContainText('19 要素');
     const boundaryIcon = (id: string) =>
       page.locator(`.react-flow__node[data-id="${id}"] .service-icon`);
@@ -802,7 +848,11 @@ for (const offline of [false, true]) {
       if (/^https?:/.test(request.url())) requests.push(request.url());
     });
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     await expect(page.locator('.canvas-footer')).toContainText('19 要素');
     const userNode = page.locator('.react-flow__node[data-id="users"]');
     await expect(userNode.locator('.service-icon')).toHaveCount(1);
@@ -950,7 +1000,11 @@ for (const offline of [false, true]) {
     context,
   }) => {
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/saas.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/saas.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     if (!offline) await page.locator('input[type=file]').setInputFiles('examples/saas.infra');
     await expect(page.locator('.canvas-footer')).toContainText('9 要素');
     const viewport = () =>
@@ -1012,7 +1066,7 @@ for (const offline of [false, true]) {
     await expect(page.locator('.detail-panel')).toContainText('a → target');
     await expect(page.locator('.detail-panel')).toContainText('b → target');
   });
-  test(`主要61サービスのアイコンとブランドカラーを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
+  test(`主要62サービスのアイコンとブランドカラーを表示する (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
     context,
   }) => {
@@ -1022,13 +1076,15 @@ for (const offline of [false, true]) {
     });
     if (offline) await context.setOffline(true);
     await page.goto(
-      offline ? 'file://' + resolve('artifacts/service-catalog.html') : 'http://127.0.0.1:5188',
+      offline
+        ? 'file://' + resolve('artifacts/service-catalog.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
     );
     if (!offline)
       await page.locator('input[type=file]').setInputFiles('examples/service-catalog.infra');
-    await expect(page.locator('.canvas-footer')).toContainText('61 要素');
+    await expect(page.locator('.canvas-footer')).toContainText('62 要素');
     const images = page.locator('.service-icon');
-    await expect(images).toHaveCount(61);
+    await expect(images).toHaveCount(62);
     await expect
       .poll(() =>
         images.evaluateAll((images) =>
@@ -1092,7 +1148,11 @@ for (const offline of [false, true]) {
       if (/^https?:/.test(request.url())) requests.push(request.url());
     });
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/saas.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/saas.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     if (!offline) await page.locator('input[type=file]').setInputFiles('examples/saas.infra');
     await expect(page.locator('.canvas-footer')).toContainText('9 要素');
     const icons = page.locator('.react-flow__node .service-icon');
@@ -1147,7 +1207,11 @@ for (const offline of [false, true]) {
     context,
   }) => {
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     await expect(page.locator('.canvas-footer')).toContainText('19 要素');
     await page.getByRole('textbox', { name: 'リソース検索' }).fill('Public AZ-a');
     await page.getByRole('button', { name: 'Public AZ-a subnet · public_a' }).click();
@@ -1186,7 +1250,7 @@ for (const offline of [false, true]) {
 test('表示切替・集約復元・検索・強調・ドリルダウン', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto('http://127.0.0.1:5188');
+  await page.goto(`http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`);
   await expect(page.locator('.canvas-footer')).toContainText('19 要素');
   await expect(page.locator('.react-flow__minimap-node')).toHaveCount(19);
   await page.getByRole('button', { name: '概要', exact: true }).click();
@@ -1219,7 +1283,7 @@ test('表示切替・集約復元・検索・強調・ドリルダウン', async
   expect(errors).toEqual([]);
 });
 test('任意 DSL と取り込みモデルが図へ反映され、エラー時は図を保つ', async ({ page }) => {
-  await page.goto('http://127.0.0.1:5188');
+  await page.goto(`http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`);
   await page.getByRole('button', { name: 'DSL を編集' }).click();
   const editor = page.getByRole('textbox', { name: 'DSL 入力' });
   await editor.fill(
@@ -1260,7 +1324,7 @@ test('単一 HTML は file URL でネットワークなしに操作できる', a
   expect(requests).toEqual([]);
 });
 test('大規模・GCP Azure・複数クラウドの入力が実際に描画される', async ({ page }) => {
-  await page.goto('http://127.0.0.1:5188');
+  await page.goto(`http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`);
   await page.locator('input[type=file]').setInputFiles('examples/gcp-azure.infra');
   await expect(page.locator('.document-title')).toContainText('Google Cloud');
   await expect(page.locator('.canvas-footer')).toContainText('12 要素');
@@ -1285,7 +1349,9 @@ for (const offline of [false, true]) {
   }) => {
     if (offline) await context.setOffline(true);
     await page.goto(
-      offline ? 'file://' + resolve('artifacts/ecs-beanstalk.html') : 'http://127.0.0.1:5188',
+      offline
+        ? 'file://' + resolve('artifacts/ecs-beanstalk.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
     );
     if (!offline)
       await page.locator('input[type=file]').setInputFiles('examples/ecs-beanstalk.infra');
@@ -1356,7 +1422,9 @@ for (const offline of [false, true]) {
   }) => {
     if (offline) await context.setOffline(true);
     await page.goto(
-      offline ? 'file://' + resolve('artifacts/transit-vpn.html') : 'http://127.0.0.1:5188',
+      offline
+        ? 'file://' + resolve('artifacts/transit-vpn.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
     );
     if (!offline)
       await page.locator('input[type=file]').setInputFiles('examples/transit-vpn.infra');
@@ -1402,7 +1470,9 @@ for (const offline of [false, true]) {
   }) => {
     if (offline) await context.setOffline(true);
     await page.goto(
-      offline ? 'file://' + resolve('artifacts/organizations.html') : 'http://127.0.0.1:5188',
+      offline
+        ? 'file://' + resolve('artifacts/organizations.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
     );
     if (!offline)
       await page.locator('input[type=file]').setInputFiles('examples/organizations.infra');
@@ -1443,7 +1513,9 @@ for (const offline of [false, true]) {
   }) => {
     if (offline) await context.setOffline(true);
     await page.goto(
-      offline ? 'file://' + resolve('artifacts/proxies.html') : 'http://127.0.0.1:5188',
+      offline
+        ? 'file://' + resolve('artifacts/proxies.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
     );
     if (!offline) await page.locator('input[type=file]').setInputFiles('examples/proxies.infra');
     await expect(page.locator('.canvas-footer')).toContainText('4 要素');
@@ -1526,7 +1598,7 @@ for (const reference of [
 }
 
 test('表・リストの長文を折り返し、HTMLを実行せず表示する', async ({ page }) => {
-  await page.goto('http://127.0.0.1:5188');
+  await page.goto(`http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`);
   await page.getByRole('button', { name: 'DSL を編集' }).click();
   const long = '長い設定値の日本語と英数字abcdefghijklmnopqrstuvwxyzを表示します。'.repeat(5);
   const literal = '<img src=x onerror=alert(1)>';
@@ -1561,7 +1633,7 @@ for (const offline of [false, true]) {
       await context.setOffline(true);
       await page.goto('file://' + resolve(output));
     } else {
-      await page.goto('http://127.0.0.1:5188');
+      await page.goto(`http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`);
       await page.locator('input[type=file]').setInputFiles('examples/identity.infra');
     }
     await expect(page.locator('.document-title')).toHaveText(
@@ -1642,7 +1714,11 @@ for (const offline of [false, true]) {
     context,
   }) => {
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     const kinds = [
       'traffic',
       'dependency',
@@ -1727,7 +1803,11 @@ for (const offline of [false, true]) {
     context,
   }) => {
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     await expect(page.locator('.connection-label').first()).toBeVisible();
     const viewport = page.locator('.react-flow__viewport');
     await viewport.evaluate(async () => {
@@ -1781,7 +1861,11 @@ for (const offline of [false, true]) {
     context,
   }) => {
     if (offline) await context.setOffline(true);
-    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
     const tooltip = page.getByRole('tooltip');
     await expect(tooltip).toHaveCount(0);
     const meanings = [

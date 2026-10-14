@@ -42,6 +42,7 @@ import aws_ecs_container from './aws-ecs-container.svg';
 import aws_beanstalk_application from './aws-beanstalk-application.svg';
 import aws_beanstalk from './aws-beanstalk.svg';
 import aws_beanstalk_version from './aws-beanstalk-version.svg';
+import turso from './saas-turso.svg';
 import cloudflare from './saas-cloudflare.svg';
 import user from './external-user.svg';
 import vercel from './saas-vercel.svg';
@@ -223,6 +224,7 @@ const icons: Record<string, string> = {
   'gitlab.repository': gitlab,
   'gitlab.ci': gitlab,
   'saas.neon': neon,
+  'saas.turso': turso,
   'saas.resend': resend,
   'saas.1password': onepassword,
   'saas.elasticsearch': elasticsearch,
@@ -255,6 +257,7 @@ const icons: Record<string, string> = {
   'azure.sql': azure_sql,
   'azure.storage': azure_storage,
 };
+export const getIconTypes = (): string[] => Object.keys(icons).sort();
 export const getIcon = (type: string): string | undefined => icons[type];
 export const iconTypes = Object.keys(icons).sort();
 

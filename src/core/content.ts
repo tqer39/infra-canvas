@@ -1,3 +1,4 @@
+import { securityRules } from './security.js';
 import { isBoundary, type Resource } from './model.js';
 
 export type ResourceContent =
@@ -7,6 +8,25 @@ export type ResourceContent =
 /** HTMLを解釈しない、図上に表示するテキスト表・リスト。 */
 export function resourceContent(resource: Resource): ResourceContent | undefined {
   const { display, columns, rows, items } = resource.attributes;
+  if (
+    resource.type === 'sg' &&
+    display === undefined &&
+    columns === undefined &&
+    rows === undefined &&
+    items === undefined &&
+    (resource.attributes.ingress !== undefined || resource.attributes.egress !== undefined)
+  ) {
+    return {
+      kind: 'table',
+      columns: ['方向', 'プロトコル', 'ポート', '通信相手'],
+      rows: securityRules(resource).map(({ direction, rule }) => [
+        direction,
+        rule.protocol,
+        rule.port,
+        rule.peer,
+      ]),
+    };
+  }
   if (display === undefined && columns === undefined && rows === undefined && items === undefined)
     return undefined;
   const strings = (value: unknown): value is string[] =>

@@ -1,3 +1,4 @@
+import { validateArchitecture } from './architecture.js';
 import { resourceContent } from './content.js';
 import { validateConfiguration } from './configuration.js';
 import { validateComputeAttributes } from './resource-metadata.js';
@@ -128,11 +129,14 @@ export function validateDiagram(value: unknown): Diagram {
       !record(view) ||
       !identifier(view.id) ||
       ids.has(view.id) ||
+      (view.label !== undefined && (typeof view.label !== 'string' || !view.label.trim())) ||
       !['overview', 'service', 'subnet', 'resource'].includes(view.level) ||
       (view.overlay !== undefined && view.overlay !== 'sg') ||
       (view.direction !== undefined && !['RIGHT', 'DOWN'].includes(view.direction))
     )
-      throw new Error('表示設定の一意な ID・level・overlay・direction を確認してください。');
+      throw new Error(
+        '表示設定の一意な ID・表示名・level・overlay・direction を確認してください。',
+      );
     ids.add(view.id);
   }
   for (const diagnostic of diagram.diagnostics)
@@ -145,6 +149,7 @@ export function validateDiagram(value: unknown): Diagram {
       !['error', 'warning'].includes(diagnostic.severity)
     )
       throw new Error('診断の code・severity・ソース位置を確認してください。');
+  validateArchitecture(diagram);
   return diagram;
 }
 

@@ -8,7 +8,19 @@ export function getResourceIconType(
   if (typeof resource.attributes.icon === 'string' && resource.attributes.icon.trim())
     return resource.attributes.icon;
   if (resource.type === 'vpc') return 'aws.vpc';
-  if (resource.type === 'account') return 'aws.account';
+  if (resource.type === 'account') {
+    if (/^aws(\.|$)/.test(String(resource.attributes.provider ?? '')))
+      return 'aws.organization-account';
+    const awsChild = [...byId.values()].some(
+      (child) =>
+        child.parentId === resource.id &&
+        (child.type.startsWith('aws.') ||
+          child.type === 'vpc' ||
+          (child.type === 'region' &&
+            /^[a-z]{2}(?:-gov)?-[a-z]+-\d+$/.test(String(child.attributes.region ?? '')))),
+    );
+    return awsChild ? 'aws.account' : resource.type;
+  }
   if (!['subnet', 'region'].includes(resource.type)) return resource.type;
   const seen = new Set<string>();
   let current: Resource | undefined = resource;

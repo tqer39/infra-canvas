@@ -45,7 +45,16 @@ const template =
   '--></body></html>';
 await writeFile('dist/template.html', template);
 await build({
+  entryPoints: ['src/assets/icons.ts'],
+  bundle: true,
+  format: 'esm',
+  platform: 'node',
+  loader: { '.svg': 'dataurl', '.png': 'dataurl' },
+  outfile: 'dist/icon-assets.mjs',
+});
+await build({
   entryPoints: ['src/cli.ts'],
+  loader: { '.svg': 'dataurl', '.png': 'dataurl' },
   bundle: true,
   platform: 'node',
   format: 'esm',

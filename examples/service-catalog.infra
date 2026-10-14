@@ -58,6 +58,7 @@ diagram "主要サービスのアイコンカタログ" version=1 {
   saas.dify service_55 "Dify"
   saas.langchain service_56 "LangChain"
   saas.langgraph service_57 "LangGraph"
+  saas.turso service_turso "Turso"
   view service level=service
   saas.nginx nginx "NGINX"
   saas.envoyproxy envoyproxy "Envoy Proxy"

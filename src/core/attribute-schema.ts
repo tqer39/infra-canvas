@@ -43,6 +43,16 @@ export const textAttributes = new Set([
   'engine_version',
   'placement',
   'subnetVisibility',
+  'exposure',
+  'trustZone',
+  'evidence',
+  'change',
+  'appearance',
+  'columnsBy',
+  'logicalService',
+  'anchor',
+  'anchorEdge',
+  'redundancyRole',
 ]);
 export const arrayAttributes = new Set([
   'capacityProviders',
@@ -56,6 +66,9 @@ export const arrayAttributes = new Set([
   'securityGroups',
   'unresolved',
   'dependsOn',
+  'ingress',
+  'egress',
+  'ports',
 ]);
 export const numberAttributes = new Set([
   'replicas',
@@ -68,5 +81,8 @@ export const numberAttributes = new Set([
   'x',
   'y',
   'line',
+  'count',
+  'countMin',
+  'countMax',
 ]);
-export const boolAttributes = new Set(['public', 'unknown', 'fixed']);
+export const boolAttributes = new Set(['public', 'unknown', 'fixed', 'boundary']);

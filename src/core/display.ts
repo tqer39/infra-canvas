@@ -49,11 +49,21 @@ export function buildDisplayGraph(diagram: Diagram, options: DisplayOptions = {}
     representative[resource.id] = chosen;
   }
   const visible = diagram.resources.filter(
-    (resource) => representative[resource.id] === resource.id && (resource.type !== 'sg' || showSG),
+    (resource) =>
+      representative[resource.id] === resource.id &&
+      resource.type !== 'overlay' &&
+      resource.type !== 'note' &&
+      (resource.type !== 'sg' || showSG),
   );
   const visibleIds = new Set(visible.map((resource) => resource.id));
   const connections = new Map<string, Connection & { originalIds: string[] }>();
+  const kinds = options.kinds ?? view?.kinds;
+  const routes = options.routes ?? view?.routes;
+  const purposes = options.purposes ?? view?.purposes;
   const include = (edge: Connection): void => {
+    if (kinds && !kinds.includes(edge.kind)) return;
+    if (routes && !routes.includes(String(edge.attributes.route ?? ''))) return;
+    if (purposes && !purposes.includes(String(edge.attributes.purpose ?? ''))) return;
     const source = representative[edge.source],
       target = representative[edge.target];
     if (!source || !target || !visibleIds.has(source) || !visibleIds.has(target)) return;
@@ -64,10 +74,23 @@ export function buildDisplayGraph(diagram: Diagram, options: DisplayOptions = {}
     const key = JSON.stringify([source, target, edge.kind, attributesKey]);
     const previous = connections.get(key);
     if (previous) previous.originalIds.push(edge.id);
-    else connections.set(key, { ...edge, source, target, originalIds: [edge.id] });
+    else {
+      const attributes = { ...edge.attributes };
+      if (source !== edge.source) delete attributes.sourcePort;
+      if (target !== edge.target) delete attributes.targetPort;
+      connections.set(key, { ...edge, attributes, source, target, originalIds: [edge.id] });
+    }
   };
   for (const edge of diagram.connections) include(edge);
   for (const resource of diagram.resources) {
+    if (typeof resource.attributes.logicalService === 'string')
+      include({
+        id: `placement:${resource.id}`,
+        source: resource.attributes.logicalService,
+        target: resource.id,
+        kind: 'association',
+        attributes: { label: '配置実体' },
+      });
     if (showSG && resource.type === 'sg' && Array.isArray(resource.attributes.members))
       for (const member of resource.attributes.members)
         include({
@@ -97,7 +120,62 @@ export function buildDisplayGraph(diagram: Diagram, options: DisplayOptions = {}
         });
   }
   return {
-    resources: visible.map((resource) => ({ ...resource, attributes: { ...resource.attributes } })),
+    notes: diagram.resources
+      .filter((resource) => resource.type === 'note' && representative[resource.id] === resource.id)
+      .map((resource) => ({
+        ...resource,
+        attributes: {
+          ...resource.attributes,
+          ...(typeof resource.attributes.anchor === 'string'
+            ? { anchor: representative[resource.attributes.anchor] }
+            : {}),
+        },
+      }))
+      .filter(
+        (resource) =>
+          resource.attributes.anchor === undefined ||
+          visibleIds.has(String(resource.attributes.anchor)),
+      ),
+    overlays: diagram.resources
+      .filter((resource) => resource.type === 'overlay')
+      .map((resource) => ({
+        ...resource,
+        attributes: {
+          ...resource.attributes,
+          members: [
+            ...new Set(
+              (resource.attributes.members as string[])
+                .map((id) => representative[id])
+                .filter((id) => visibleIds.has(id)),
+            ),
+          ],
+        },
+      }))
+      .filter((resource) => (resource.attributes.members as string[]).length > 0),
+    resources: visible.map((resource) => {
+      const groups = [
+        ...new Set([
+          ...(Array.isArray(resource.attributes.securityGroups)
+            ? resource.attributes.securityGroups
+            : []),
+          ...diagram.resources
+            .filter(
+              (group) =>
+                group.type === 'sg' &&
+                Array.isArray(group.attributes.members) &&
+                group.attributes.members.includes(resource.id),
+            )
+            .map((group) => group.id),
+        ]),
+      ];
+      return {
+        ...resource,
+        attributes: {
+          ...resource.attributes,
+          ...(groups.length ? { securityGroups: groups } : {}),
+        },
+      };
+    }),
     connections: [...connections.values()],
     representative,
     collapsed: [...collapsed],

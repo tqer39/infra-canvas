@@ -7,7 +7,7 @@
 追加52種と既存の1Password・Elasticsearch・Kibanaは、Simple Icons（版はマニフェスト参照） の
 ブランドカラー（`hex`）を SVG の `fill` 属性に適用して同梱しています。形状は変更しません。
 Vercel・Notion など、ブランドカラーが黒のサービスは黒で表示します。
-既存9種と合わせ、サービス・技術の61種に対応します。クラウドのアイコンは別に維持します。
+既存9種・Tursoと合わせ、サービス・技術の62種に対応します。クラウドのアイコンは別に維持します。
 外部 CDN や新しい npm 依存は使わず、単一 HTML にも埋め込みます。
 [既存9種の対応表・利用条件](assets.md) と、`src/assets/manifest.json` に版・取得元・カラー・原本と着色後のハッシュを記録しています。
 Simple Icons の CC0 はブランドの商標利用を許諾するものではありません。提供元の条件が別途適用されます。
@@ -81,6 +81,9 @@ kintone は [製品ロゴ使用ガイドライン](https://cybozu.co.jp/logotype
 Difyの素材には、マニフェストに記録した提供元の独自ライセンス・ブランド使用条件が適用されます。
 OpenAI・ChatGPTは現在のSimple Iconsに含まれておらず、公式の同梱用SVGを取得できていないため、この追加には含めていません。
 [OpenAIの公式ガイド](https://openai.com/brand/)に従い、別ブランドの素材で代用しません。
+
+Tursoは公式docsの固定commitから取得した `saas.turso` アイコンを同梱します。
+`group services "Turso" icon=saas.turso` のように、groupにもサービスアイコンを指定できます。
 
 ## ソフトウェアと EKS の追加
 

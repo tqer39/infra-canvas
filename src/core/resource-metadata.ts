@@ -1,3 +1,4 @@
+import { expressionMetadata } from './presentation.js';
 import type { Resource } from './model.js';
 
 export interface ResourceMetadata {
@@ -54,6 +55,16 @@ export function resourceMetadata(resource: Resource): ResourceMetadata[] {
     return [];
   });
   const compute: ResourceMetadata[] = [];
+  const roles: Record<string, string> = {
+    primary: 'Primary',
+    replica: 'Replica',
+    active: 'Active',
+    standby: 'Standby',
+  };
+  if (typeof resource.attributes.redundancyRole === 'string')
+    compute.push({ label: '冗長化', value: roles[resource.attributes.redundancyRole]! });
+  if (Array.isArray(resource.attributes.ports) && resource.attributes.ports.length)
+    compute.push({ label: '接続口', value: resource.attributes.ports.join(' / ') });
   for (const [label, key] of [
     ['CPU request', 'cpuRequest'],
     ['メモリ request', 'memoryRequest'],
@@ -66,6 +77,8 @@ export function resourceMetadata(resource: Resource): ResourceMetadata[] {
   if (typeof resource.attributes.replicas === 'number')
     compute.push({ label: 'レプリカ数', value: String(resource.attributes.replicas) });
   const attrs = resource.attributes;
+  if (Array.isArray(attrs.securityGroups) && attrs.securityGroups.length)
+    compute.push({ label: 'SG', value: attrs.securityGroups.join(' / ') });
   for (const [label, key] of [
     ['実行方式', 'launchType'],
     ['容量プロバイダー', 'capacityProviders'],
@@ -94,7 +107,7 @@ export function resourceMetadata(resource: Resource): ResourceMetadata[] {
             : String(value),
     });
   }
-  return [...identity, ...compute];
+  return [...identity, ...compute, ...expressionMetadata(resource)];
 }
 const textWidth = (text: string): number =>
   [...text].reduce((sum, c) => sum + (c.codePointAt(0)! > 255 ? 14 : 7), 0);

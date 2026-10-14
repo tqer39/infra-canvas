@@ -1,0 +1,39 @@
+diagram "インフラ表現サンプル — P2・P3" version=1 {
+  external.user users "利用者" exposure=public evidence=observed
+  external.service api "論理サービス: API" countMin=2 countMax=6 evidence=design
+  site cloud "クラウド / リージョン列" columnsBy=region {
+    zone tokyo "東京" region="ap-northeast-1" columnsBy=az trustZone="本番" {
+      collection az_a "AZ A / API 実体" az="ap-northeast-1a" count=2 {
+        aws.ec2 api_a "API A" az="ap-northeast-1a" logicalService=api exposure=private evidence=observed
+      }
+      collection az_c "AZ C / API 実体" az="ap-northeast-1c" count=2 {
+        aws.ec2 api_c "API C" az="ap-northeast-1c" logicalService=api exposure=private change=add evidence=design
+      }
+      aws.rds database "注文DB" appearance=database exposure=restricted trustZone="データ" redundancyRole=primary
+      external.queue jobs "ジョブキュー" appearance=queue countMin=0 countMax=100 evidence=inferred
+    }
+    zone osaka "大阪 / DR" region="ap-northeast-3" {
+      aws.rds replica "DR Replica" appearance=database exposure=restricted redundancyRole=replica change=modify
+      external.storage backup "バックアップ" appearance=storage evidence=unknown
+    }
+  }
+  onprem.floor office "社内拠点" boundary=true appearance=site {
+    rack equipment "ラック R1" appearance=rack {
+      namespace agents "監視エージェント群" appearance=namespace count=3 {
+        external.service legacy "旧監視" change=remove evidence=observed
+      }
+    }
+  }
+  overlay data_boundary "データの信頼境界" members=[database,replica,backup] trustZone="データ"
+  note rollout "段階的に切り替える" anchor=api_c description="AZ Cを追加後、負荷分散と障害時の切り替えを確認する。構成図は切り替え成立を保証しない。"
+  note encryption "通信の前提" anchorEdge=internet_api description="認証方式と暗号化は明示した設計情報。実環境から取得した通信結果ではない。"
+  users -> api id=internet_api encrypted=true authMethod=OIDC evidence=design protocol=https port=443
+  api_a -> database encrypted=true protocol=tcp port=5432
+  api_c -> database encrypted=true protocol=tcp port=5432 change=add
+  api_a -> jobs protocol=https port=443
+  database -> replica kind=replication encrypted=true label="非同期複製"
+  replica -> backup kind=dependency label="バックアップ設定"
+  legacy -> api kind=dependency change=remove label="廃止予定の設定"
+  view placement label="配置実体" level=resource kinds=[association]
+  view data_flow label="データ通信" level=resource kinds=[traffic,replication,dependency]
+}

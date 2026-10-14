@@ -41,7 +41,7 @@ for (const sample of samples) {
       await page.goto(
         offline
           ? 'file://' + resolve(`artifacts/${sample.name}.html`)
-          : (baseURL ?? 'http://127.0.0.1:5188'),
+          : (baseURL ?? `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`),
       );
       if (!offline)
         await page.locator('input[type=file]').setInputFiles(`examples/${sample.name}.infra`);
