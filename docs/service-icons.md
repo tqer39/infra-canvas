@@ -91,5 +91,7 @@ NGINX は `saas.nginx` / `software.nginx`、Envoy は `saas.envoyproxy` / `softw
 EKS・VPC Lattice・PrivateLink・Route 53・Direct Connect・DynamoDB・Control Tower・IAM Identity Center の公式アイコンを追加しました。
 `aws.eks-cluster`、`aws.eks-node-group`、`aws.eks-fargate-profile` は EKS のサービスアイコンを共有します。
 `k8s.*` の型は共通 Kubernetes ロゴを使い、リソース固有の公式アイコンとは扱いません。
-現在のクラウド同梱件数は AWS 44、Google Cloud 10、Azure 4 です。全公式サービス・機能を網羅していません。
+現在のクラウド同梱件数は AWS 45、Google Cloud 11、Azure 5 です。全公式サービス・機能を網羅していません。
+`aws.cloud` は AWS の文字とスマイルを含む公式 `AWS-Cloud-logo_32.svg` を使用します。
+`gcp.cloud` は公式サイト掲載の Google Cloud カラフルな雲アイコン、`azure.cloud` は公式アイコン ZIP の Azure A ロゴです。
 型名が未対応でも構成は保持し、代替カードとして表示します。

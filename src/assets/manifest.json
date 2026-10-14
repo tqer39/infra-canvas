@@ -1921,5 +1921,39 @@
     "transformation": "SVG ルートにブランドカラーの fill 属性を追加（形状は変更しない）",
     "archivePath": "package/icons/envoyproxy.svg",
     "archiveSha256": "20ebead4f6bc93464812a5e260d19fc4d84772e5eeff69a6fbea263ca2441c5f"
+  },
+  {
+    "type": "aws.cloud",
+    "file": "aws-cloud.svg",
+    "archivePath": "Architecture-Group-Icons_07312026/AWS-Cloud-logo_32.svg",
+    "sha256": "63d73df1aac59dab323df732f82e196e359fb7b6370c0ca8e51e7b897cd350be",
+    "source": "https://aws.amazon.com/architecture/icons/",
+    "downloadURL": "https://d1.awsstatic.com/onedam/marketing-channels/website/public/shared/architecture-icon-release/Icon-package_07312026.5846e92413caa21490223536cc97f1269e44fa92.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526",
+    "archiveSha256": "d2d166c453526471749d520e0db022c459abef759d2946cf2dd1d1c992dc6526"
+  },
+  {
+    "type": "azure.cloud",
+    "file": "azure-cloud.svg",
+    "archivePath": "Azure_Public_Service_Icons/Icons/other/10018-icon-service-Azure-A.svg",
+    "sha256": "dcc1d690bc18e7c7401fb545c51790b4974a69c9d997b27c4fbd9f1f26fe6815",
+    "source": "https://learn.microsoft.com/en-us/azure/architecture/icons/",
+    "downloadURL": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip",
+    "retrievedAt": "2026-10-14",
+    "version": "配布物 SHA-256 921594ccd1bf3d9c0a1bd7b6d924e050551a59342f2b353bb74bdcf761c35141",
+    "archiveSha256": "921594ccd1bf3d9c0a1bd7b6d924e050551a59342f2b353bb74bdcf761c35141"
+  },
+  {
+    "type": "gcp.cloud",
+    "file": "gcp-cloud.png",
+    "cloudPack": "gcp-brand",
+    "provider": "Google Cloud",
+    "sha256": "a332b54b620a2fa04413561c01c925cd40f936581c7bed52df424ecccc9c08b4",
+    "source": "https://cloud.google.com/",
+    "downloadURL": "https://www.gstatic.com/cgc/super_cloud_gradient.png",
+    "retrievedAt": "2026-10-14",
+    "version": "公式サイト掲載画像 SHA-256 a332b54b620a2fa04413561c01c925cd40f936581c7bed52df424ecccc9c08b4",
+    "archiveSha256": "a332b54b620a2fa04413561c01c925cd40f936581c7bed52df424ecccc9c08b4"
   }
 ]

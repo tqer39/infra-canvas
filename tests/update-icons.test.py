@@ -103,6 +103,24 @@ class UpdateIcons(unittest.TestCase):
             path.write_bytes(data)
         self.assertEqual(u.plan(self.root, self.fetch), {})
 
+    def test_google_cloud_brand_png_updates_and_rejects_corrupt_data(self):
+        data = (Path(__file__).resolve().parents[1] / 'src/assets/gcp-cloud.png').read_bytes()
+        self.manifest.append({'type': 'gcp.cloud', 'provider': 'Google Cloud', 'cloudPack': 'gcp-brand', 'file': 'brand.png', 'source': 'https://cloud.google.com/', 'downloadURL': 'https://www.gstatic.com/cgc/super_cloud_gradient.png', 'sha256': 'old'})
+        (self.assets / 'manifest.json').write_text(json.dumps(self.manifest))
+        (self.assets / 'brand.png').write_bytes(b'old')
+        url = self.manifest[-1]['downloadURL']
+        self.responses[url] = data
+        writes = u.plan(self.root, self.fetch)
+        self.assertEqual(writes[self.assets / 'brand.png'], data)
+        for path, content in writes.items():
+            path.write_bytes(content)
+        self.assertEqual(u.plan(self.root, self.fetch), {})
+        for corrupt in [SVG, data[:-4], data + b'extra', data[:30] + b'X' + data[31:]]:
+            self.responses[url] = corrupt
+            with self.subTest(corrupt=corrupt[:16]), self.assertRaisesRegex(ValueError, 'PNG'):
+                u.plan(self.root, self.fetch)
+            self.assertEqual((self.assets / 'brand.png').read_bytes(), data)
+
     def test_deleted_brand_aborts_without_touching_any_asset(self):
         before = (self.assets / 'manifest.json').read_bytes()
         self.simple['package/data/simple-icons.json'] = b'[]'

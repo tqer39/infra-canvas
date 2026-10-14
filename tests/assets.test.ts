@@ -16,6 +16,13 @@ test('同梱アイコンは記録したハッシュと一致し、外部資産�
   for (const entry of manifest) {
     const bytes = readFileSync(`src/assets/${entry.file}`);
     assert.equal(createHash('sha256').update(bytes).digest('hex'), entry.sha256, entry.file);
+    if (entry.file.endsWith('.png')) {
+      assert.deepEqual(bytes.subarray(0, 8), Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+      assert.equal(bytes.toString('ascii', 12, 16), 'IHDR');
+      assert.ok(bytes.readUInt32BE(16) > 0 && bytes.readUInt32BE(20) > 0);
+      assert.equal(bytes.toString('ascii', bytes.length - 8, bytes.length - 4), 'IEND');
+      continue;
+    }
     const svg = bytes.toString('utf8');
     assert.match(svg, /<svg\b/, entry.file);
     assert.doesNotMatch(
@@ -89,6 +96,20 @@ test('LLMカタログと全サービスカタログは有効で、同梱資産�
   );
   assert.equal(catalogs[1].length, 17);
   for (const type of catalogs[1]) assert.ok(catalogs[0].includes(type), type);
+});
+
+test('表示アイコンの指定は種別・境界より優先し、DSLで保持する', () => {
+  const parsed = parseDSL(`diagram "icons" {
+    external.service settings "設定" icon="saas.github"
+    vpc network "境界" icon="gcp.compute"
+    aws.ecs automatic "自動" icon=""
+  }`);
+  assert.ok(parsed.diagram, JSON.stringify(parsed.diagnostics));
+  assert.deepEqual(validateDiagram(parsed.diagram).diagnostics, []);
+  const resources = new Map(parsed.diagram.resources.map((resource) => [resource.id, resource]));
+  assert.equal(getResourceIconType(resources.get('settings')!, resources), 'saas.github');
+  assert.equal(getResourceIconType(resources.get('network')!, resources), 'gcp.compute');
+  assert.equal(getResourceIconType(resources.get('automatic')!, resources), 'aws.ecs');
 });
 
 test('AWS境界アイコンは明示的な公開区分と所属を使い、他クラウドや未知の区分を推測しない', () => {

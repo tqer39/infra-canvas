@@ -1,5 +1,6 @@
 import { edgeKinds, edgeKindLabels } from '../core/model';
 import { useId, useState } from 'react';
+import { getIcon, iconTypes } from '../assets/icons';
 import {
   textAttributes,
   arrayAttributes,
@@ -50,9 +51,9 @@ const enums: Record<string, string[]> = {
   subnetType: ['public', 'private'],
 };
 type Field = { key: string; type: 'string' | 'number' | 'boolean' | 'array'; value: string };
-const fieldsFor = (attrs: Attributes): Field[] =>
+const fieldsFor = (attrs: Attributes, excludeIcon = false): Field[] =>
   Object.entries(attrs)
-    .filter(([key]) => !reserved.has(key))
+    .filter(([key]) => !reserved.has(key) && !(excludeIcon && key === 'icon'))
     .map(([key, value]) => ({
       key,
       type: Array.isArray(value) ? 'array' : (typeof value as Field['type']),
@@ -71,15 +72,20 @@ export function PropertyEditor({
 }) {
   const item = resource ?? connection!;
   const optionsId = useId();
-  const [fields, setFields] = useState(() => fieldsFor(item.attributes));
+  const [fields, setFields] = useState(() => fieldsFor(item.attributes, !!resource));
   const [label, setLabel] = useState(resource?.label ?? '');
   const [kind, setKind] = useState<Connection['kind']>(connection?.kind ?? 'traffic');
   const [newKey, setNewKey] = useState('');
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [icon, setIcon] = useState(String(resource?.attributes.icon ?? ''));
+  const [iconQuery, setIconQuery] = useState('');
+  const matchingIcons = iconTypes.filter((type) =>
+    type.toLowerCase().includes(iconQuery.trim().toLowerCase()),
+  );
   const supported = resource
     ? [...textAttributes, ...arrayAttributes, ...numberAttributes, ...boolAttributes].filter(
-        (key) => !reserved.has(key),
+        (key) => !reserved.has(key) && key !== 'icon',
       )
     : ['label', 'protocol', 'port', 'description', 'signals'];
   const change = (key: string, value: string) => {
@@ -88,12 +94,56 @@ export function PropertyEditor({
     );
     setSaved(false);
   };
-  const reset = () => {
-    setFields(fieldsFor(item.attributes));
-    setLabel(resource?.label ?? '');
-    setKind(connection?.kind ?? 'traffic');
-    setError('');
-    setSaved(false);
+  const save = (
+    next: { fields?: Field[]; label?: string; kind?: Connection['kind']; icon?: string } = {},
+  ) => {
+    try {
+      const attributes: Attributes = Object.fromEntries(
+        Object.entries(item.attributes).filter(([key]) => reserved.has(key)),
+      );
+      for (const field of next.fields ?? fields) {
+        if (!/^[A-Za-z_][A-Za-z0-9_.:-]*$/.test(field.key))
+          throw new Error('属性名を確認してください。');
+        if (
+          field.type === 'number' &&
+          (!field.value.trim() || !Number.isFinite(Number(field.value)))
+        )
+          throw new Error(`${names[field.key] ?? field.key} は数値で指定してください。`);
+        attributes[field.key] =
+          field.type === 'number'
+            ? Number(field.value)
+            : field.type === 'boolean'
+              ? field.value === 'true'
+              : field.type === 'array'
+                ? field.value === ''
+                  ? []
+                  : field.value.split('\n')
+                : field.value;
+      }
+      const nextIcon = next.icon ?? icon;
+      if (resource && nextIcon) attributes.icon = nextIcon;
+      const nextLabel = next.label ?? label;
+      const nextKind = next.kind ?? kind;
+      const sameAttributes =
+        Object.keys(attributes).length === Object.keys(item.attributes).length &&
+        Object.entries(attributes).every(
+          ([key, value]) => JSON.stringify(value) === JSON.stringify(item.attributes[key]),
+        );
+      if (
+        sameAttributes &&
+        (resource ? nextLabel === resource.label : nextKind === connection!.kind)
+      ) {
+        setError('');
+        setSaved(true);
+        return;
+      }
+      onSave({ label: nextLabel, kind: nextKind, attributes });
+      setError('');
+      setSaved(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setSaved(false);
+    }
   };
   return (
     <form
@@ -101,36 +151,7 @@ export function PropertyEditor({
       aria-label={resource ? 'リソース情報の編集' : `接続 ${connection!.id} の編集`}
       onSubmit={(event) => {
         event.preventDefault();
-        try {
-          const attributes: Attributes = Object.fromEntries(
-            Object.entries(item.attributes).filter(([key]) => reserved.has(key)),
-          );
-          for (const field of fields) {
-            if (!/^[A-Za-z_][A-Za-z0-9_.:-]*$/.test(field.key))
-              throw new Error('属性名を確認してください。');
-            if (
-              field.type === 'number' &&
-              (!field.value.trim() || !Number.isFinite(Number(field.value)))
-            )
-              throw new Error(`${names[field.key] ?? field.key} は数値で指定してください。`);
-            attributes[field.key] =
-              field.type === 'number'
-                ? Number(field.value)
-                : field.type === 'boolean'
-                  ? field.value === 'true'
-                  : field.type === 'array'
-                    ? field.value === ''
-                      ? []
-                      : field.value.split('\n')
-                    : field.value;
-          }
-          onSave({ label, kind, attributes });
-          setError('');
-          setSaved(true);
-        } catch (e) {
-          setError(e instanceof Error ? e.message : String(e));
-          setSaved(false);
-        }
+        save();
       }}
     >
       {resource ? (
@@ -138,6 +159,7 @@ export function PropertyEditor({
           名前
           <input
             value={label}
+            onBlur={() => save()}
             onChange={(e) => {
               setLabel(e.target.value);
               setSaved(false);
@@ -150,8 +172,9 @@ export function PropertyEditor({
           <select
             value={kind}
             onChange={(e) => {
-              setKind(e.target.value as Connection['kind']);
-              setSaved(false);
+              const nextKind = e.target.value as Connection['kind'];
+              setKind(nextKind);
+              save({ kind: nextKind });
             }}
           >
             {edgeKinds.map((kind) => (
@@ -161,6 +184,64 @@ export function PropertyEditor({
             ))}
           </select>
         </label>
+      )}
+      {resource && (
+        <>
+          <label>
+            表示アイコンを検索
+            <input
+              type="search"
+              value={iconQuery}
+              placeholder="例: aws、github、cloud_run"
+              onChange={(event) => setIconQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') event.preventDefault();
+              }}
+            />
+          </label>
+          <fieldset className="icon-picker">
+            <legend>表示アイコン</legend>
+            <div className="icon-candidates">
+              {['', ...(icon && !matchingIcons.includes(icon) ? [icon] : []), ...matchingIcons].map(
+                (type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    className={`icon-candidate ${type ? '' : 'icon-automatic'}`}
+                    aria-label={type || '種別から自動選択'}
+                    aria-pressed={icon === type}
+                    onClick={() => {
+                      setIcon(type);
+                      save({ icon: type });
+                    }}
+                  >
+                    {getIcon(type) ? (
+                      <img src={getIcon(type)} alt="" />
+                    ) : (
+                      <span className="icon-placeholder" aria-hidden="true">
+                        {type ? '◇' : '自動'}
+                      </span>
+                    )}
+                    <span>
+                      {type || '種別から自動選択'}
+                      {type && icon === type && !matchingIcons.includes(type)
+                        ? '（現在の選択）'
+                        : ''}
+                    </span>
+                  </button>
+                ),
+              )}
+            </div>
+          </fieldset>
+          <p className="editor-hint" aria-live="polite">
+            {matchingIcons.length
+              ? `${matchingIcons.length} 件のアイコン`
+              : '該当するアイコンはありません'}
+          </p>
+          {icon && getIcon(icon) && (
+            <img className="service-icon" src={getIcon(icon)} alt={`${icon} のプレビュー`} />
+          )}
+        </>
       )}
       {fields.map((field) => (
         <div className="property-field" key={field.key}>
@@ -173,12 +254,20 @@ export function PropertyEditor({
                 rows={field.key === 'config' ? 10 : 3}
                 placeholder={field.key === 'config' ? '設定内容（実行されません）' : '1行に1項目'}
                 onChange={(e) => change(field.key, e.target.value)}
+                onBlur={() => save()}
               />
             ) : field.type === 'boolean' || enums[field.key] ? (
               <select
                 aria-label={names[field.key] ?? field.key}
                 value={field.value}
-                onChange={(e) => change(field.key, e.target.value)}
+                onChange={(e) => {
+                  change(field.key, e.target.value);
+                  save({
+                    fields: fields.map((f) =>
+                      f.key === field.key ? { ...f, value: e.target.value } : f,
+                    ),
+                  });
+                }}
               >
                 {[
                   ...new Set([
@@ -198,6 +287,7 @@ export function PropertyEditor({
                 step="any"
                 value={field.value}
                 onChange={(e) => change(field.key, e.target.value)}
+                onBlur={() => save()}
               />
             )}
           </label>
@@ -206,8 +296,9 @@ export function PropertyEditor({
             className="property-remove"
             aria-label={`${field.key} を削除`}
             onClick={() => {
-              setFields((current) => current.filter((f) => f.key !== field.key));
-              setSaved(false);
+              const nextFields = fields.filter((f) => f.key !== field.key);
+              setFields(nextFields);
+              save({ fields: nextFields });
             }}
           >
             削除
@@ -253,18 +344,22 @@ export function PropertyEditor({
               : arrayAttributes.has(key) || key === 'signals'
                 ? 'array'
                 : 'string';
-          setFields((current) => [
-            ...current,
+          const nextFields: Field[] = [
+            ...fields,
             { key, type, value: type === 'boolean' ? 'false' : '' },
-          ]);
+          ];
+          setFields(nextFields);
           setNewKey('');
           setError('');
           setSaved(false);
+          if (type !== 'number') save({ fields: nextFields });
         }}
       >
         属性を追加
       </button>
-      <p className="editor-hint">配列は1行に1項目。変更は「変更を反映」で確定します。</p>
+      <p className="editor-hint">
+        配列は1行に1項目。選択は即時、テキストは入力欄を離れると自動反映します。元に戻す操作で取り消せます。
+      </p>
       {error && (
         <p className="warning-copy" role="alert">
           {error}
@@ -275,14 +370,6 @@ export function PropertyEditor({
           変更を反映しました
         </p>
       )}
-      <div className="detail-actions">
-        <button className="primary-button" type="submit">
-          変更を反映
-        </button>
-        <button className="toolbar-button" type="button" onClick={reset}>
-          変更を取り消す
-        </button>
-      </div>
     </form>
   );
 }

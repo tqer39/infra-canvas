@@ -5,6 +5,8 @@ export function getResourceIconType(
   resource: Resource,
   byId: ReadonlyMap<string, Resource>,
 ): string {
+  if (typeof resource.attributes.icon === 'string' && resource.attributes.icon.trim())
+    return resource.attributes.icon;
   if (resource.type === 'vpc') return 'aws.vpc';
   if (resource.type === 'account') return 'aws.account';
   if (!['subnet', 'region'].includes(resource.type)) return resource.type;
