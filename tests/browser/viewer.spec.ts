@@ -17,6 +17,48 @@ async function blurEditor(page: Page): Promise<void> {
 }
 
 for (const offline of [false, true]) {
+  test(`自動選択された実際のアイコンの分類だけ初期展開する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(
+      offline
+        ? 'file://' + resolve('artifacts/aws.html')
+        : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
+    );
+    const picker = page.getByRole('group', { name: '表示アイコン', exact: true });
+    for (const [id, type, group] of [
+      ['api', 'aws.ecs', 'AWS'],
+      ['tokyo', 'aws.region', 'AWS'],
+      ['prod', 'aws.account', 'AWS'],
+      ['repository', 'github.repository', 'GitHub'],
+      ['users', 'external.user', '利用者・外部リソース'],
+    ]) {
+      const node = page.locator(`.react-flow__node[data-id="${id}"]`);
+      await node.locator('.resource-label').click();
+      await expect(picker.locator('.icon-group[open] summary')).toHaveText([
+        new RegExp(`^${group}`),
+      ]);
+      const candidate = picker.getByRole('button', { name: type, exact: true });
+      await expect(node.locator('.service-icon')).toHaveAttribute(
+        'src',
+        (await candidate.locator('img').getAttribute('src'))!,
+      );
+      await expect(
+        picker.getByRole('button', { name: '種別から自動選択', exact: true }),
+      ).toHaveAttribute('aria-pressed', id === 'prod' ? 'false' : 'true');
+    }
+    await page.locator('input[type=file]').setInputFiles({
+      name: 'fallback.infra',
+      mimeType: 'text/plain',
+      buffer: Buffer.from(
+        'diagram "代替アイコン" {\n external.service unknown "汎用サービス"\n view service level=resource\n}',
+      ),
+    });
+    await page.locator('[data-id="unknown"] .resource-label').click();
+    await expect(picker.locator('.icon-group[open]')).toHaveCount(0);
+  });
   test(`表示アイコンの検索は選択を変えず、選択は自動反映・Undo/Redoできる (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
     context,
@@ -39,8 +81,7 @@ for (const offline of [false, true]) {
       .locator('.icon-group')
       .filter({ has: page.locator('summary', { hasText: /^AWS/ }) });
     await expect(awsGroup).toHaveCount(1);
-    await expect(picker.locator('.icon-group[open]')).toHaveCount(0);
-    await awsGroup.locator('summary').click();
+    await expect(picker.locator('.icon-group[open] summary')).toHaveText([/AWS/]);
     await expect(awsGroup).toHaveAttribute('open');
     await expect(awsGroup.getByRole('button', { name: 'aws.ec2', exact: true })).toBeVisible();
     await awsGroup.locator('summary').click();
