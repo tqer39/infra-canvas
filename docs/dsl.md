@@ -94,9 +94,26 @@ api -> database kind=dependency label="構成上の依存"
 pipeline -> role kind=auth protocol=oidc
 role -> api kind=deploy
 sg -> api kind=association
+database -> replica kind=replication
+primary -> standby kind=failover
 ```
 
-`kind` は `traffic`、`dependency`、`auth`、`deploy`、`association` です。省略時は `traffic` です。
+`kind` は次の7種類です。省略時は `traffic` です。
+
+| kind          | 種類     | 色     | 線種     |
+| ------------- | -------- | ------ | -------- |
+| `traffic`     | 通信     | 青     | 実線     |
+| `dependency`  | 依存     | 灰     | 破線     |
+| `auth`        | 認証     | 橙     | 一点鎖線 |
+| `deploy`      | デプロイ | 紫     | 長い破線 |
+| `association` | 関連     | 青緑   | 点線     |
+| `replication` | 複製     | ピンク | 二点鎖線 |
+| `failover`    | 切替     | 赤     | 短い破線 |
+
+線・矢印・ラベル・凡例の色を揃え、色と線種の両方で接続を区別します。
+`replication` はデータの複製、`failover` は主系から待機系への切替を表す設計上の接続です。
+これらの指定は実際の複製や切替の成立を保証しません。
+
 接続には `protocol`、`port`、`label`、`description` も指定できます。
 `port` は 0 から 65535 の整数です。端点は宣言されたリソースの ID を指定します。
 Terraform の参照と `depends_on` は `dependency` であり、通信の証拠として扱いません。

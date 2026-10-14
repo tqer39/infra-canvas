@@ -457,16 +457,17 @@ textarea:focus-visible {
   pointer-events: all;
   padding: 3px 5px;
   border: 1px solid transparent;
+  border-left: 3px solid var(--connection-color);
   border-radius: 3px;
   background: rgba(255, 255, 255, 0.95);
-  color: #4a5870;
+  color: var(--connection-color, #4a5870);
   font-size: 10px;
   white-space: nowrap;
 }
 .connection-label:hover,
 .connection-label[aria-pressed='true'] {
-  border-color: #24877f;
-  background: #edf8f5;
+  border-color: var(--connection-color, #24877f);
+  background: #fff;
 }
 .service-name-link {
   color: inherit;
@@ -604,25 +605,113 @@ textarea:focus-visible {
   gap: 14px;
   font-size: 10px;
   color: #8a9ba8;
-  height: 34px;
+  min-height: 34px;
   background: #f9fbfcf5;
   border-top: 1px solid #e1e9ee;
-  padding: 0 20px;
+  padding: 6px 20px;
   z-index: 5;
 }
 .edge-legend {
   display: flex;
-  gap: 13px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px 13px;
 }
-.edge-legend span {
+.edge-legend-item {
   display: flex;
   align-items: center;
   gap: 5px;
 }
-.edge-legend i {
-  display: inline-block;
-  width: 11px;
-  height: 2px;
+.edge-legend svg {
+  flex-shrink: 0;
+}
+.edge-legend-item {
+  cursor: help;
+  border-radius: 3px;
+}
+.edge-legend-item:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.edge-legend-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(360px, calc(100% - 24px));
+  padding: 10px 12px;
+  border: 1px solid #dce5eb;
+  border-radius: 7px;
+  background: #fff;
+  color: #4a5870;
+  box-shadow: 0 4px 16px #304d6426;
+  font-size: 12px;
+  line-height: 1.6;
+  z-index: 1;
+}
+.edge-legend-tooltip p {
+  margin: 4px 0 0;
+}
+.connection-help {
+  flex-shrink: 0;
+  color: #4a5870;
+}
+.connection-help summary {
+  cursor: pointer;
+  padding: 5px 7px;
+  border: 1px solid #dce5eb;
+  border-radius: 5px;
+  background: #fff;
+}
+.connection-help summary:focus-visible {
+  outline: 2px solid #0072b2;
+  outline-offset: 2px;
+}
+.connection-help-panel {
+  position: absolute;
+  right: 12px;
+  bottom: calc(100% + 8px);
+  width: min(560px, calc(100% - 24px));
+  max-height: min(560px, calc(100dvh - 180px));
+  overflow: auto;
+  padding: 16px;
+  border: 1px solid #dce5eb;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 4px 20px #304d6426;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.connection-help-panel h2 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+.connection-help-panel p {
+  margin: 0;
+}
+.connection-help-panel dl {
+  margin: 12px 0;
+}
+.connection-help-panel dl > div {
+  padding: 8px 0;
+  border-top: 1px solid #e1e9ee;
+}
+.connection-help-panel dt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.connection-help-panel dd {
+  margin: 4px 0 0 50px;
+}
+.connection-help-panel small {
+  color: #596579;
+  font-size: 11px;
+  font-weight: 400;
+}
+.connection-help-panel dd small {
+  display: block;
 }
 .react-flow__controls {
   bottom: 42px;

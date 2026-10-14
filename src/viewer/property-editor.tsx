@@ -1,3 +1,4 @@
+import { edgeKinds, edgeKindLabels } from '../core/model';
 import { useId, useState } from 'react';
 import {
   textAttributes,
@@ -153,11 +154,11 @@ export function PropertyEditor({
               setSaved(false);
             }}
           >
-            <option value="traffic">通信</option>
-            <option value="dependency">依存</option>
-            <option value="auth">認証</option>
-            <option value="deploy">デプロイ</option>
-            <option value="association">関連</option>
+            {edgeKinds.map((kind) => (
+              <option key={kind} value={kind}>
+                {edgeKindLabels[kind]}
+              </option>
+            ))}
           </select>
         </label>
       )}
