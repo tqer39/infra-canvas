@@ -1,0 +1,24 @@
+# BigQuery subscriptionで直接書き込む設計例。変換が必要な処理は別途設計する。
+# https://docs.cloud.google.com/pubsub/docs/bigquery
+diagram "Google Cloud・イベント分析" version=1 {
+  external.service producer "イベント送信元"
+  external.user analyst "分析担当者"
+  project analytics "分析プロジェクト" project="demo-analytics" {
+    gcp.pubsub events "Pub/Sub トピック" scope=global
+    gcp.pubsub-subscription subscription "BigQuery subscription" display=list items=["テーブルスキーマに合うイベント", "配信はat-least-once", "集計時にイベントIDで重複を考慮"]
+    region tokyo "東京のデータ" region="asia-northeast1" {
+      gcp.bigquery warehouse "BigQuery イベントテーブル" region="asia-northeast1"
+    }
+    gcp.service-account writer "Pub/Subサービスエージェント" description="書き込み先テーブルの権限を別途設定"
+  }
+  producer -> events kind=traffic protocol=https port=443 label="イベント発行"
+  events -> subscription kind=association label="購読対象"
+  subscription -> warehouse kind=traffic label="イベント書き込み"
+  subscription -> writer kind=association label="書き込みID"
+  writer -> warehouse kind=auth label="テーブルへの書き込み認可"
+  analyst -> warehouse kind=traffic protocol=https port=443 label="集計クエリ"
+  view overview level=overview
+  view service level=service
+  view network level=subnet
+  view security level=resource overlay=sg
+}

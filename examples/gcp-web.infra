@@ -1,0 +1,25 @@
+# 架空プロジェクトの設計例。Cloud SQL接続は公開IP + Cloud SQL Connectorを想定。
+# https://docs.cloud.google.com/sql/docs/postgres/connect-run
+diagram "Google Cloud・Cloud Run Web アプリ" version=1 {
+  external.user users "利用者"
+  github.actions pipeline "GitHub Actions"
+  project production "Web 本番プロジェクト" project="demo-web-prod" environment=production {
+    region tokyo "東京" region="asia-northeast1" {
+      gcp.cloud_run web "Cloud Run Web API" description="公開HTTPSエンドポイント"
+      gcp.sql database "Cloud SQL PostgreSQL" description="公開IP + Cloud SQL Connector経由。DB認証は別途設定"
+      gcp.storage uploads "Cloud Storage アップロード" region="asia-northeast1"
+    }
+    gcp.service-account runtime "実行サービスアカウント" display=list items=["Cloud SQL Client", "アップロード用バケットへのアクセス"]
+  }
+  users -> web kind=traffic protocol=https port=443
+  web -> database kind=traffic label="Cloud SQL Connector経由"
+  web -> uploads kind=traffic protocol=https port=443 label="ファイル保存"
+  web -> runtime kind=association label="実行ID"
+  runtime -> database kind=auth label="Cloud SQL接続の認可"
+  runtime -> uploads kind=auth label="バケットへのアクセス認可"
+  pipeline -> web kind=deploy label="コンテナの配備"
+  view overview level=overview
+  view service level=service
+  view network level=subnet
+  view security level=resource overlay=sg
+}
