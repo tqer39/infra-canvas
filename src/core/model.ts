@@ -127,6 +127,7 @@ export interface EdgeRoute {
   labelAnchor?: { x: number; y: number };
 }
 export interface LayoutResult {
+  compact?: boolean;
   nodes: Placement[];
   edges?: EdgeRoute[];
   durationMs: number;

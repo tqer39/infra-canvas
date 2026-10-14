@@ -18,6 +18,85 @@ async function remoteStatus(page: import('@playwright/test').Page, configured = 
   );
 }
 
+test('リポジトリ生成の初期表示を詰め、長いサービス名と7本のラベルを省略せず表示する', async ({
+  page,
+}) => {
+  await remoteStatus(page);
+  await page.route('**/api/repository/status', (route) =>
+    route.fulfill({ json: { available: true } }),
+  );
+  await page.route('**/api/repository', (route) =>
+    route.fulfill({
+      json: {
+        url: 'https://github.com/example/generic',
+        name: 'example/generic',
+        ref: 'main',
+        commit: 'a'.repeat(40),
+        warnings: [],
+        files: [{ path: 'wrangler.jsonc', content: '{"name":"app","main":"index.ts"}' }],
+      },
+    }),
+  );
+  const dsl = `diagram "Generic generated services" {
+    group config "Configuration provider" { external.service secrets "Secret store with a long descriptive name" }
+    group build "Automation provider" { external.service runner "Build and release service" }
+    group runtime "Runtime provider" {
+      external.service app "Application runtime with a full service name"
+      external.service db "Persistent database"
+      external.service queue "Asynchronous queue"
+    }
+    group messaging "Notification provider" { external.service notify "Notification receiver" }
+    secrets -> runner id=supply label="Credential supply" kind=auth
+    runner -> app id=deploy label="Application deployment" kind=deploy
+    runner -> notify id=notification label="Result notification" kind=dependency
+    secrets -> app id=sync label="Synchronization via automation" kind=dependency
+    app -> db id=database label="Conditional database connection" kind=dependency
+    app -> queue id=binding label="Queue binding" kind=association
+    app -> db id=replication label="Replication" kind=replication
+    view service level=resource direction=RIGHT
+  }`;
+  await page.route('**/api/llm/complete', (route) =>
+    route.fulfill({
+      json: { text: JSON.stringify({ message: '生成しました。', dsl, warnings: [] }) },
+    }),
+  );
+  await page.goto(`http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`);
+  await page.getByRole('button', { name: 'チャット', exact: true }).click();
+  await page.getByLabel('LLM接続先', { exact: true }).selectOption('bedrock');
+  await page.getByText('リポジトリURLから作成', { exact: true }).click();
+  await page
+    .getByLabel('リポジトリURL', { exact: true })
+    .fill('https://github.com/example/generic');
+  await page.getByRole('button', { name: 'リポジトリを読み込む', exact: true }).click();
+  await page.getByRole('button', { name: 'LLMで概要を補足', exact: true }).click();
+  await page.getByRole('button', { name: '図に反映', exact: true }).click();
+  await page.getByRole('button', { name: 'チャットを閉じる', exact: true }).click();
+  await expect(page.locator('.react-flow__edge')).toHaveCount(7);
+  await expect(page.locator('.connection-label.compact-label')).toHaveCount(7);
+  const title = page.locator('[data-id="app"] .resource-text strong');
+  await expect(title).toHaveText('Application runtime with a full service name');
+  await expect(title).toHaveCSS('white-space', 'normal');
+  await expect(title).toHaveCSS('font-size', '14px');
+  await expect
+    .poll(() =>
+      page
+        .locator('.react-flow__viewport')
+        .evaluate((el) =>
+          Number(/scale\(([^)]+)\)/.exec((el as HTMLElement).style.transform)?.[1] ?? 0),
+        ),
+    )
+    .toBeGreaterThan(0.55);
+  const overlapping = await page.locator('.connection-label').evaluateAll((elements) => {
+    const rects = elements.map((el) => el.getBoundingClientRect());
+    return rects.some((a, i) =>
+      rects
+        .slice(i + 1)
+        .some((b) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top),
+    );
+  });
+  expect(overlapping).toBe(false);
+});
+
 test('JSON文字列内の改行をローカルで回復し、再生成せず候補だけを表示する', async ({ page }) => {
   await remoteStatus(page);
   let calls = 0;

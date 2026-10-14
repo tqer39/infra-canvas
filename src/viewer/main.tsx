@@ -84,6 +84,7 @@ declare global {
   }
 }
 type ResourceData = Record<string, unknown> & {
+  compact?: boolean;
   resource: Resource;
   collapsed: boolean;
   iconType: string;
@@ -277,7 +278,7 @@ function ResourceCard({ data }: NodeProps<ResourceNode>) {
           '',
       )}
       data-appearance={String(resource.attributes.appearance ?? 'default')}
-      className={`resource-card ${boundary && !collapsed ? 'boundary-card' : ''} ${boundary && resource.type.startsWith('aws.') ? 'detail-boundary-card' : ''} ${collapsed ? 'collapsed-card' : ''} ${related ? 'related' : ''} ${muted ? 'muted' : ''}`}
+      className={`resource-card ${data.compact ? 'compact-card' : ''} ${boundary && !collapsed ? 'boundary-card' : ''} ${boundary && resource.type.startsWith('aws.') ? 'detail-boundary-card' : ''} ${collapsed ? 'collapsed-card' : ''} ${related ? 'related' : ''} ${muted ? 'muted' : ''}`}
     >
       <Handle type="target" position={Position.Left} />
       <Handle type="source" position={Position.Right} />
@@ -463,7 +464,7 @@ function RoutedConnection(props: EdgeProps) {
       )}
       <EdgeLabelRenderer>
         <button
-          className="connection-label nodrag nopan"
+          className={`connection-label nodrag nopan ${props.data?.compact ? 'compact-label' : ''}`}
           style={
             {
               transform: `translate(-50%, -50%) translate(${labelPosition.x}px, ${labelPosition.y}px)`,
@@ -800,6 +801,7 @@ function App() {
               },
               style: { width: placement.width, height: placement.height },
               data: {
+                compact: layout.compact,
                 resource,
                 contentTop: placement.contentTop,
                 iconType: getResourceIconType(resource, originalResources),
@@ -853,7 +855,7 @@ function App() {
             labelBgStyle: { fill: '#fff', fillOpacity: 0.95 },
             labelBgPadding: [5, 3] as [number, number],
             type: 'routed',
-            data: { route: routes.get(edge.id), kind: edge.kind },
+            data: { route: routes.get(edge.id), kind: edge.kind, compact: layout.compact },
           })),
         );
         setGraph(display);
@@ -902,7 +904,7 @@ function App() {
     }
     const frame = requestAnimationFrame(() => {
       autoFitContext.current = context;
-      void flow.fitView({ padding: 0.14, duration: 250 });
+      void flow.fitView({ padding: lastLayout?.compact ? 0.06 : 0.14, duration: 250 });
     });
     return () => cancelAnimationFrame(frame);
   }, [graph, flow]);

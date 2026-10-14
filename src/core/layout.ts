@@ -2,6 +2,11 @@ import { applyColumnLayout, placeAnnotations, placeOverlayLabels } from './spati
 import { evidenceLabels, changeLabels, resourceTypeLabel } from './presentation.js';
 import { validateResourceExpressions } from './architecture.js';
 import { applyFixedLayout, separateLabels } from './geometry.js';
+import {
+  compactRepositoryLayout,
+  projectCompoundEdges,
+  packRepositoryRoots,
+} from './compact-layout.js';
 import { resourceMetadata, metadataWidth, metadataHeight } from './resource-metadata.js';
 import { resourceContent, contentDimensions } from './content.js';
 import ELK from 'elkjs/lib/elk.bundled.js';
@@ -21,7 +26,7 @@ import type {
 export interface LayoutOptions {
   direction?: 'RIGHT' | 'DOWN';
 }
-export const layoutVersion = 'infra-canvas-layout-11';
+export const layoutVersion = 'infra-canvas-layout-12';
 
 export const connectionLabel = (edge: Connection): string =>
   [
@@ -67,6 +72,7 @@ export async function layoutGraph(
     if (!resourceIds.has(edge.source) || !resourceIds.has(edge.target))
       throw new Error(`配置対象に存在しない接続端点: ${edge.id}`);
   const started = performance.now();
+  const compact = compactRepositoryLayout(graph);
   const byId = new Map(graph.resources.map((resource) => [resource.id, resource]));
   const children = new Map<string | undefined, Resource[]>();
   for (const resource of graph.resources) {
@@ -102,11 +108,11 @@ export async function layoutGraph(
           Math.min(
             Math.max(labelWidth, detailBoundary ? textWidth(resource.type, 6, 10) : 0) +
               headerWidth,
-            480,
+            compact && !content ? 300 : 480,
           ),
         );
         const labelLines =
-          collapsed || detailBoundary || content
+          compact || collapsed || detailBoundary || content
             ? Math.ceil(labelWidth / (width - headerWidth))
             : 1;
         const metaHeight = metadataHeight(metadata, width);
@@ -122,7 +128,7 @@ export async function layoutGraph(
         if (nested.length) {
           node.children = nested;
           node.layoutOptions = {
-            'elk.padding': `[top=${(detailBoundary ? 68 + Math.max(0, labelLines - 1) * 18 : 56) + metaHeight},left=24,bottom=24,right=24]`,
+            'elk.padding': `[top=${(detailBoundary ? 68 + Math.max(0, labelLines - 1) * 18 : 56 + (compact ? Math.max(0, labelLines - 1) * 18 : 0)) + metaHeight},left=24,bottom=24,right=24]`,
             ...(detailBoundary || metadata.length
               ? {
                   'elk.nodeSize.constraints': 'MINIMUM_SIZE',
@@ -163,6 +169,7 @@ export async function layoutGraph(
       'elk.padding': '[top=24,left=24,bottom=24,right=24]',
     },
   };
+  if (compact) projectCompoundEdges(input, graph);
   const elk = new ELK();
   const result = await elk.layout(input);
   const nodes: Placement[] = [];
@@ -192,6 +199,7 @@ export async function layoutGraph(
     }
   };
   collect(result);
+  if (compact) packRepositoryRoots(nodes, options.direction ?? 'RIGHT');
   const edges: EdgeRoute[] = allEdges.map(({ edge, owner }) => {
     const origin = offsets.get(edge.container ?? owner) ?? { x: 0, y: 0 };
     const absolute = (point: { x: number; y: number }): { x: number; y: number } => ({
@@ -217,18 +225,24 @@ export async function layoutGraph(
   });
   const initial = { nodes, edges, durationMs: 0, version: layoutVersion };
   const columnsChanged = applyColumnLayout(graph, initial, options.direction);
-  const layout = applyFixedLayout(graph, initial, columnsChanged);
+  const routingGraph = compact
+    ? {
+        ...graph,
+        connections: [...graph.connections].sort((a, b) => a.id.localeCompare(b.id, 'en')),
+      }
+    : graph;
+  const layout = applyFixedLayout(routingGraph, initial, compact || columnsChanged);
   separateLabels(
     layout.edges ?? [],
     new Map(
       graph.connections.map((edge) => [
         edge.id,
-        { width: textWidth(connectionLabel(edge)) + 14, height: 22 },
+        { width: textWidth(connectionLabel(edge)) + 14, height: compact ? 26 : 22 },
       ]),
     ),
     layout.nodes,
   );
   placeOverlayLabels(layout);
   layout.annotations = placeAnnotations(graph, layout);
-  return { ...layout, durationMs: performance.now() - started };
+  return { ...layout, compact, durationMs: performance.now() - started };
 }
