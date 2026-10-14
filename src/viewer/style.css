@@ -471,6 +471,9 @@ textarea:focus-visible {
   border-color: var(--connection-color, #24877f);
   background: #fff;
 }
+.connection-label.compact-label {
+  font-size: 12px;
+}
 .service-name-link {
   color: inherit;
   text-decoration: none;
@@ -509,6 +512,12 @@ textarea:focus-visible {
   text-overflow: ellipsis;
 }
 .collapsed-card .resource-text strong {
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}
+.compact-card .resource-text strong {
+  font-size: 14px;
   white-space: normal;
   overflow: visible;
   overflow-wrap: anywhere;
