@@ -6,14 +6,14 @@ React Flow が探索操作を、ELK.js が境界を含む自動配置を担当�
 
 ## 起動
 
-mise を導入し、リポジトリを clone したディレクトリで実行します。Node.js 24.21.0 と Python 3.14.7 は mise が管理します。
+mise を導入し、リポジトリを clone したディレクトリで実行します。Node.js 24.21.0、Python 3.14.7、Lefthook 2.2.1 は mise が管理します。
 
 ```bash
 mise bootstrap
 mise run dev
 ```
 
-セットアップは依存インストール、AIルール生成、headless Chromium の準備、ビルドを行い、再実行できます。
+セットアップは依存インストール、Git フック登録、AIルール生成、headless Chromium の準備、ビルドを行い、再実行できます。
 Linux で Chromium の OS 依存が不足する場合は `mise run browser:install-ci` を使います。
 macOS・Linux・Windows の共通入口は mise です（動作実測は macOS）。
 
@@ -129,6 +129,13 @@ npm 公開はしていません。ビルド後、ローカルのパス依存と�
 `mise run fmt` で整形し、`mise run fmt:check` は書き換えず差分を検査します。
 独自 DSL・Terraform のサンプル、公式 SVG・資産 manifest、生成物、lockfile は整形対象から除外します。
 Markdown 内のサンプルコードも自動整形しません。
+
+Lefthook の `pre-commit` は `mise run lint` と `mise run rules:check` を並列に実行し、
+失敗するとコミットを止めます。ステージ済みファイルに限定せず、作業ツリー全体を検証します。
+自動修正や再ステージは行わないため、整形エラーは `mise run fmt` で修正してから必要な変更をステージしてください。
+既存の作業環境では `mise run hooks:install` でフックを登録・更新でき、
+`mise run hooks:check` で同じチェックを手動実行できます。
+単体テスト・ビルド・ブラウザテストは次のコマンドと CI で実行します。
 
 ```bash
 mise run check
