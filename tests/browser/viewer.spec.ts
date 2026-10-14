@@ -2,6 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { parseDSL } from '../../src/core/parser';
 
 async function setArrowShape(page: Page, shape: string): Promise<void> {
   const toggle = page.getByRole('switch', { name: '矢印を曲線にする', exact: true });
@@ -1518,5 +1519,196 @@ for (const offline of [false, true]) {
       )
       .toBe(true);
     await page.screenshot({ path: `artifacts/identity-${offline ? 'offline' : 'live'}.png` });
+  });
+}
+
+for (const offline of [false, true]) {
+  test(`7種類の接続を色と線種で区別し、凡例・矢印・ラベル・編集を同期する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    const kinds = [
+      'traffic',
+      'dependency',
+      'auth',
+      'deploy',
+      'association',
+      'replication',
+      'failover',
+    ];
+    const labels = ['通信', '依存', '認証', 'デプロイ', '関連', '複製', '切替'];
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    await page.getByRole('textbox', { name: 'DSL 入力' }).fill(`diagram "線種の比較" {
+      aws.ecs source "送信元"
+      ${kinds.map((kind, i) => `aws.rds target${i} "接続先${i}"\nsource -> target${i} kind=${kind}`).join('\n')}
+    }`);
+    await page.getByRole('button', { name: '解析して反映', exact: true }).click();
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    await expect(page.locator('.connection-label')).toHaveCount(7);
+    if (!offline) {
+      await page.locator('.react-flow__controls-fitview').click();
+      await page.screenshot({ path: 'artifacts/connection-kinds.png' });
+    }
+    const colors: string[] = [];
+    const patterns: string[] = [];
+    for (const [index, kind] of kinds.entries()) {
+      const label = page.locator(`.connection-label[data-kind="${kind}"]`);
+      const legend = page.locator(`.edge-legend [data-kind="${kind}"]`);
+      await expect(label).toHaveText(labels[index]!);
+      await expect(legend).toHaveText(labels[index]!);
+      const color = await legend.evaluate((el) => getComputedStyle(el).color);
+      colors.push(color);
+      await expect(label).toHaveCSS('color', color);
+      await expect(label).toHaveCSS('border-left-color', color);
+      const edge = page.locator('.react-flow__edge').filter({
+        has: page.locator(`path[style*="${color}"]`),
+      });
+      await expect(edge).toHaveCount(1);
+      const path = edge.locator('.react-flow__edge-path');
+      await expect(path).toHaveCSS('stroke', color);
+      const dash = await path.evaluate((el) => getComputedStyle(el).strokeDasharray);
+      patterns.push(dash);
+      const legendDash = await legend
+        .locator('path')
+        .first()
+        .evaluate((el) => getComputedStyle(el).strokeDasharray);
+      expect(dash).toBe(legendDash);
+      const markerColor = await path.evaluate((el) => {
+        const ref = el.getAttribute('marker-end')!;
+        const id = ref.slice(ref.indexOf('#') + 1).replace(/["')]/g, '');
+        return getComputedStyle(document.getElementById(id)!.querySelector('polyline')!).stroke;
+      });
+      expect(markerColor).toBe(color);
+      await label.click();
+      await expect(label).toHaveCSS('color', color);
+      await expect(path).toHaveCSS('stroke', color);
+    }
+    expect(new Set(colors).size).toBe(7);
+    expect(new Set(patterns).size).toBe(7);
+    await setArrowShape(page, 'bezier');
+    await expect(page.locator('.connection-label[data-kind="failover"]')).toHaveCSS(
+      'color',
+      colors[6]!,
+    );
+    await page.locator('.connection-editor summary').click();
+    const form = page.locator('.connection-editor form');
+    await expect(form.getByLabel('接続の種類')).toHaveValue('failover');
+    await form.getByLabel('接続の種類').selectOption('replication');
+    await form.getByRole('button', { name: '変更を反映', exact: true }).click();
+    await expect(page.locator('.connection-label[data-kind="replication"]')).toHaveCount(2);
+    await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
+    const restored = parseDSL(await page.getByRole('textbox', { name: 'DSL 入力' }).inputValue());
+    expect(restored.diagnostics).toEqual([]);
+    expect(
+      restored.diagram!.connections.filter((edge) => edge.kind === 'replication'),
+    ).toHaveLength(2);
+  });
+}
+
+for (const offline of [false, true]) {
+  test(`線種の意味をキーボードと狭い画面で参照でき、視点を保持する (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    await expect(page.locator('.connection-label').first()).toBeVisible();
+    const viewport = page.locator('.react-flow__viewport');
+    await viewport.evaluate(async () => {
+      for (let frame = 0; frame < 35; frame++) await new Promise(requestAnimationFrame);
+    });
+    const before = await viewport.getAttribute('style');
+    const summary = page.locator('.connection-help summary');
+    const panel = page.getByRole('region', { name: '線種の意味と例' });
+    await expect(panel).toBeHidden();
+    await summary.focus();
+    await page.keyboard.press('Enter');
+    await expect(panel).toBeVisible();
+    const labels = ['通信', '依存', '認証', 'デプロイ', '関連', '複製', '切替'];
+    const patterns = ['実線', '破線', '一点鎖線', '長い破線', '点線', '二点鎖線', '短い破線'];
+    for (const [index, row] of (await panel.locator('dl > div').all()).entries()) {
+      await expect(row.locator('dt')).toContainText(labels[index]!);
+      await expect(row.locator('dt')).toContainText(patterns[index]!);
+      await expect(row.locator('dd')).toContainText('例：');
+      const kind = await row.getAttribute('data-kind');
+      const legend = page.locator(`.edge-legend [data-kind="${kind}"]`);
+      expect(await row.locator('svg path').first().getAttribute('stroke-dasharray')).toBe(
+        await legend.locator('svg path').first().getAttribute('stroke-dasharray'),
+      );
+    }
+    await expect(panel.locator('dl > div')).toHaveCount(7);
+    await expect(panel).toContainText('通信の成立は示しません');
+    await expect(panel).toContainText('実効権限は示しません');
+    await expect(viewport).toHaveAttribute('style', before!);
+    if (!offline) await page.screenshot({ path: 'artifacts/connection-help.png' });
+    await page.keyboard.press('Escape');
+    await expect(panel).toBeHidden();
+    await expect(summary).toBeFocused();
+    await page.setViewportSize({ width: 640, height: 720 });
+    await expect(page.locator('.edge-legend')).toBeHidden();
+    await expect(summary).toBeVisible();
+    await summary.click();
+    await expect(panel).toBeVisible();
+    const bounds = await panel.boundingBox();
+    expect(bounds!.x).toBeGreaterThanOrEqual(0);
+    expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(640);
+    expect(bounds!.y).toBeGreaterThanOrEqual(0);
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(720);
+    await summary.click();
+    await expect(panel).toBeHidden();
+  });
+}
+
+for (const offline of [false, true]) {
+  test(`凡例の意味をホバーとフォーカスで確認し、Escapeで閉じる (${offline ? 'HTML' : '開発画面'})`, async ({
+    page,
+    context,
+  }) => {
+    if (offline) await context.setOffline(true);
+    await page.goto(offline ? 'file://' + resolve('artifacts/aws.html') : 'http://127.0.0.1:5188');
+    const tooltip = page.getByRole('tooltip');
+    await expect(tooltip).toHaveCount(0);
+    const meanings = [
+      ['traffic', '通信 · 実線', '通信やデータの流れ'],
+      ['dependency', '依存 · 破線', 'リソースや設定を必要とする関係'],
+      ['auth', '認証 · 一点鎖線', '認証・認可に関する関係'],
+      ['deploy', 'デプロイ · 長い破線', '配備・更新する流れ'],
+      ['association', '関連 · 点線', '所属・関連付け・設定上の関連'],
+      ['replication', '複製 · 二点鎖線', '接続先へ複製する流れ'],
+      ['failover', '切替 · 短い破線', '待機系へ切り替える関係'],
+    ];
+    for (const [kind, heading, meaning] of meanings) {
+      const item = page.locator(`.edge-legend-item[data-kind="${kind}"]`);
+      await item.hover();
+      await expect(tooltip).toBeVisible();
+      await expect(tooltip).toContainText(heading!);
+      await expect(tooltip).toContainText(meaning!);
+      await expect(item).toHaveAttribute('aria-describedby', 'connection-legend-tooltip');
+      const bounds = await tooltip.boundingBox();
+      expect(bounds!.x).toBeGreaterThanOrEqual(0);
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(1440);
+      await page.mouse.move(20, 80);
+      await expect(tooltip).toHaveCount(0);
+      await item.focus();
+      await expect(tooltip).toContainText(meaning!);
+      await page.keyboard.press('Escape');
+      await expect(tooltip).toHaveCount(0);
+      await expect(item).toBeFocused();
+      await page.getByRole('button', { name: 'DSL を編集', exact: true }).focus();
+      await expect(tooltip).toHaveCount(0);
+    }
+    await page.locator('.edge-legend-item[data-kind="traffic"]').hover();
+    await tooltip.hover();
+    await expect(tooltip).toContainText('通信 · 実線');
+    await page.keyboard.press('Escape');
+    await expect(tooltip).toHaveCount(0);
+    await page.mouse.move(20, 80);
+    await page.locator('.edge-legend-item[data-kind="traffic"]').focus();
+    await page.keyboard.press('Tab');
+    await expect(page.locator('.edge-legend-item[data-kind="dependency"]')).toBeFocused();
+    await expect(tooltip).toContainText('依存 · 破線');
+    if (!offline) await page.screenshot({ path: 'artifacts/connection-legend-tooltip.png' });
   });
 }

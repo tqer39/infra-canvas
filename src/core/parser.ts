@@ -7,7 +7,7 @@ import {
 import { resourceContent } from './content.js';
 import { validateConfiguration } from './configuration.js';
 import { validateComputeAttributes } from './resource-metadata.js';
-import { boundaryTypes, isTelemetrySignals } from './model.js';
+import { boundaryTypes, isTelemetrySignals, edgeKinds as supportedEdgeKinds } from './model.js';
 import type {
   Attribute,
   Attributes,
@@ -25,7 +25,7 @@ interface Token extends SourceLocation {
   value: string;
   kind: 'word' | 'string' | 'symbol' | 'newline' | 'eof';
 }
-const edgeKinds = new Set(['traffic', 'dependency', 'auth', 'deploy', 'association']);
+const edgeKinds: ReadonlySet<string> = new Set(supportedEdgeKinds);
 class ParseFailure extends Error {}
 
 export function parseDSL(source: string): ParseResult {

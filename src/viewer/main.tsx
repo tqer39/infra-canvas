@@ -48,7 +48,13 @@ import { getRegionCountry, getResourceRegion } from '../assets/regions';
 import { createHistory, historyReducer } from './history';
 import defaultSource from '../../examples/aws.infra?raw';
 import { PropertyEditor } from './property-editor';
-import type { Attributes, Connection } from '../core/model';
+import {
+  edgeKindLabels as kindLabels,
+  edgeKinds,
+  type Attributes,
+  type Connection,
+} from '../core/model';
+import { connectionStyles, connectionDescriptions } from './connection-style';
 
 declare global {
   interface Window {
@@ -64,20 +70,6 @@ type ResourceData = Record<string, unknown> & {
   muted: boolean;
 };
 type ResourceNode = Node<ResourceData>;
-const kindLabels: Record<string, string> = {
-  traffic: '通信',
-  dependency: '依存',
-  auth: '認証',
-  deploy: 'デプロイ',
-  association: '関連',
-};
-const kindColors: Record<string, string> = {
-  traffic: '#55749a',
-  dependency: '#8b93a3',
-  auth: '#ad7633',
-  deploy: '#8165b0',
-  association: '#258d81',
-};
 const activeEdgeZ = 10;
 const viewLabels: Record<string, string> = {
   overview: '概要',
@@ -85,6 +77,135 @@ const viewLabels: Record<string, string> = {
   network: 'ネットワーク',
   security: 'セキュリティ',
 };
+
+function ConnectionSample({ kind }: { kind: Connection['kind'] }) {
+  return (
+    <svg
+      width="42"
+      height="12"
+      viewBox="0 0 42 12"
+      aria-hidden="true"
+      style={{ color: connectionStyles[kind].color }}
+    >
+      <path
+        d="M 0 6 H 36"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeDasharray={connectionStyles[kind].dash}
+        fill="none"
+      />
+      <path d="M 36 3 L 41 6 L 36 9 Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function ConnectionLegend() {
+  const [hovered, setHovered] = useState<Connection['kind']>();
+  const [focused, setFocused] = useState<Connection['kind']>();
+  const [dismissed, setDismissed] = useState(false);
+  const active = dismissed ? undefined : (hovered ?? focused);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const enter = (kind: Connection['kind']) => {
+    clearTimeout(hoverTimer.current);
+    setHovered(kind);
+    setDismissed(false);
+  };
+  const leave = () => {
+    clearTimeout(hoverTimer.current);
+    hoverTimer.current = setTimeout(() => setHovered(undefined), 150);
+  };
+  useEffect(() => () => clearTimeout(hoverTimer.current), []);
+  useEffect(() => {
+    if (!active) return;
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        clearTimeout(hoverTimer.current);
+        setHovered(undefined);
+        setDismissed(true);
+      }
+    };
+    document.addEventListener('keydown', dismiss);
+    return () => document.removeEventListener('keydown', dismiss);
+  }, [active]);
+  return (
+    <div className="edge-legend">
+      {edgeKinds.map((kind) => (
+        <span
+          key={kind}
+          className="edge-legend-item"
+          data-kind={kind}
+          style={{ color: connectionStyles[kind].color }}
+          tabIndex={0}
+          aria-describedby={active === kind ? 'connection-legend-tooltip' : undefined}
+          onMouseEnter={() => enter(kind)}
+          onMouseLeave={leave}
+          onFocus={() => {
+            clearTimeout(hoverTimer.current);
+            setHovered(undefined);
+            setFocused(kind);
+            setDismissed(false);
+          }}
+          onBlur={() => setFocused(undefined)}
+        >
+          <ConnectionSample kind={kind} />
+          {kindLabels[kind]}
+        </span>
+      ))}
+      {active && (
+        <div
+          className="edge-legend-tooltip"
+          id="connection-legend-tooltip"
+          role="tooltip"
+          onMouseEnter={() => enter(active)}
+          onMouseLeave={leave}
+        >
+          <strong>
+            {kindLabels[active]} · {connectionDescriptions[active].pattern}
+          </strong>
+          <p>{connectionDescriptions[active].meaning}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ConnectionHelp() {
+  return (
+    <details
+      className="connection-help"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.currentTarget.open = false;
+          event.currentTarget.querySelector('summary')?.focus();
+        }
+      }}
+    >
+      <summary>線種の意味</summary>
+      <section className="connection-help-panel" aria-label="線種の意味と例">
+        <h2>線種の意味</h2>
+        <p>矢印は送信元から接続先へ向きます。色と線の模様を組み合わせて、次の関係を表します。</p>
+        <dl>
+          {edgeKinds.map((kind) => (
+            <div key={kind} data-kind={kind}>
+              <dt>
+                <ConnectionSample kind={kind} />
+                {kindLabels[kind]}
+                <small>{connectionDescriptions[kind].pattern}</small>
+              </dt>
+              <dd>
+                {connectionDescriptions[kind].meaning}
+                <small>{connectionDescriptions[kind].example}</small>
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <p>
+          線は構成上の関係や設計の意図を表します。実際の通信・権限・複製・切替の成立を保証するものではありません。
+        </p>
+      </section>
+    </details>
+  );
+}
 
 function RegionFlag({ resource }: { resource: Resource }) {
   const region = getResourceRegion(resource);
@@ -270,11 +391,15 @@ function RoutedConnection(props: EdgeProps) {
       <EdgeLabelRenderer>
         <button
           className="connection-label nodrag nopan"
-          style={{
-            transform: `translate(-50%, -50%) translate(${!curved && route?.label ? route.label.x : fallback[1]}px, ${!curved && route?.label ? route.label.y : fallback[2]}px)`,
-            opacity: props.style?.opacity,
-            zIndex: props.selected ? 11 : 2,
-          }}
+          style={
+            {
+              transform: `translate(-50%, -50%) translate(${!curved && route?.label ? route.label.x : fallback[1]}px, ${!curved && route?.label ? route.label.y : fallback[2]}px)`,
+              opacity: props.style?.opacity,
+              '--connection-color': props.style?.stroke,
+              zIndex: props.selected ? 11 : 2,
+            } as CSSProperties
+          }
+          data-kind={String(props.data?.kind)}
           aria-label={String(props.data?.accessibleLabel ?? props.label)}
           aria-pressed={props.selected}
           onFocus={() => select?.(props.id)}
@@ -502,22 +627,17 @@ function App() {
             source: edge.source,
             target: edge.target,
             label: connectionLabel(edge),
-            markerEnd: { type: MarkerType.ArrowClosed, color: kindColors[edge.kind] },
+            markerEnd: { type: MarkerType.ArrowClosed, color: connectionStyles[edge.kind].color },
             style: {
-              stroke: kindColors[edge.kind],
+              stroke: connectionStyles[edge.kind].color,
               strokeWidth: 1.7,
-              strokeDasharray:
-                edge.kind === 'dependency'
-                  ? '5 4'
-                  : edge.kind === 'association'
-                    ? '2 4'
-                    : undefined,
+              strokeDasharray: connectionStyles[edge.kind].dash,
             },
             labelStyle: { fill: '#4a5870', fontSize: 10 },
             labelBgStyle: { fill: '#fff', fillOpacity: 0.95 },
             labelBgPadding: [5, 3] as [number, number],
             type: 'routed',
-            data: { route: routes.get(edge.id) },
+            data: { route: routes.get(edge.id), kind: edge.kind },
           })),
         );
         setGraph(display);
@@ -1097,14 +1217,8 @@ function App() {
             <span>
               {graph?.resources.length ?? 0} 要素 · {graph?.connections.length ?? 0} 接続
             </span>
-            <div className="edge-legend">
-              {Object.entries(kindLabels).map(([kind, label]) => (
-                <span key={kind}>
-                  <i style={{ background: kindColors[kind] }} />
-                  {label}
-                </span>
-              ))}
-            </div>
+            <ConnectionLegend />
+            <ConnectionHelp />
             <span>配置 {Math.round(layoutTime)} ms</span>
           </div>
         </div>

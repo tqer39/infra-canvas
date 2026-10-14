@@ -1,7 +1,7 @@
 import { resourceContent } from './content.js';
 import { validateConfiguration } from './configuration.js';
 import { validateComputeAttributes } from './resource-metadata.js';
-import { isBoundary, isTelemetrySignals } from './model.js';
+import { isBoundary, isTelemetrySignals, edgeKinds as supportedEdgeKinds } from './model.js';
 import type { Diagram, Resource } from './model.js';
 
 const idPattern = /^[A-Za-z_][A-Za-z0-9_.:-]*$/;
@@ -32,7 +32,7 @@ const location = (value: unknown): boolean =>
   positiveInteger(value.line) &&
   positiveInteger(value.column) &&
   (value.file === undefined || typeof value.file === 'string');
-const kinds = new Set(['traffic', 'dependency', 'auth', 'deploy', 'association']);
+const kinds: ReadonlySet<string> = new Set(supportedEdgeKinds);
 
 /** 外部 JSON とライブラリ利用者の入力を、推測や修正をせず共通モデルとして検証する。 */
 export function validateDiagram(value: unknown): Diagram {

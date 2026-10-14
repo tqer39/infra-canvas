@@ -29,7 +29,25 @@ export interface Resource {
   provenance?: Provenance;
   unresolved?: string[];
 }
-export type EdgeKind = 'traffic' | 'dependency' | 'auth' | 'deploy' | 'association';
+export const edgeKinds = [
+  'traffic',
+  'dependency',
+  'auth',
+  'deploy',
+  'association',
+  'replication',
+  'failover',
+] as const;
+export type EdgeKind = (typeof edgeKinds)[number];
+export const edgeKindLabels: Record<EdgeKind, string> = {
+  traffic: '通信',
+  dependency: '依存',
+  auth: '認証',
+  deploy: 'デプロイ',
+  association: '関連',
+  replication: '複製',
+  failover: '切替',
+};
 export const telemetrySignals = ['metrics', 'logs', 'traces'] as const;
 export const telemetrySignalLabels: Record<string, string> = {
   metrics: 'メトリクス',
