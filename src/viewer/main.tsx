@@ -122,7 +122,13 @@ function ConnectionSample({ kind }: { kind: Connection['kind'] }) {
   );
 }
 
-function ConnectionLegend() {
+function ConnectionLegend({
+  visibleKinds,
+  onToggle,
+}: {
+  visibleKinds: readonly EdgeKind[];
+  onToggle: (kind: EdgeKind) => void;
+}) {
   const [hovered, setHovered] = useState<Connection['kind']>();
   const [focused, setFocused] = useState<Connection['kind']>();
   const [dismissed, setDismissed] = useState(false);
@@ -153,12 +159,14 @@ function ConnectionLegend() {
   return (
     <div className="edge-legend">
       {edgeKinds.map((kind) => (
-        <span
+        <button
+          type="button"
           key={kind}
           className="edge-legend-item"
           data-kind={kind}
           style={{ color: connectionStyles[kind].color }}
-          tabIndex={0}
+          aria-pressed={visibleKinds.includes(kind)}
+          onClick={() => onToggle(kind)}
           aria-describedby={active === kind ? 'connection-legend-tooltip' : undefined}
           onMouseEnter={() => enter(kind)}
           onMouseLeave={leave}
@@ -172,7 +180,7 @@ function ConnectionLegend() {
         >
           <ConnectionSample kind={kind} />
           {kindLabels[kind]}
-        </span>
+        </button>
       ))}
       {active && (
         <div
@@ -186,6 +194,10 @@ function ConnectionLegend() {
             {kindLabels[active]} · {connectionDescriptions[active].pattern}
           </strong>
           <p>{connectionDescriptions[active].meaning}</p>
+          <p>
+            現在{visibleKinds.includes(active) ? '表示中' : '非表示'}。クリックで
+            {visibleKinds.includes(active) ? '非表示' : '表示'}にします。
+          </p>
         </div>
       )}
     </div>
@@ -527,6 +539,13 @@ function App() {
   const [viewName, setViewName] = useState('');
   const activeView = diagram?.views.find((item) => item.id === view);
   const effectiveKinds = filterKinds ?? activeView?.kinds ?? [...edgeKinds];
+  const toggleKind = (kind: EdgeKind) => {
+    setSelectedEdge(undefined);
+    setFilterKinds((current) => {
+      const kinds = current ?? activeView?.kinds ?? [...edgeKinds];
+      return kinds.includes(kind) ? kinds.filter((item) => item !== kind) : [...kinds, kind];
+    });
+  };
   const routes = [
     ...new Set(
       diagram?.connections.flatMap((edge) =>
@@ -1709,14 +1728,7 @@ function App() {
                       <input
                         type="checkbox"
                         checked={effectiveKinds.includes(kind)}
-                        onChange={(event) => {
-                          setSelectedEdge(undefined);
-                          setFilterKinds(
-                            event.target.checked
-                              ? [...effectiveKinds, kind]
-                              : effectiveKinds.filter((item) => item !== kind),
-                          );
-                        }}
+                        onChange={() => toggleKind(kind)}
                       />
                       {kindLabels[kind]}
                     </label>
@@ -2011,7 +2023,7 @@ function App() {
             <span>
               {graph?.resources.length ?? 0} 要素 · {graph?.connections.length ?? 0} 接続
             </span>
-            <ConnectionLegend />
+            <ConnectionLegend visibleKinds={effectiveKinds} onToggle={toggleKind} />
             <ConnectionHelp />
             <span>配置 {Math.round(layoutTime)} ms</span>
           </div>
