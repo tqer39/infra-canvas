@@ -34,6 +34,19 @@ for (const offline of [false, true]) {
     const picker = form.getByRole('group', { name: '表示アイコン', exact: true });
     const options = picker.locator('.icon-candidate > span:last-child');
     await expect(form.getByRole('button', { name: '変更を反映', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('combobox', { name: '表示アイコン', exact: true })).toHaveCount(0);
+    const awsGroup = picker
+      .locator('.icon-group')
+      .filter({ has: page.locator('summary', { hasText: /^AWS/ }) });
+    await expect(awsGroup).toHaveCount(1);
+    await awsGroup.locator('summary').click();
+    await expect(awsGroup).not.toHaveAttribute('open');
+    await expect(awsGroup.getByRole('button', { name: 'aws.ec2', exact: true })).toBeHidden();
+    await search.fill('Google Cloud');
+    await expect(picker.locator('.icon-group summary')).toHaveText([/Google Cloud/]);
+    await expect(picker.getByRole('button', { name: 'gcp.cloud', exact: true })).toBeVisible();
+    await search.fill('');
+    await expect(awsGroup).not.toHaveAttribute('open');
     const originalIcon = await node.locator('.service-icon').getAttribute('src');
     await page.getByRole('button', { name: 'DSL を編集', exact: true }).click();
     const editor = page.getByRole('textbox', { name: 'DSL 入力', exact: true });

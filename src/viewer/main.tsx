@@ -68,7 +68,7 @@ import {
   type DisplayGraph,
   type LayoutResult,
 } from '../core/model';
-import { getIcon, getIconHomepage, getIconTypes } from '../assets/icons';
+import { getIcon, getIconHomepage } from '../assets/icons';
 import { getResourceIconType } from '../assets/resource-icons';
 import { getCountryFlag } from '../assets/flags';
 import { getRegionCountry, getResourceRegion } from '../assets/regions';
@@ -1432,7 +1432,7 @@ function App() {
           aria-expanded={exportOpen}
           onClick={() => setExportOpen(!exportOpen)}
         >
-          書き出し
+          ダウンロード・印刷
         </button>
         <button
           className="toolbar-button"
@@ -1473,7 +1473,7 @@ function App() {
         />
       </header>
       {exportOpen && (
-        <section className="export-panel" aria-label="静的出力">
+        <section className="export-panel" aria-label="ダウンロード・印刷">
           <label>
             用紙
             <select
@@ -1521,7 +1521,7 @@ function App() {
               <option value="tile">指定縮尺で分割</option>
             </select>
           </label>
-          <p>現在のビューと固定位置を出力します。PDFは印刷画面で保存先を選べます。</p>
+          <p>現在のビューと固定位置を反映します。PDFは印刷画面から保存できます。</p>
           {(['svg', 'png', 'pdf'] as const).map((format) => (
             <button
               className="toolbar-button"
@@ -1529,7 +1529,7 @@ function App() {
               disabled={busy || !lastLayout}
               onClick={() => void exportDrawing(format)}
             >
-              {format.toUpperCase()} を書き出す
+              {format === 'pdf' ? '印刷 / PDF を保存' : `${format.toUpperCase()} をダウンロード`}
             </button>
           ))}
         </section>
@@ -2183,36 +2183,6 @@ function App() {
                   </button>
                 </div>
               )}
-              <label className="icon-picker">
-                表示アイコン
-                <select
-                  aria-label="表示アイコン"
-                  value={String(selectedResource.attributes.icon ?? '')}
-                  onChange={(event) => {
-                    if (!diagram) return;
-                    const next = {
-                      ...diagram,
-                      resources: diagram.resources.map((resource) => {
-                        if (resource.id !== selectedResource.id) return resource;
-                        const attributes = { ...resource.attributes };
-                        if (event.target.value) attributes.icon = event.target.value;
-                        else delete attributes.icon;
-                        return { ...resource, attributes };
-                      }),
-                    };
-                    autoFitContext.current = { diagram: next, view, scope };
-                    setSource(serializeDSL(next));
-                    setDiagram(next);
-                  }}
-                >
-                  <option value="">種別・providerから選ぶ</option>
-                  {getIconTypes().map((type) => (
-                    <option key={type} value={type}>
-                      {type === 'aws.organization-account' ? 'AWS アカウント' : type}
-                    </option>
-                  ))}
-                </select>
-              </label>
               <h3>属性</h3>
               <PropertyEditor
                 key={`${documentVersion}-${selectedResource.id}`}

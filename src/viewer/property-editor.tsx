@@ -80,8 +80,54 @@ export function PropertyEditor({
   const [saved, setSaved] = useState(false);
   const [icon, setIcon] = useState(String(resource?.attributes.icon ?? ''));
   const [iconQuery, setIconQuery] = useState('');
+  const iconGroups: Record<string, string> = {
+    aws: 'AWS',
+    gcp: 'Google Cloud',
+    azure: 'Azure',
+    k8s: 'Kubernetes',
+    github: 'GitHub',
+    gitlab: 'GitLab',
+    saas: '外部サービス・SaaS',
+    software: 'ソフトウェア',
+    external: '利用者・外部リソース',
+  };
+  const query = iconQuery.trim().toLowerCase();
   const matchingIcons = iconTypes.filter((type) =>
-    type.toLowerCase().includes(iconQuery.trim().toLowerCase()),
+    `${type} ${iconGroups[type.split('.')[0]] ?? 'その他'}`.toLowerCase().includes(query),
+  );
+  const groups = Object.entries(iconGroups).map(([prefix, name]) => ({
+    name,
+    types: matchingIcons.filter((type) => type.startsWith(`${prefix}.`)),
+  }));
+  groups.push({
+    name: 'その他',
+    types: matchingIcons.filter((type) => !iconGroups[type.split('.')[0]]),
+  });
+  const [collapsedIconGroups, setCollapsedIconGroups] = useState<string[]>([]);
+  const iconButton = (type: string) => (
+    <button
+      key={type}
+      type="button"
+      className={`icon-candidate ${type ? '' : 'icon-automatic'}`}
+      aria-label={type || '種別から自動選択'}
+      aria-pressed={icon === type}
+      onClick={() => {
+        setIcon(type);
+        save({ icon: type });
+      }}
+    >
+      {getIcon(type) ? (
+        <img src={getIcon(type)} alt="" />
+      ) : (
+        <span className="icon-placeholder" aria-hidden="true">
+          {type ? '◇' : '自動'}
+        </span>
+      )}
+      <span>
+        {type || '種別から自動選択'}
+        {type && icon === type && !matchingIcons.includes(type) ? '（現在の選択）' : ''}
+      </span>
+    </button>
   );
   const supported = resource
     ? [...textAttributes, ...arrayAttributes, ...numberAttributes, ...boolAttributes].filter(
@@ -201,36 +247,33 @@ export function PropertyEditor({
           </label>
           <fieldset className="icon-picker">
             <legend>表示アイコン</legend>
-            <div className="icon-candidates">
-              {['', ...(icon && !matchingIcons.includes(icon) ? [icon] : []), ...matchingIcons].map(
-                (type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    className={`icon-candidate ${type ? '' : 'icon-automatic'}`}
-                    aria-label={type || '種別から自動選択'}
-                    aria-pressed={icon === type}
-                    onClick={() => {
-                      setIcon(type);
-                      save({ icon: type });
+            <div className="icon-browser">
+              {iconButton('')}
+              {icon && !matchingIcons.includes(icon) && iconButton(icon)}
+              {groups
+                .filter((group) => group.types.length)
+                .map((group) => (
+                  <details
+                    className="icon-group"
+                    key={group.name}
+                    open={!!query || !collapsedIconGroups.includes(group.name)}
+                    onToggle={(event) => {
+                      if (query) return;
+                      const open = event.currentTarget.open;
+                      setCollapsedIconGroups((current) =>
+                        open
+                          ? current.filter((name) => name !== group.name)
+                          : [...new Set([...current, group.name])],
+                      );
                     }}
                   >
-                    {getIcon(type) ? (
-                      <img src={getIcon(type)} alt="" />
-                    ) : (
-                      <span className="icon-placeholder" aria-hidden="true">
-                        {type ? '◇' : '自動'}
-                      </span>
-                    )}
-                    <span>
-                      {type || '種別から自動選択'}
-                      {type && icon === type && !matchingIcons.includes(type)
-                        ? '（現在の選択）'
-                        : ''}
-                    </span>
-                  </button>
-                ),
-              )}
+                    <summary>
+                      {group.name}
+                      <span>{group.types.length} 件</span>
+                    </summary>
+                    <div className="icon-candidates">{group.types.map(iconButton)}</div>
+                  </details>
+                ))}
             </div>
           </fieldset>
           <p className="editor-hint" aria-live="polite">
