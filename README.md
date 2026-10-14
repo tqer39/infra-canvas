@@ -87,14 +87,30 @@ npm 公開はしていません。ビルド後、ローカルのパス依存と�
 
 ## サンプルと仕様
 
-| 入力                                          | 内容                                                                           |
-| --------------------------------------------- | ------------------------------------------------------------------------------ |
-| [aws.infra](examples/aws.infra)               | AWS 2 アカウント、2 AZ、ALB・ECS・RDS、重複 SG、GitHub Actions・OIDC           |
-| [gcp-azure.infra](examples/gcp-azure.infra)   | Google Cloud と Azure の小規模構成                                             |
-| [multicloud.infra](examples/multicloud.infra) | 複数クラウドと外部サービス                                                     |
-| [saas.infra](examples/saas.infra)             | GitHub・1Password・Linear・GitLab・Neon・Fly.io・Resend・Elasticsearch・Kibana |
-| [large.infra](examples/large.infra)           | 300 サービスと18境界                                                           |
-| [terraform](examples/terraform)               | module、count、for_each、複数 provider、未確定値を含む合成入力                 |
+| 入力                                                    | 内容                                                                           |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| [aws.infra](examples/aws.infra)                         | AWS 2 アカウント、2 AZ、ALB・ECS・RDS、重複 SG、GitHub Actions・OIDC           |
+| [gcp-azure.infra](examples/gcp-azure.infra)             | Google Cloud と Azure の小規模構成                                             |
+| [gcp-web.infra](examples/gcp-web.infra)                 | Google Cloud: Cloud Run・Cloud SQL・Cloud Storage と実行サービスアカウント     |
+| [gcp-analytics.infra](examples/gcp-analytics.infra)     | Google Cloud: Pub/Sub から BigQuery subscription によるイベント分析            |
+| [azure-web.infra](examples/azure-web.infra)             | Azure: App Service・SQL Database・Blob Storage とマネージドID                  |
+| [azure-functions.infra](examples/azure-functions.infra) | Azure: Blob アップロードを契機に Functions で画像を変換・保存                  |
+| [multicloud.infra](examples/multicloud.infra)           | 複数クラウドと外部サービス                                                     |
+| [saas.infra](examples/saas.infra)                       | GitHub・1Password・Linear・GitLab・Neon・Fly.io・Resend・Elasticsearch・Kibana |
+| [large.infra](examples/large.infra)                     | 300 サービスと18境界                                                           |
+| [terraform](examples/terraform)                         | module、count、for_each、複数 provider、未確定値を含む合成入力                 |
+
+追加した4件は架空の設計例です。「ファイルを開く」で読み込むか、
+`node dist/cli.js preview examples/gcp-web.infra --port 5180` のように表示できます。
+概要・サービス・ネットワーク・セキュリティの4ビューで、通信・認可・配備の関係を確認できます。
+各サービスの接続設定・権限・通信成立を検証するものではありません。
+未対応アイコンのサービスも種別名付きで表示します。
+
+構成の根拠は [Cloud Run と Cloud SQL の接続](https://docs.cloud.google.com/sql/docs/postgres/connect-run)、
+[BigQuery subscription](https://docs.cloud.google.com/pubsub/docs/bigquery)、
+[App Service のマネージドIDによるSQL接続](https://learn.microsoft.com/en-us/azure/app-service/tutorial-connect-msi-sql-database)、
+[Functions の Blob trigger](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-storage-blob-trigger) と
+[Blob 出力binding](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-storage-blob-output) です。
 
 [公開構成図5件の対応確認](docs/architecture-coverage.md) と [再記述サンプル](examples/reference) では、3クラウド公式・クラスメソッド・サーバーワークスの図を検証しています。
 

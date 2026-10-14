@@ -1,0 +1,25 @@
+# Blob triggerとBlob出力bindingを使う画像処理の設計例。
+# https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-storage-blob-trigger
+# https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-storage-blob-output
+diagram "Azure・Blob アップロードの非同期処理" version=1 {
+  external.service uploader "アップロード元アプリ"
+  external.user viewer "処理結果の閲覧者"
+  subscription production "画像処理サブスクリプション" subscription="00000000-0000-0000-0000-000000000002" {
+    group resources "画像処理リソースグループ" region="japaneast" {
+      azure.storage incoming "入力 Storage Account" description="uploadsコンテナーのBlobを監視"
+      azure.functions resize "Azure Functions 画像変換" display=list items=["Blob triggerで入力を読み取り", "画像サイズを変換", "Blob出力bindingで結果を保存", "再実行に備えて冪等性を確保"]
+      azure.storage processed "出力 Storage Account" description="processedコンテナーへ結果を保存"
+      azure.storage host "Functions ホスト用 Storage" description="AzureWebJobsStorage。入出力データと役割を分離"
+    }
+  }
+  uploader -> incoming kind=traffic protocol=https port=443 label="画像アップロード"
+  incoming -> resize kind=association label="Blob trigger"
+  resize -> incoming kind=traffic protocol=https port=443 label="入力Blobの読み取り"
+  resize -> processed kind=traffic protocol=https port=443 label="出力bindingで保存"
+  resize -> host kind=dependency label="Functionsホストのストレージ"
+  viewer -> processed kind=traffic protocol=https port=443 label="変換結果の取得"
+  view overview level=overview
+  view service level=service
+  view network level=subnet
+  view security level=resource overlay=sg
+}

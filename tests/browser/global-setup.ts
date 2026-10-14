@@ -14,6 +14,10 @@ export default function globalSetup(): void {
     'saas',
     'service-catalog',
     'identity',
+    'gcp-web',
+    'gcp-analytics',
+    'azure-web',
+    'azure-functions',
   ]) {
     execFileSync(process.execPath, [
       'dist/cli.js',

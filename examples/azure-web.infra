@@ -1,0 +1,25 @@
+# 架空サブスクリプションの設計例。App ServiceはVNet内のVMとして扱わない。
+# https://learn.microsoft.com/en-us/azure/app-service/tutorial-connect-msi-sql-database
+diagram "Azure・App Service Web アプリ" version=1 {
+  external.user users "利用者"
+  github.actions pipeline "GitHub Actions"
+  subscription production "Web 本番サブスクリプション" subscription="00000000-0000-0000-0000-000000000001" {
+    group resources "Web リソースグループ" region="japaneast" environment=production {
+      azure.app web "App Service Web API" description="公開HTTPSエンドポイント"
+      azure.sql database "Azure SQL Database" description="公開接続。ファイアウォールとDBユーザーを別途設定"
+      azure.storage uploads "Storage Account アップロード"
+      azure.managed-identity runtime "マネージドID" display=list items=["SQL DatabaseのDBユーザーと権限", "Blobコンテナーへのアクセス権限"]
+    }
+  }
+  users -> web kind=traffic protocol=https port=443
+  web -> database kind=traffic protocol=tcp port=1433 label="SQLクエリ"
+  web -> uploads kind=traffic protocol=https port=443 label="Blob保存"
+  web -> runtime kind=association label="実行ID"
+  runtime -> database kind=auth label="Microsoft Entra認証"
+  runtime -> uploads kind=auth label="Blobアクセス認可"
+  pipeline -> web kind=deploy label="Webアプリの配備"
+  view overview level=overview
+  view service level=service
+  view network level=subnet
+  view security level=resource overlay=sg
+}
