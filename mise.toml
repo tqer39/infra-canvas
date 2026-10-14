@@ -1,17 +1,32 @@
 [tools]
 node = "24.21.0"
 python = "3.14.7"
+lefthook = "2.2.1"
 
 [env]
 _.path = ["./node_modules/.bin"]
 
 [tasks.bootstrap]
-description = "依存・AIルール・ブラウザー・ビルドを準備する"
-run = ["mise run install", "mise run rules:generate", "mise run browser:install", "mise run build"]
+description = "依存・Gitフック・AIルール・ブラウザー・ビルドを準備する"
+run = [
+  "mise run install",
+  "mise run hooks:install",
+  "mise run rules:generate",
+  "mise run browser:install",
+  "mise run build",
+]
 
 [tasks.install]
 description = "lockfile 通りに npm 依存を導入する"
 run = "npm ci --ignore-scripts"
+
+[tasks."hooks:install"]
+description = "Lefthook の Git フックを登録する"
+run = "lefthook install"
+
+[tasks."hooks:check"]
+description = "コミット前の検証を手動実行する"
+run = "lefthook run pre-commit --all-files"
 
 [tasks.dev]
 description = "ローカルビューアーを起動する"

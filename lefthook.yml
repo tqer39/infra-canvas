@@ -1,0 +1,9 @@
+# 実行コマンドは mise.toml に集約する。
+# https://lefthook.dev/configuration/
+pre-commit:
+  parallel: true
+  commands:
+    lint:
+      run: mise run lint
+    rules:
+      run: mise run rules:check
