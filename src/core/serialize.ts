@@ -52,7 +52,7 @@ export function serializeDSL(diagram: Diagram): string {
   for (const connection of diagram.connections) {
     identifier(connection.source);
     identifier(connection.target);
-    const attributes = { ...connection.attributes, kind: connection.kind };
+    const attributes = { id: connection.id, ...connection.attributes, kind: connection.kind };
     lines.push(
       `  ${connection.source} -> ${connection.target} ${Object.entries(attributes)
         .map(([key, value]) => `${identifier(key)}=${encode(value)}`)
@@ -61,7 +61,16 @@ export function serializeDSL(diagram: Diagram): string {
   }
   for (const view of diagram.views)
     lines.push(
-      `  view ${identifier(view.id)} level=${view.level}${view.overlay ? ` overlay=${encode(view.overlay)}` : ''}${view.direction ? ` direction=${view.direction}` : ''}`,
+      `  view ${identifier(view.id)}${view.label ? ` label=${encode(view.label)}` : ''} level=${view.level}${view.overlay ? ` overlay=${encode(view.overlay)}` : ''}${view.direction ? ` direction=${view.direction}` : ''}${[
+        'kinds',
+        'routes',
+        'purposes',
+      ]
+        .map((key) => {
+          const value = view[key as 'kinds' | 'routes' | 'purposes'];
+          return value === undefined ? '' : ` ${key}=${encode(value)}`;
+        })
+        .join('')}`,
     );
   lines.push('}');
   return `${lines.join('\n')}\n`;

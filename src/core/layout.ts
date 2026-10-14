@@ -1,3 +1,7 @@
+import { applyColumnLayout, placeAnnotations, placeOverlayLabels } from './spatial.js';
+import { evidenceLabels, changeLabels, resourceTypeLabel } from './presentation.js';
+import { validateResourceExpressions } from './architecture.js';
+import { applyFixedLayout, separateLabels } from './geometry.js';
 import { resourceMetadata, metadataWidth, metadataHeight } from './resource-metadata.js';
 import { resourceContent, contentDimensions } from './content.js';
 import ELK from 'elkjs/lib/elk.bundled.js';
@@ -17,7 +21,7 @@ import type {
 export interface LayoutOptions {
   direction?: 'RIGHT' | 'DOWN';
 }
-export const layoutVersion = 'infra-canvas-layout-8';
+export const layoutVersion = 'infra-canvas-layout-11';
 
 const kindLabels = {
   traffic: '通信',
@@ -25,12 +29,32 @@ const kindLabels = {
   auth: '認証',
   deploy: 'デプロイ',
   association: '関連',
+  replication: '複製',
+  failover: '切替',
 };
 export const connectionLabel = (edge: Connection): string =>
   [
+    edge.attributes.route
+      ? `${edge.attributes.route} ${edge.attributes.routeDirection === 'return' ? '復路' : '往路'} ${edge.attributes.step}`
+      : undefined,
     edge.attributes.label ?? kindLabels[edge.kind],
     Array.isArray(edge.attributes.signals)
       ? edge.attributes.signals.map((signal) => telemetrySignalLabels[signal] ?? signal).join(' / ')
+      : undefined,
+    edge.attributes.sourcePort || edge.attributes.targetPort
+      ? `${edge.attributes.sourcePort ?? 'リソース'} → ${edge.attributes.targetPort ?? 'リソース'}`
+      : undefined,
+    edge.attributes.encrypted === undefined
+      ? undefined
+      : edge.attributes.encrypted
+        ? '暗号化'
+        : '平文',
+    edge.attributes.authMethod ? `認証 ${edge.attributes.authMethod}` : undefined,
+    edge.attributes.evidence
+      ? `根拠 ${evidenceLabels[String(edge.attributes.evidence)]}`
+      : undefined,
+    edge.attributes.change && edge.attributes.change !== 'unchanged'
+      ? changeLabels[String(edge.attributes.change)]
       : undefined,
     edge.attributes.protocol,
     edge.attributes.port,
@@ -46,6 +70,7 @@ export async function layoutGraph(
   options: LayoutOptions = {},
 ): Promise<LayoutResult> {
   validateResourceHierarchy(graph.resources);
+  graph.resources.forEach(validateResourceExpressions);
   const resourceIds = new Set(graph.resources.map((resource) => resource.id));
   for (const edge of graph.connections)
     if (!resourceIds.has(edge.source) || !resourceIds.has(edge.target))
@@ -73,7 +98,7 @@ export async function layoutGraph(
           (isBoundary(resource) ? 112 : 80) +
           (getRegionCountry(getResourceRegion(resource)) ? 26 : 0) +
           (isBoundary(resource) && !collapsed && !detailBoundary
-            ? textWidth(resource.type, 6, 10) + 9
+            ? textWidth(resourceTypeLabel(resource), 6, 10) + 9
             : 0);
         const content = resourceContent(resource);
         const metadata = resourceMetadata(resource);
@@ -162,6 +187,13 @@ export async function layoutGraph(
         y: node.y ?? 0,
         width: node.width ?? 180,
         height: node.height ?? 86,
+        ...(node.children?.length
+          ? {
+              contentTop: Number(
+                /top=(\d+)/.exec(node.layoutOptions?.['elk.padding'] ?? '')?.[1] ?? 56,
+              ),
+            }
+          : {}),
         ...(parentId ? { parentId } : {}),
       });
       offsets.set(node.id, { x: origin.x + (node.x ?? 0), y: origin.y + (node.y ?? 0) });
@@ -192,5 +224,20 @@ export async function layoutGraph(
         : {}),
     };
   });
-  return { nodes, edges, durationMs: performance.now() - started, version: layoutVersion };
+  const initial = { nodes, edges, durationMs: 0, version: layoutVersion };
+  const columnsChanged = applyColumnLayout(graph, initial, options.direction);
+  const layout = applyFixedLayout(graph, initial, columnsChanged);
+  separateLabels(
+    layout.edges ?? [],
+    new Map(
+      graph.connections.map((edge) => [
+        edge.id,
+        { width: textWidth(connectionLabel(edge)) + 14, height: 22 },
+      ]),
+    ),
+    layout.nodes,
+  );
+  placeOverlayLabels(layout);
+  layout.annotations = placeAnnotations(graph, layout);
+  return { ...layout, durationMs: performance.now() - started };
 }

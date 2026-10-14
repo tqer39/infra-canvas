@@ -1,6 +1,7 @@
+import { validateArchitecture } from './architecture.js';
 import { resourceContent } from './content.js';
 import { validateComputeAttributes } from './resource-metadata.js';
-import { boundaryTypes, isTelemetrySignals } from './model.js';
+import { isBoundary, isTelemetrySignals, edgeKinds as supportedKinds } from './model.js';
 import type {
   Attribute,
   Attributes,
@@ -18,8 +19,19 @@ interface Token extends SourceLocation {
   value: string;
   kind: 'word' | 'string' | 'symbol' | 'newline' | 'eof';
 }
-const edgeKinds = new Set(['traffic', 'dependency', 'auth', 'deploy', 'association']);
+const edgeKinds = new Set<string>(supportedKinds);
 const textAttributes = new Set([
+  'icon',
+  'exposure',
+  'trustZone',
+  'evidence',
+  'change',
+  'appearance',
+  'columnsBy',
+  'logicalService',
+  'anchor',
+  'anchorEdge',
+  'redundancyRole',
   'launchType',
   'display',
   'description',
@@ -59,6 +71,9 @@ const textAttributes = new Set([
   'subnetVisibility',
 ]);
 const arrayAttributes = new Set([
+  'ingress',
+  'egress',
+  'ports',
   'capacityProviders',
   'requiresCompatibilities',
   'columns',
@@ -72,6 +87,9 @@ const arrayAttributes = new Set([
   'dependsOn',
 ]);
 const numberAttributes = new Set([
+  'count',
+  'countMin',
+  'countMax',
   'cpu',
   'memory',
   'desiredCount',
@@ -82,7 +100,7 @@ const numberAttributes = new Set([
   'y',
   'line',
 ]);
-const boolAttributes = new Set(['public', 'unknown', 'fixed']);
+const boolAttributes = new Set(['public', 'unknown', 'fixed', 'boundary']);
 class ParseFailure extends Error {}
 
 export function parseDSL(source: string): ParseResult {
@@ -252,23 +270,58 @@ export function parseDSL(source: string): ParseResult {
         supported = key === 'version';
         valid = val === 1;
       } else if (context === 'view') {
-        supported = ['level', 'overlay', 'direction'].includes(key);
+        supported = [
+          'label',
+          'level',
+          'overlay',
+          'direction',
+          'kinds',
+          'routes',
+          'purposes',
+        ].includes(key);
         valid =
-          key === 'level'
-            ? typeof val === 'string' && ['overview', 'service', 'subnet', 'resource'].includes(val)
-            : key === 'direction'
-              ? typeof val === 'string' && ['RIGHT', 'DOWN'].includes(val)
-              : val === 'sg';
+          key === 'label'
+            ? typeof val === 'string' && val.trim().length > 0
+            : ['kinds', 'routes', 'purposes'].includes(key)
+              ? Array.isArray(val) && (key !== 'kinds' || val.every((item) => edgeKinds.has(item)))
+              : key === 'level'
+                ? typeof val === 'string' &&
+                  ['overview', 'service', 'subnet', 'resource'].includes(val)
+                : key === 'direction'
+                  ? typeof val === 'string' && ['RIGHT', 'DOWN'].includes(val)
+                  : val === 'sg';
       } else if (context === 'edge') {
-        supported = ['kind', 'protocol', 'port', 'label', 'description', 'signals'].includes(key);
+        supported = [
+          'id',
+          'encrypted',
+          'authMethod',
+          'evidence',
+          'change',
+          'kind',
+          'protocol',
+          'port',
+          'label',
+          'description',
+          'signals',
+          'purpose',
+          'route',
+          'step',
+          'routeDirection',
+          'sourcePort',
+          'targetPort',
+        ].includes(key);
         valid =
-          key === 'kind'
-            ? typeof val === 'string' && edgeKinds.has(val)
-            : key === 'signals'
-              ? isTelemetrySignals(val)
-              : key === 'port'
-                ? typeof val === 'number' && Number.isInteger(val) && val >= 0 && val <= 65535
-                : typeof val === 'string';
+          key === 'encrypted'
+            ? typeof val === 'boolean'
+            : key === 'step'
+              ? typeof val === 'number' && Number.isSafeInteger(val) && val > 0
+              : key === 'kind'
+                ? typeof val === 'string' && edgeKinds.has(val)
+                : key === 'signals'
+                  ? isTelemetrySignals(val)
+                  : key === 'port'
+                    ? typeof val === 'number' && Number.isInteger(val) && val >= 0 && val <= 65535
+                    : typeof val === 'string';
       } else {
         supported =
           textAttributes.has(key) ||
@@ -332,12 +385,14 @@ export function parseDSL(source: string): ParseResult {
           validateAttrs(parsed.attributes, parsed.positions, 'edge');
           const kind = (parsed.attributes.kind ?? 'traffic') as EdgeKind;
           delete parsed.attributes.kind;
+          const edgeId = String(parsed.attributes.id ?? `edge-${connections.length + 1}`);
+          delete parsed.attributes.id;
           edgeReferences.push(
             { id: first.value, token: first },
             { id: target.value, token: target },
           );
           connections.push({
-            id: `edge-${connections.length + 1}`,
+            id: edgeId,
             source: first.value,
             target: target.value,
             kind,
@@ -351,6 +406,12 @@ export function parseDSL(source: string): ParseResult {
           validateAttrs(parsed.attributes, parsed.positions, 'view');
           views.push({
             id: id.value,
+            ...(parsed.attributes.label ? { label: parsed.attributes.label as string } : {}),
+            ...Object.fromEntries(
+              ['kinds', 'routes', 'purposes']
+                .filter((key) => parsed.attributes[key] !== undefined)
+                .map((key) => [key, parsed.attributes[key]]),
+            ),
             level: (parsed.attributes.level ?? 'resource') as View['level'],
             ...(parsed.attributes.overlay ? { overlay: parsed.attributes.overlay as string } : {}),
             ...(parsed.attributes.direction
@@ -414,7 +475,7 @@ export function parseDSL(source: string): ParseResult {
               for (const token of parsed.references.get(key) ?? [])
                 references.push({ token, owner: resource, key });
           if (peek().value === '{') {
-            if (!boundaryTypes.has(resource.type))
+            if (!isBoundary(resource))
               fail(
                 peek(),
                 `${resource.type} は入れ子境界ではありません。SG は members 属性で関連付けてください。`,
@@ -456,6 +517,13 @@ export function parseDSL(source: string): ParseResult {
         report(ref.token, 'reference.type', `${target.id} は sg ではありません。`);
     }
     diagram = { version: 1, title: title.value, resources, connections, views, diagnostics };
+    if (!diagnostics.length) {
+      try {
+        validateArchitecture(diagram);
+      } catch (error) {
+        report(title, 'architecture.invalid', (error as Error).message);
+      }
+    }
   } catch (error) {
     if (!(error instanceof ParseFailure)) throw error;
   }

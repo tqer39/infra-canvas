@@ -1,3 +1,6 @@
+import { handleLLMRequest } from './assistant/llm-server.js';
+import { handleRepositoryRequest } from './assistant/server.js';
+import { exportStaticFile } from './export-static.js';
 import { readFile, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { parseDSL } from './core/parser.js';
@@ -8,7 +11,7 @@ import { importTerraformRepository } from './terraform/index.js';
 import { embedDiagram, exportHTML } from './export.js';
 import { fileURLToPath } from 'node:url';
 
-const help = `Infra Canvas\n\n  validate <file.infra>\n  preview <file.infra|model.json> [--port 5180]\n  import <repository> [--root .] [--json plan.json] [--out model.json] [--dsl output.infra]\n  dsl <model.json> --out output.infra\n  html <file.infra|model.json> --out diagram.html\n\nTerraform の JSON は terraform show -json で事前に生成してください。\n`;
+const help = `Infra Canvas\n\n  validate <file.infra>\n  preview <file.infra|model.json> [--port 5180]\n  import <repository> [--root .] [--json plan.json] [--out model.json] [--dsl output.infra]\n  dsl <model.json> --out output.infra\n  html <file.infra|model.json> --out diagram.html\n  svg|png|pdf <file.infra|model.json> --out output [--view id] [--scale 1]\n  pdf: [--paper A4|A3] [--orientation landscape|portrait] [--pages fit|tile]\n\nTerraform の JSON は terraform show -json で事前に生成してください。\n`;
 
 export async function loadDiagram(path: string): Promise<Diagram> {
   const source = await readFile(path, 'utf8');
@@ -37,7 +40,18 @@ async function main(args: string[]) {
     const key = rest[i];
     const value = rest[i + 1];
     if (
-      !['--port', '--root', '--json', '--out', '--dsl'].includes(key) ||
+      ![
+        '--port',
+        '--root',
+        '--json',
+        '--out',
+        '--dsl',
+        '--view',
+        '--paper',
+        '--orientation',
+        '--scale',
+        '--pages',
+      ].includes(key) ||
       !value ||
       value.startsWith('--')
     )
@@ -79,6 +93,29 @@ async function main(args: string[]) {
     console.log(`HTML を保存しました: ${options['--out']}`);
     return;
   }
+  if (command === 'svg' || command === 'png' || command === 'pdf') {
+    if (!options['--out']) throw new Error('--out を指定してください。');
+    if (
+      command !== 'pdf' &&
+      ['--paper', '--orientation', '--pages'].some((key) => options[key] !== undefined)
+    )
+      throw new Error('用紙・向き・分割はpdfで指定してください。');
+    if (
+      options['--view'] &&
+      !diagram.views.some((view) => view.id === options['--view']) &&
+      !['overview', 'service', 'network', 'security'].includes(options['--view'])
+    )
+      throw new Error('存在するviewを指定してください。');
+    await exportStaticFile(diagram, command, options['--out'], {
+      view: options['--view'],
+      scale: options['--scale'] === undefined ? undefined : Number(options['--scale']),
+      paper: options['--paper'] as 'A4' | 'A3' | undefined,
+      orientation: options['--orientation'] as 'portrait' | 'landscape' | undefined,
+      pages: options['--pages'] as 'fit' | 'tile' | undefined,
+    });
+    console.log(`${command.toUpperCase()} を保存しました: ${options['--out']}`);
+    return;
+  }
   if (command === 'preview') {
     const template = await readFile(
       fileURLToPath(new URL('../dist/template.html', import.meta.url)),
@@ -89,13 +126,22 @@ async function main(args: string[]) {
     if (!Number.isInteger(port) || port < 1024 || port > 65535)
       throw new Error('port は 1024〜65535 の整数を指定してください。');
     const server = createServer((req, res) => {
-      if (req.url !== '/') {
-        res.writeHead(404).end();
-        return;
-      }
-      res
-        .writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' })
-        .end(html);
+      void handleLLMRequest(req, res)
+        .then((handled) => handled || handleRepositoryRequest(req, res))
+        .then((handled) => {
+          if (handled) return;
+          if (req.url !== '/') {
+            res.writeHead(404).end();
+            return;
+          }
+          res
+            .writeHead(200, {
+              'Content-Type': 'text/html; charset=utf-8',
+              'Cache-Control': 'no-store',
+            })
+            .end(html);
+        })
+        .catch(() => res.writeHead(500).end());
     });
     server.on('error', () => {
       console.error('プレビューを起動できません。別の port を指定してください。');
@@ -109,7 +155,9 @@ async function main(args: string[]) {
   throw new Error(`不明なコマンドです。\n${help}`);
 }
 
-main(process.argv.slice(2)).catch(() => {
+main(process.argv.slice(2)).catch((error: unknown) => {
+  if (['svg', 'png', 'pdf'].includes(process.argv[2] ?? '') && error instanceof Error)
+    console.error(error.message);
   console.error('処理に失敗しました。入力、オプション、出力先を確認してください。');
   process.exitCode = 1;
 });

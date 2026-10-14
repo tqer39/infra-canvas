@@ -65,18 +65,19 @@ SG の関連や許可規則だけで通信成立を断定しません。
 
 ## 属性
 
-| 型         | 属性名                                                                                   | 用途                       |
-| ---------- | ---------------------------------------------------------------------------------------- | -------------------------- |
-| 文字列     | `description`, `region`, `az`, `cidr`, `protocol`                                        | 説明、配置設定             |
-| 文字列     | `account`, `project`, `subscription`, `scope`, `environment`                             | 管理スコープ               |
-| 文字列     | `status`, `network`, `routeEvidence`, `provider`, `role`, `url`, `version`, `subnetType` | 表示メタデータ             |
-| 文字列配列 | `subnets`, `members`, `securityGroups`, `dependsOn`                                      | リソース ID 参照           |
-| 文字列配列 | `tags`, `unresolved`                                                                     | タグ、未解決情報           |
-| 数値       | `port`, `width`, `height`, `x`, `y`, `line`                                              | 属性情報・将来の配置保存用 |
-| boolean    | `public`, `unknown`, `fixed`                                                             | 属性情報・将来の固定配置用 |
-| 文字列     | `meta.*`                                                                                 | 拡張用のテキスト属性       |
+| 型         | 属性名                                                                                   | 用途                 |
+| ---------- | ---------------------------------------------------------------------------------------- | -------------------- |
+| 文字列     | `description`, `region`, `az`, `cidr`, `protocol`                                        | 説明、配置設定       |
+| 文字列     | `account`, `project`, `subscription`, `scope`, `environment`                             | 管理スコープ         |
+| 文字列     | `status`, `network`, `routeEvidence`, `provider`, `role`, `url`, `version`, `subnetType` | 表示メタデータ       |
+| 文字列配列 | `subnets`, `members`, `securityGroups`, `dependsOn`                                      | リソース ID 参照     |
+| 文字列配列 | `tags`, `unresolved`                                                                     | タグ、未解決情報     |
+| 数値       | `port`, `width`, `height`, `x`, `y`, `line`                                              | 属性情報・座標固定   |
+| boolean    | `public`, `unknown`, `fixed`                                                             | 属性情報・座標固定   |
+| 文字列     | `meta.*`                                                                                 | 拡張用のテキスト属性 |
 
-`width`、`height`、`x`、`y`、`fixed` は保持されますが、初期版の ELK 自動配置への固定指定は未対応です。
+`x`、`y` と `fixed=true` で座標を固定できます。親内では相対座標です。
+`width` と `height` は属性として保持しますが、カード寸法の固定指定は未対応です。
 
 Terraform アダプターの属性として `terraformType`、`availability_zone`、`cidr_block`、
 `instance_type`、`engine`、`engine_version`、`placement`、`subnetVisibility` も文字列で受け付けます。
@@ -96,7 +97,7 @@ role -> api kind=deploy
 sg -> api kind=association
 ```
 
-`kind` は `traffic`、`dependency`、`auth`、`deploy`、`association` です。省略時は `traffic` です。
+`kind` は `traffic`、`dependency`、`auth`、`deploy`、`association`、`replication`、`failover` です。省略時は `traffic` です。
 接続には `protocol`、`port`、`label`、`description` も指定できます。
 `port` は 0 から 65535 の整数です。端点は宣言されたリソースの ID を指定します。
 Terraform の参照と `depends_on` は `dependency` であり、通信の証拠として扱いません。
@@ -137,12 +138,12 @@ API キーやログの内容は DSL に記載しないでください。実際�
 折りたたんだ内部だけの接続は省略し、展開すると原図から復元します。
 表示操作では共通モデルを変更しません。
 
-ビューアー上部の「矢印」で「直角」または「曲線」を選択できます。
-曲線はベジェ曲線で描画し、ラベルも曲線の中央へ移します。
+ビューアー上部の「矢印：直線／曲線」をクリックすると形状を切り替えます。
+曲線はベジェ曲線で描画し、カードを横切る場合は曲がり方や迂回経路を変えます。
+ラベルは共通の衝突回避位置を使います。
 切り替えてもノード配置・パン・ズーム・接続の選択を保持します。
 開発画面と単一 HTML で利用できます。この選択は表示中のセッションにのみ適用され、
-DSL には保存しません。曲線では直角経路の障害物回避を利用しないため、
-密集した図では他のノードと重なる場合があります。
+DSL には保存しません。静的出力は直角経路です。
 
 ## 診断と修正例
 
@@ -189,7 +190,7 @@ const dsl = serializeDSL(result.diagram);
 `LayoutResult.edges` の接続経路とラベル中心は図全体の絶対座標です。ELK が計算した直交経路を保持し、
 ラベルのテキスト寸法も配置へ渡します。入れ子の辺は `container` の親座標を累積して変換します。
 ELK のアルゴリズム、seed、入力 ID 順序を固定します。同じ入力と同じライブラリ版で配置を検証します。
-小さな変更による既存位置の維持は保証しません。`durationMs` は各実行の測定値で、再現性比較の対象外です。
+固定座標は維持します。未固定ノードの既存位置の維持は保証しません。`durationMs` は各実行の測定値で、再現性比較の対象外です。
 
 ## LLM への生成指示
 
@@ -336,3 +337,42 @@ AZ名だけでアカウント間の同じ物理ゾーンを示すとは扱いま
 [AWSのアカウント識別子](https://docs.aws.amazon.com/general/latest/gr/acct-identifiers.html) と
 [AZ IDの説明](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/dh-sharing.html) を参照してください。
 [identity.infra](../examples/identity.infra) は架空IDを使った表示例です。
+
+## フィルター・経路・囲み・固定配置・接続口
+
+`view` の `kinds` / `routes` / `purposes`、接続の `route` / `step` / `routeDirection` / `purpose`、
+`overlay members=[...]`、リソースの `ports` / `redundancyRole`、接続の `sourcePort` / `targetPort` を利用できます。
+構文例・検証規則・保存操作・制約は [インフラ構成図の詳細表現](architecture-expressions.md) を参照してください。
+
+## インフラ表現の追加属性
+
+リソースの `columnsBy` / `logicalService`、`exposure` / `trustZone`、`evidence` / `change`、
+`count` / `countMin` / `countMax`、`boundary` / `appearance` / `icon`、注釈の `anchor` / `anchorEdge`、
+接続の `id` / `encrypted` / `authMethod` / `evidence` / `change` を利用できます。
+`note` は独立した注釈、`collection` / `site` / `rack` / `namespace` / `cluster` / `zone` は境界です。
+詳細な検証規則と静的出力は [詳細表現](architecture-expressions.md) を参照してください。
+
+## Subnet内のリソースとSGルール
+
+Subnetの `{ ... }` 内にリソースを宣言すると、物理的な所属として表示します。
+`view service level=resource` でサービス表示でも内部を展開できます。
+`subnets=[a,c]` は配置設定の参照で、入れ子とは別の表現です。
+[Subnet・SGのサンプル](../examples/subnet-security.infra) を画面のサンプル一覧から開けます。
+
+```text
+subnet app "Private Subnet" private {
+  aws.ec2 api "API" securityGroups=[api_sg, monitoring_sg]
+}
+sg api_sg "API SG" ingress=["tcp 8080 sg:web_sg"] egress=["tcp 5432 sg:db_sg"]
+sg web_sg "Web SG" ingress=["tcp 443 0.0.0.0/0"] egress=[]
+sg db_sg "DB SG" ingress=["tcp 5432 sg:api_sg"] egress=[]
+sg monitoring_sg "Monitoring SG" ingress=["tcp 9100 10.0.0.0/16"] egress=[]
+```
+
+`ingress`・`egress` はSG専用の文字列配列です。各項目は `protocol port peer` の形式です。
+プロトコルは `tcp`・`udp`・`icmp`・`all`、TCP/UDPポートは0〜65535または `開始-終了`、
+ICMP/allのポート欄は `*` を指定します。相手はIPv4/IPv6 CIDRまたは存在するSGの `sg:ID` です。
+現在はICMPのtype/codeやprefix listは扱いません。ルールはカード上の表で表示します。
+`egress=[]` は明示的な空のルールです。省略した方向についてAWSの既定値を補完しません。
+SGの所属は複数指定でき、リソースの詳細から所属SGへ移動できます。
+許可ルールと実際の通信線は独立しており、通信成立やAWS設定の適法性を検証するものではありません。

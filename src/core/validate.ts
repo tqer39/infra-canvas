@@ -1,6 +1,7 @@
+import { validateArchitecture } from './architecture.js';
 import { resourceContent } from './content.js';
 import { validateComputeAttributes } from './resource-metadata.js';
-import { isBoundary, isTelemetrySignals } from './model.js';
+import { isBoundary, isTelemetrySignals, edgeKinds } from './model.js';
 import type { Diagram, Resource } from './model.js';
 
 const idPattern = /^[A-Za-z_][A-Za-z0-9_.:-]*$/;
@@ -31,7 +32,7 @@ const location = (value: unknown): boolean =>
   positiveInteger(value.line) &&
   positiveInteger(value.column) &&
   (value.file === undefined || typeof value.file === 'string');
-const kinds = new Set(['traffic', 'dependency', 'auth', 'deploy', 'association']);
+const kinds = new Set<string>(edgeKinds);
 
 /** 外部 JSON とライブラリ利用者の入力を、推測や修正をせず共通モデルとして検証する。 */
 export function validateDiagram(value: unknown): Diagram {
@@ -126,11 +127,14 @@ export function validateDiagram(value: unknown): Diagram {
       !record(view) ||
       !identifier(view.id) ||
       ids.has(view.id) ||
+      (view.label !== undefined && (typeof view.label !== 'string' || !view.label.trim())) ||
       !['overview', 'service', 'subnet', 'resource'].includes(view.level) ||
       (view.overlay !== undefined && view.overlay !== 'sg') ||
       (view.direction !== undefined && !['RIGHT', 'DOWN'].includes(view.direction))
     )
-      throw new Error('表示設定の一意な ID・level・overlay・direction を確認してください。');
+      throw new Error(
+        '表示設定の一意な ID・表示名・level・overlay・direction を確認してください。',
+      );
     ids.add(view.id);
   }
   for (const diagnostic of diagram.diagnostics)
@@ -143,6 +147,7 @@ export function validateDiagram(value: unknown): Diagram {
       !['error', 'warning'].includes(diagnostic.severity)
     )
       throw new Error('診断の code・severity・ソース位置を確認してください。');
+  validateArchitecture(diagram);
   return diagram;
 }
 

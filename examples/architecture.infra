@@ -1,0 +1,31 @@
+diagram "経路・冗長化・跨る境界" version=1 {
+  external.user user "利用者"
+  account prod "本番" icon=aws.organization-account {
+    vpc network "VPC" columnsBy=az {
+      group az_a "AZ A" az="ap-northeast-1a" {
+        subnet subnet_a private az="ap-northeast-1a"
+        aws.ec2 api_a "API A" ports=[frontend,backend] redundancyRole=active
+      }
+      group az_c "AZ C" az="ap-northeast-1c" {
+        subnet subnet_c private az="ap-northeast-1c"
+        aws.ec2 api_c "API C" ports=[frontend,backend] redundancyRole=standby
+      }
+      aws.alb alb "ALB" subnets=[subnet_a,subnet_c] ports=[listener,target]
+      aws.rds primary "DB Primary" redundancyRole=primary
+      aws.rds replica "DB Replica" redundancyRole=replica
+    }
+  }
+  overlay application "API の冗長化グループ" members=[api_a,api_c]
+  overlay backend "バックエンドの信頼境界" members=[api_a,api_c,primary,replica]
+  user -> alb route=web step=1 purpose=application targetPort=listener protocol=https port=443
+  alb -> api_a route=web step=2 purpose=application sourcePort=target targetPort=frontend protocol=http port=8080
+  api_a -> primary route=web step=3 purpose=application sourcePort=backend protocol=tcp port=5432
+  primary -> api_a route=web step=1 routeDirection=return purpose=application targetPort=backend label="応答"
+  api_a -> alb route=web step=2 routeDirection=return purpose=application sourcePort=frontend targetPort=target label="応答"
+  alb -> user route=web step=3 routeDirection=return purpose=application sourcePort=listener label="応答"
+  primary -> replica kind=replication purpose=data label="非同期複製"
+  alb -> api_c kind=failover purpose=application sourcePort=target targetPort=frontend label="切替時"
+  view application_view label="アプリ通信" level=resource kinds=[traffic,failover] purposes=[application]
+  view web_path label="Web往復経路" level=resource kinds=[traffic] routes=[web]
+  view data label="DB複製" level=resource kinds=[replication] purposes=[data]
+}

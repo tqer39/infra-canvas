@@ -5,6 +5,9 @@ export function getResourceIconType(
   resource: Resource,
   byId: ReadonlyMap<string, Resource>,
 ): string {
+  if (typeof resource.attributes.icon === 'string') return resource.attributes.icon;
+  if (resource.type === 'account' && /^aws(\.|$)/.test(String(resource.attributes.provider ?? '')))
+    return 'aws.organization-account';
   if (resource.type === 'vpc') return 'aws.vpc';
   if (resource.type !== 'subnet') return resource.type;
   const seen = new Set<string>();

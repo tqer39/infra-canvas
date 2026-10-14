@@ -29,7 +29,16 @@ export interface Resource {
   provenance?: Provenance;
   unresolved?: string[];
 }
-export type EdgeKind = 'traffic' | 'dependency' | 'auth' | 'deploy' | 'association';
+export const edgeKinds = [
+  'traffic',
+  'dependency',
+  'auth',
+  'deploy',
+  'association',
+  'replication',
+  'failover',
+] as const;
+export type EdgeKind = (typeof edgeKinds)[number];
 export const telemetrySignals = ['metrics', 'logs', 'traces'] as const;
 export const telemetrySignalLabels: Record<string, string> = {
   metrics: 'メトリクス',
@@ -56,9 +65,13 @@ export interface Connection {
 }
 export interface View {
   id: string;
+  label?: string;
   level: 'overview' | 'service' | 'subnet' | 'resource';
   overlay?: string;
   direction?: 'RIGHT' | 'DOWN';
+  kinds?: EdgeKind[];
+  routes?: string[];
+  purposes?: string[];
 }
 export interface Diagram {
   version: 1;
@@ -77,12 +90,17 @@ export interface DisplayOptions {
   collapsed?: string[];
   expanded?: string[];
   direction?: 'RIGHT' | 'DOWN';
+  kinds?: EdgeKind[];
+  routes?: string[];
+  purposes?: string[];
 }
 export interface DisplayGraph {
   resources: Resource[];
   connections: (Connection & { originalIds: string[] })[];
   representative: Record<string, string>;
   collapsed: string[];
+  overlays?: Resource[];
+  notes?: Resource[];
 }
 export interface Placement {
   id: string;
@@ -91,17 +109,28 @@ export interface Placement {
   width: number;
   height: number;
   parentId?: string;
+  contentTop?: number;
 }
 export interface EdgeRoute {
   id: string;
   points: { x: number; y: number }[];
   label?: { x: number; y: number };
+  labelAnchor?: { x: number; y: number };
 }
 export interface LayoutResult {
   nodes: Placement[];
   edges?: EdgeRoute[];
   durationMs: number;
   version: string;
+  overlays?: (Placement & {
+    label: string;
+    members: string[];
+    labelX?: number;
+    labelY?: number;
+    labelWidth?: number;
+    labelHeight?: number;
+  })[];
+  annotations?: (Placement & { label: string; text: string; anchor?: { x: number; y: number } })[];
 }
 export const boundaryTypes = new Set([
   'account',
@@ -112,6 +141,12 @@ export const boundaryTypes = new Set([
   'network',
   'subnet',
   'group',
+  'collection',
+  'site',
+  'rack',
+  'namespace',
+  'cluster',
+  'zone',
   'module',
   'aws.organization',
   'aws.organization-root',
@@ -124,4 +159,5 @@ export const boundaryTypes = new Set([
   'aws.beanstalk-application',
   'aws.beanstalk-environment',
 ]);
-export const isBoundary = (resource: Resource): boolean => boundaryTypes.has(resource.type);
+export const isBoundary = (resource: Resource): boolean =>
+  boundaryTypes.has(resource.type) || resource.attributes.boundary === true;

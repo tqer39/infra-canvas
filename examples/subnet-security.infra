@@ -1,0 +1,29 @@
+diagram "AWS Subnetとセキュリティグループ" {
+  external.user users "利用者"
+  account prod "本番" icon=aws.organization-account {
+    vpc network "VPC" cidr="10.0.0.0/16" columnsBy=az {
+      group az_a "AZ A" az="ap-northeast-1a" {
+        subnet public_a "Public Subnet" public az="ap-northeast-1a" cidr="10.0.1.0/24" {
+          aws.ec2 web "Webサーバー" securityGroups=[web_sg]
+        }
+        subnet private_a "Private Subnet" private az="ap-northeast-1a" cidr="10.0.11.0/24" {
+          aws.ec2 api "APIサーバー" securityGroups=[app_sg,monitoring_sg]
+        }
+      }
+      group az_c "AZ C" az="ap-northeast-1c" {
+        subnet private_c "DB Subnet" private az="ap-northeast-1c" cidr="10.0.12.0/24" {
+          aws.rds database "注文DB" securityGroups=[db_sg]
+        }
+      }
+      sg web_sg "Web SG" ingress=["tcp 443 0.0.0.0/0"] egress=["tcp 8080 sg:app_sg"]
+      sg app_sg "Application SG" ingress=["tcp 8080 sg:web_sg"] egress=["tcp 5432 sg:db_sg"]
+      sg db_sg "DB SG" ingress=["tcp 5432 sg:app_sg"] egress=[]
+      sg monitoring_sg "Monitoring SG" ingress=["tcp 9100 10.0.0.0/16"] egress=[]
+    }
+  }
+  users -> web protocol=https port=443
+  web -> api protocol=http port=8080
+  api -> database protocol=tcp port=5432
+  view service level=resource
+  view security level=resource overlay=sg
+}
