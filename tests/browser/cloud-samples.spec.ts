@@ -1,5 +1,5 @@
 import { selectSavedView } from './display-controls';
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { resolve } from 'node:path';
 
 const samples = [

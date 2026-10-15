@@ -4,21 +4,10 @@ import {
   selectSavedView,
   toggleMembership,
 } from './display-controls';
-import { test, expect } from '@playwright/test';
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { test, expect } from './fixtures';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-test.beforeAll(() => {
-  mkdirSync('artifacts', { recursive: true });
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'html',
-    'examples/architecture.infra',
-    '--out',
-    'artifacts/architecture.html',
-  ]);
-});
 for (const offline of [false, true])
   test(`構成図のフィルター・経路・囲み・接続口・冗長化 (${offline ? 'HTML' : '開発画面'})`, async ({
     page,

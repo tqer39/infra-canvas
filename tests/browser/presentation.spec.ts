@@ -1,37 +1,8 @@
 import { toggleArrowShape, toggleMembership } from './display-controls';
-import { test, expect } from '@playwright/test';
-import { execFileSync } from 'node:child_process';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { test, expect } from './fixtures';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-test.beforeAll(() => {
-  mkdirSync('artifacts', { recursive: true });
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'html',
-    'examples/expressions.infra',
-    '--out',
-    'artifacts/expressions.html',
-  ]);
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'png',
-    'examples/expressions.infra',
-    '--out',
-    'artifacts/expressions-cli.png',
-    '--scale',
-    '0.5',
-  ]);
-  execFileSync(process.execPath, [
-    'dist/cli.js',
-    'pdf',
-    'examples/expressions.infra',
-    '--out',
-    'artifacts/expressions-cli.pdf',
-    '--paper',
-    'A3',
-  ]);
-});
 for (const offline of [false, true])
   test(`P2/P3の表示・注釈・集合の復元・SVG/PNG/PDF出力 (${offline ? 'HTML' : '開発画面'})`, async ({
     page,
