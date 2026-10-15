@@ -18,45 +18,57 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2, 3]
+    env:
+      MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+      MISE_YES: '1'
+      MISE_GITHUB_TOKEN: ${{ github.token }}
     steps:
-      - name: 前回失敗時の起動診断を収集
+      - name: 専用ワークスペースに対象コミットを取得
+        env:
+          CHECKOUT_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         shell: bash
         run: |
-          /usr/bin/python3 - <<'PY_DIAGNOSTIC'
-          import glob, json, zipfile
-          from urllib.parse import urlsplit
-          for path in glob.glob('artifacts/browser-results/**/trace.zip', recursive=True):
-              print('TRACE', path)
-              with zipfile.ZipFile(path) as archive:
-                  for name in archive.namelist():
-                      if not name.endswith(('.trace', '.network')):
-                          continue
-                      for line in archive.read(name).splitlines():
-                          event = json.loads(line)
-                          if event.get('type') == 'console' and event.get('messageType') == 'error':
-                              print('CONSOLE', event.get('text', ''))
-                          if event.get('method') == 'pageError':
-                              print('PAGEERROR', event.get('params', {}))
-                          snap = event.get('snapshot', {})
-                          if snap.get('response', {}).get('status', 0) >= 400:
-                              print('HTTP', snap['response']['status'], urlsplit(snap.get('request', {}).get('url', '')).path)
-          PY_DIAGNOSTIC
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
-        with:
-          version: '2026.9.9'
-          install_args: ${{ matrix.shard == 1 && 'node python' || 'node' }}
-          cache: false
+          set -euo pipefail
+          expected="${RUNNER_TEMP%/_temp}/infra-canvas/infra-canvas"
+          [[ "$RUNNER_TEMP" == /*/_work/_temp && "$GITHUB_WORKSPACE" == "$expected" ]]
+          [[ "$GITHUB_SERVER_URL" == https://github.com && "$GITHUB_REPOSITORY" == tqer39/infra-canvas ]]
+          [[ -n "$CHECKOUT_TOKEN" ]]
+          commits=()
+          for sha in "$GITHUB_SHA" "$BASE_SHA" "$HEAD_SHA"; do
+            [[ "$sha" =~ ^[a-f0-9]{40}$ ]]
+            [[ "$sha" == 0000000000000000000000000000000000000000 ]] || commits+=("$sha")
+          done
+          [[ "$GITHUB_SHA" != 0000000000000000000000000000000000000000 ]]
+          cd "$RUNNER_TEMP"
+          rm -rf -- "$GITHUB_WORKSPACE"
+          mkdir -p "$GITHUB_WORKSPACE"
+          cd "$GITHUB_WORKSPACE"
+          export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null
+          git init --quiet
+          git remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
+          authorization=$(printf 'x-access-token:%s' "$CHECKOUT_TOKEN" | base64 | tr -d '\n')
+          export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.https://github.com/.extraheader
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic $authorization"
+          git -c gc.auto=0 fetch --no-tags origin "${commits[@]}"
+          unset GIT_CONFIG_COUNT GIT_CONFIG_KEY_0 GIT_CONFIG_VALUE_0 authorization CHECKOUT_TOKEN
+          git checkout --detach --force "$GITHUB_SHA"
+          echo "$HOME/.local/share/mise/bin" >> "$GITHUB_PATH"
+      - name: 導入済みmiseで実行環境を準備
+        env:
+          TOOLS: ${{ matrix.shard == 1 && 'node python' || 'node' }}
+        run: |
+          [[ "$(mise --version)" == '2026.9.9 '* ]]
+          read -ra tools <<< "$TOOLS"
+          mise install "${tools[@]}"
       - name: ブラウザー検証が必要な変更を判定
         id: changes
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           EVENT_NAME: ${{ github.event_name }}
-        run: node scripts/ci-policy.mjs changes >> "$GITHUB_OUTPUT"
+        run: mise exec node -- node scripts/ci-policy.mjs changes >> "$GITHUB_OUTPUT"
       - run: mise run install
         if: ${{ matrix.shard == 1 || steps.changes.outputs.browser == 'true' }}
       - name: 型検査・Oxlint・markdownlint・Oxfmt・単体テスト
@@ -68,7 +80,7 @@ jobs:
         if: ${{ steps.changes.outputs.browser == 'true' }}
       - name: runner ごとにブラウザーのポートを割り当てる
         if: ${{ steps.changes.outputs.browser == 'true' }}
-        run: node scripts/ci-policy.mjs port >> "$GITHUB_ENV"
+        run: mise exec node -- node scripts/ci-policy.mjs port >> "$GITHUB_ENV"
       - run: mise run test:browser -- --shard=${{ matrix.shard }}/3
         if: ${{ steps.changes.outputs.browser == 'true' }}
   workflow-result:

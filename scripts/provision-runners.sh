@@ -37,6 +37,13 @@ curl --fail --location --retry 3 \
   --output "$archive"
 echo "70920811a4f8ad4328818682bca5c6469c1c942fab52448868071d0063816613  $archive" | sha256sum --check
 
+# 通常CIはActionの毎回ダウンロードを避け、検証済みのmiseを常設する。
+curl --fail --location --retry 3 \
+  https://github.com/jdx/mise/releases/download/v2026.9.9/mise-v2026.9.9-linux-x64.tar.gz \
+  --output "$temporary/mise.tar.gz"
+echo "e4767e4854af5daeff2191b2bbdc94f834742a23efad591dbd33187861d41604  $temporary/mise.tar.gz" | sha256sum --check
+tar -xzf "$temporary/mise.tar.gz" -C "$temporary"
+
 for slot in ci-1 ci-2 ci-3 maintenance; do
   account="ic-$slot"
   directory="/var/lib/infra-canvas-$slot"
@@ -56,6 +63,8 @@ for slot in ci-1 ci-2 ci-3 maintenance; do
     useradd --system --user-group --create-home --home-dir "$directory" --shell /usr/sbin/nologin "$account"
   fi
   chmod 700 "$directory"
+  install -d -o "$account" -g "$account" -m 700 "$directory/.local/share/mise/bin"
+  install -o "$account" -g "$account" -m 755 "$temporary/mise/bin/mise" "$directory/.local/share/mise/bin/mise"
   if [[ ! -f "$directory/runner/.runner" ]]; then
     install -d -o "$account" -g "$account" -m 700 "$directory/runner"
     tar -xzf "$archive" -C "$directory/runner"

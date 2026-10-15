@@ -51,7 +51,9 @@ test('静的検証は常に1回、ブラウザーは必要時に3シャードす
     );
     assert.equal(runs.filter((run) => run === 'mise run check:static').length, 1);
     assert.equal(
-      runs.filter((run) => run === 'node scripts/ci-policy.mjs changes >> "$GITHUB_OUTPUT"').length,
+      runs.filter(
+        (run) => run === 'mise exec node -- node scripts/ci-policy.mjs changes >> "$GITHUB_OUTPUT"',
+      ).length,
       3,
     );
     assert.equal(
@@ -70,9 +72,6 @@ test('静的検証は常に1回、ブラウザーは必要時に3シャードす
       );
     }
   }
-  const checkout = verify.steps.find((step) => step.uses?.startsWith('actions/checkout@'));
-  assert.equal(checkout.with['fetch-depth'], 0);
-  assert.equal(checkout.with['persist-credentials'], false);
 });
 
 test('3 runner と保守のポートを分け、準備と変更判定を依存導入より先に行う', () => {
@@ -84,21 +83,22 @@ test('3 runner と保守のポートを分け、準備と変更判定を依存�
     runnerPort('infra-canvas-maintenance'),
   );
   const index = (fragment) => verify.steps.findIndex((step) => step.run?.includes(fragment));
-  const mise = verify.steps.findIndex((step) => step.uses?.startsWith('jdx/mise-action@'));
+  const mise = verify.steps.findIndex((step) => step.name === '導入済みmiseで実行環境を準備');
   assert.ok(mise < index('ci-policy.mjs changes'));
   assert.ok(index('ci-policy.mjs changes') < index('mise run install'));
   assert.ok(index('mise run check:static') < index('mise run test:browser'));
   assert.ok(index('ci-policy.mjs port') < index('mise run test:browser'));
 });
 
-test('常設runnerにsudoやリモートキャッシュ復元を要求しない', () => {
-  for (const job of [verify, icons.jobs.update]) {
-    const mise = job.steps.find((step) => step.uses?.startsWith('jdx/mise-action@'));
-    assert.ok(mise);
-    assert.equal(mise.with.cache, false);
-    for (const step of job.steps)
+test('通常CIは外部Actionを取得せず、導入済みmiseと必要なツールだけを使う', () => {
+  for (const job of Object.values(ci.jobs)) {
+    for (const step of job.steps) {
+      assert.equal(step.uses, undefined);
       assert.doesNotMatch(step.run ?? '', /\bsudo\b|browser:install-ci/);
+    }
   }
+  const prepare = verify.steps.find((step) => step.name === '導入済みmiseで実行環境を準備');
+  assert.equal(prepare.env.TOOLS, "${{ matrix.shard == 1 && 'node python' || 'node' }}");
   assert.ok(
     icons.jobs.update.steps.some((step) => step.run === 'mise run test:browser -- --workers=1'),
   );

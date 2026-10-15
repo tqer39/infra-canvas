@@ -1,5 +1,5 @@
 import { setDisplayOptions, selectDetail, selectSavedView } from './display-controls';
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page } from './fixtures';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';

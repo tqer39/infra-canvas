@@ -4,7 +4,7 @@ import {
   selectSavedView,
   toggleMembership,
 } from './display-controls';
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
