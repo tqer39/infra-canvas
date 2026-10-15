@@ -1,0 +1,25 @@
+# ビルドに必要な入力だけを許可し、認証情報・ローカル生成物を送らない。
+**
+!package.json
+!package-lock.json
+!tsconfig.json
+!tsconfig.build.json
+!vite.config.ts
+!index.html
+!scripts/
+!scripts/build.mjs
+!src/
+!src/**
+!examples/
+!examples/**
+!docs/
+!docs/assets.md
+!LICENSE*
+**/.env*
+**/*.tfstate*
+**/*.tfplan
+**/.terraform/**
+**/.git/**
+**/node_modules/**
+**/plan.json
+**/state.json

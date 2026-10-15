@@ -11,7 +11,7 @@ import { importTerraformRepository } from './terraform/index.js';
 import { embedDiagram, exportHTML } from './export.js';
 import { fileURLToPath } from 'node:url';
 
-const help = `Infra Canvas\n\n  validate <file.infra>\n  preview <file.infra|model.json> [--port 5180]\n  import <repository> [--root .] [--json plan.json] [--out model.json] [--dsl output.infra]\n  dsl <model.json> --out output.infra\n  html <file.infra|model.json> --out diagram.html\n  svg|png|pdf <file.infra|model.json> --out output [--view id] [--scale 1]\n  pdf: [--paper A4|A3] [--orientation landscape|portrait] [--pages fit|tile]\n\nTerraform の JSON は terraform show -json で事前に生成してください。\n`;
+const help = `Infra Canvas\n\n  validate <file.infra>\n  preview <file.infra|model.json> [--port 5180] [--host 127.0.0.1|0.0.0.0]\n  import <repository> [--root .] [--json plan.json] [--out model.json] [--dsl output.infra]\n  dsl <model.json> --out output.infra\n  html <file.infra|model.json> --out diagram.html\n  svg|png|pdf <file.infra|model.json> --out output [--view id] [--scale 1]\n  pdf: [--paper A4|A3] [--orientation landscape|portrait] [--pages fit|tile]\n\nTerraform の JSON は terraform show -json で事前に生成してください。\n`;
 
 export async function loadDiagram(path: string): Promise<Diagram> {
   const source = await readFile(path, 'utf8');
@@ -42,6 +42,7 @@ async function main(args: string[]) {
     if (
       ![
         '--port',
+        '--host',
         '--root',
         '--json',
         '--out',
@@ -123,6 +124,9 @@ async function main(args: string[]) {
     );
     const html = embedDiagram(template, diagram);
     const port = Number(options['--port'] ?? 5180);
+    const host = options['--host'] ?? '127.0.0.1';
+    if (!['127.0.0.1', '0.0.0.0'].includes(host))
+      throw new Error('host は 127.0.0.1 または 0.0.0.0 を指定してください。');
     if (!Number.isInteger(port) || port < 1024 || port > 65535)
       throw new Error('port は 1024〜65535 の整数を指定してください。');
     const server = createServer((req, res) => {
@@ -147,8 +151,8 @@ async function main(args: string[]) {
       console.error('プレビューを起動できません。別の port を指定してください。');
       process.exitCode = 1;
     });
-    server.listen(port, '127.0.0.1', () =>
-      console.log(`http://127.0.0.1:${port}/  (終了: Ctrl+C)`),
+    server.listen(port, host, () =>
+      console.log(`http://127.0.0.1:${port}/  (待ち受け: ${host}、終了: Ctrl+C)`),
     );
     return;
   }

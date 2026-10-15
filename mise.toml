@@ -74,6 +74,14 @@ depends = ["check:static", "build"]
 [tasks."test:browser"]
 run = "playwright test"
 
+[tasks."docker:build"]
+description = "現在のCPU向けのDockerイメージをビルドする"
+run = "docker build --tag infra-canvas:local ."
+
+[tasks."test:docker"]
+description = "Dockerイメージの起動・API保護・ブラウザー操作を検証する（引数: イメージ platform）"
+run = "node scripts/test-docker.mjs"
+
 [tasks."browser:install"]
 run = "playwright install --only-shell chromium"
 
