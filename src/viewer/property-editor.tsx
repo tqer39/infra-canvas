@@ -1,5 +1,5 @@
 import { edgeKinds, edgeKindLabels } from '../core/model';
-import { useId, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { getIcon, iconTypes } from '../assets/icons';
 import {
   textAttributes,
@@ -82,6 +82,11 @@ export function PropertyEditor({
   const [saved, setSaved] = useState(false);
   const [icon, setIcon] = useState(String(resource?.attributes.icon ?? ''));
   const [iconQuery, setIconQuery] = useState('');
+  const iconBrowser = useRef<HTMLDivElement>(null);
+  const currentIconButton = useRef<HTMLButtonElement>(null);
+  const displayedIconType = icon || resourceIconType || resource?.type || '';
+  const scrollTargetType = getIcon(displayedIconType) ? displayedIconType : '';
+
   const iconGroups: Record<string, string> = {
     aws: 'AWS',
     gcp: 'Google Cloud',
@@ -106,13 +111,28 @@ export function PropertyEditor({
     types: matchingIcons.filter((type) => !iconGroups[type.split('.')[0]]),
   });
   const [collapsedIconGroups, setCollapsedIconGroups] = useState<string[]>(() =>
-    groups
-      .filter((group) => !group.types.includes(icon || resourceIconType || resource?.type || ''))
-      .map((group) => group.name),
+    groups.filter((group) => !group.types.includes(displayedIconType)).map((group) => group.name),
   );
+  const currentGroupOpen = !collapsedIconGroups.includes(
+    iconGroups[displayedIconType.split('.')[0]] ?? 'その他',
+  );
+  useLayoutEffect(() => {
+    const browser = iconBrowser.current;
+    const button = currentIconButton.current;
+    if (!browser || !button || !button.getClientRects().length) return;
+    const viewport = browser.getBoundingClientRect();
+    const target = button.getBoundingClientRect();
+    const heading = button.closest('details')?.querySelector('summary');
+    const top =
+      viewport.top + browser.clientTop + (heading?.getBoundingClientRect().height ?? 0) + 6;
+    const bottom = viewport.top + browser.clientTop + browser.clientHeight - 6;
+    if (target.top < top) browser.scrollTop += target.top - top;
+    else if (target.bottom > bottom) browser.scrollTop += target.bottom - bottom;
+  }, [scrollTargetType, query, currentGroupOpen]);
   const iconButton = (type: string) => (
     <button
       key={type}
+      ref={type === scrollTargetType ? currentIconButton : undefined}
       type="button"
       className={`icon-candidate ${type ? '' : 'icon-automatic'}`}
       aria-label={type || '種別から自動選択'}
@@ -253,7 +273,7 @@ export function PropertyEditor({
           </label>
           <fieldset className="icon-picker">
             <legend>表示アイコン</legend>
-            <div className="icon-browser">
+            <div className="icon-browser" ref={iconBrowser}>
               {iconButton('')}
               {icon && !matchingIcons.includes(icon) && iconButton(icon)}
               {groups
