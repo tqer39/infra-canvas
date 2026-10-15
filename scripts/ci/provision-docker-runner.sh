@@ -55,8 +55,13 @@ curl --fail --location --retry 3 \
   --output "$temporary/mise.tar.gz"
 echo "e4767e4854af5daeff2191b2bbdc94f834742a23efad591dbd33187861d41604  $temporary/mise.tar.gz" | sha256sum --check
 tar -xzf "$temporary/mise.tar.gz" -C "$temporary"
-install -d -o "$account" -g "$account" -m 0700 "$directory/.local/share/mise/bin"
+install -d -o "$account" -g "$account" -m 0700 \
+  "$directory/.local" "$directory/.local/share" "$directory/.local/share/mise" \
+  "$directory/.local/share/mise/bin" "$directory/.local/state" "$directory/.cache"
 install -o "$account" -g "$account" -m 0755 "$temporary/mise/bin/mise" "$directory/.local/share/mise/bin/mise"
+# install -dは暗黙に作った親の所有者を変更しないため、runnerで実際に書き込みを検証する。
+runuser -u "$account" -- mkdir -p \
+  "$directory/.local/share/mise/installs" "$directory/.local/state/mise" "$directory/.cache/mise"
 if [[ ! -f "$directory/runner/.runner" ]]; then
   curl --fail --location --retry 3 \
     https://github.com/actions/runner/releases/download/v2.337.0/actions-runner-linux-x64-2.337.0.tar.gz \
