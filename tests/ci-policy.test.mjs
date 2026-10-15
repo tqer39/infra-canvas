@@ -4,7 +4,36 @@ import { mkdtempSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
-import { changedFiles, needsBrowser, workflowSucceeded } from '../scripts/ci-policy.mjs';
+import {
+  changedFiles,
+  needsBrowser,
+  runnerPort,
+  workflowSucceeded,
+} from '../scripts/ci-policy.mjs';
+
+test('ポートCLIはrunner名に対応した値を出力し、未知のrunnerでは設定を出力しない', () => {
+  for (const name of [
+    'infra-canvas-ci-1',
+    'infra-canvas-ci-2',
+    'infra-canvas-ci-3',
+    'infra-canvas-maintenance',
+  ]) {
+    const result = spawnSync(process.execPath, ['scripts/ci-policy.mjs', 'port'], {
+      env: { ...process.env, RUNNER_NAME: name },
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.stdout, `INFRA_TEST_PORT=${runnerPort(name)}\n`);
+  }
+  for (const name of ['', 'unregistered-runner', 'infra-canvas-ci-4', '__proto__']) {
+    const result = spawnSync(process.execPath, ['scripts/ci-policy.mjs', 'port'], {
+      env: { ...process.env, RUNNER_NAME: name },
+      encoding: 'utf8',
+    });
+    assert.notEqual(result.status, 0);
+    assert.equal(result.stdout, '');
+  }
+});
 
 test('文書・Renovate・AIルール・単体検証・アイコン取得処理だけならブラウザーを省略する', () => {
   for (const file of [

@@ -37,6 +37,19 @@ export function workflowSucceeded({ changes, checks, browser, browserRequired })
   );
 }
 
+// 別PRの同じシャードが並行しても、ホスト上のポートを共有しない。
+export function runnerPort(name) {
+  const ports = new Map([
+    ['infra-canvas-ci-1', 5181],
+    ['infra-canvas-ci-2', 5182],
+    ['infra-canvas-ci-3', 5184],
+    ['infra-canvas-maintenance', 5183],
+  ]);
+  const port = ports.get(name);
+  if (!port) throw new Error(`未登録の runner です: ${name}`);
+  return port;
+}
+
 export function changedFiles(base, head, event) {
   if (!/^[a-f0-9]{40}$/.test(base ?? '') || !/^[a-f0-9]{40}$/.test(head ?? '')) {
     throw new Error('変更判定には完全なコミット SHA が必要です');
@@ -55,6 +68,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
   if (process.argv[2] === 'changes') {
     const files = changedFiles(process.env.BASE_SHA, process.env.HEAD_SHA, process.env.EVENT_NAME);
     console.log(`browser=${files === null || needsBrowser(files)}`);
+  } else if (process.argv[2] === 'port') {
+    console.log(`INFRA_TEST_PORT=${runnerPort(process.env.RUNNER_NAME)}`);
   } else if (process.argv[2] === 'result') {
     const passed = workflowSucceeded({
       changes: process.env.CHANGES_RESULT,
@@ -67,6 +82,6 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
       process.exitCode = 1;
     }
   } else {
-    throw new Error('changes または result を指定してください');
+    throw new Error('changes、port または result を指定してください');
   }
 }

@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import { parse } from 'yaml';
+import { runnerPort } from '../scripts/ci-policy.mjs';
 
 const ci = parse(readFileSync('.github/workflows/ci.yml', 'utf8'));
 const icons = parse(readFileSync('.github/workflows/update-icons.yml', 'utf8'));
@@ -22,14 +23,19 @@ test('無料枠を消費する hosted runner を残さず、通常CIと保守の
   assert.equal(ci.jobs.browser.needs, 'changes');
 });
 
-test('同一ホスト上のブラウザー2シャードと保守ジョブは別ポートを使う', () => {
+test('同一ホスト上のCI3台と保守ジョブは別ポートを使い、別PRでも競合しない', () => {
   const browser = ci.jobs.browser;
   assert.deepEqual(browser.strategy.matrix.shard, [1, 2]);
-  const ports = browser.strategy.matrix.shard.map((shard) =>
-    browser.env.INFRA_TEST_PORT.replace('${{ matrix.shard }}', String(shard)),
+  const ports = [1, 2, 3].map((slot) => runnerPort(`infra-canvas-ci-${slot}`));
+  ports.push(runnerPort('infra-canvas-maintenance'));
+  assert.equal(new Set(ports).size, 4);
+  assert.equal(
+    Number(icons.jobs.update.env.INFRA_TEST_PORT),
+    runnerPort('infra-canvas-maintenance'),
   );
-  ports.push(icons.jobs.update.env.INFRA_TEST_PORT);
-  assert.equal(new Set(ports).size, 3);
+  assert.ok(
+    browser.steps.some((step) => step.run === 'node scripts/ci-policy.mjs port >> "$GITHUB_ENV"'),
+  );
   for (const port of ports) assert.ok(Number(port) >= 1024 && Number(port) <= 65535);
   assert.match(
     browser.steps.find((step) => step.run?.includes('test:browser')).run,

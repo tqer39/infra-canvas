@@ -37,12 +37,18 @@ curl --fail --location --retry 3 \
   --output "$archive"
 echo "70920811a4f8ad4328818682bca5c6469c1c942fab52448868071d0063816613  $archive" | sha256sum --check
 
-for slot in ci-1 ci-2 maintenance; do
+for slot in ci-1 ci-2 ci-3 maintenance; do
   account="ic-$slot"
   directory="/var/lib/infra-canvas-$slot"
   name="infra-canvas-$slot"
   label=infra-canvas-ci
-  [[ $slot != maintenance ]] || label=infra-canvas-maintenance
+  cpu_quota=400%
+  memory_max=6G
+  if [[ $slot == maintenance ]]; then
+    label=infra-canvas-maintenance
+    cpu_quota=200%
+    memory_max=4G
+  fi
   if id "$account" >/dev/null 2>&1; then
     [[ $(getent passwd "$account" | cut -d: -f6) == "$directory" ]]
     [[ $(id -Gn "$account") == "$account" ]]
@@ -92,9 +98,9 @@ ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
 RestrictSUIDSGID=true
-CPUQuota=400%
+CPUQuota=$cpu_quota
 CPUWeight=20
-MemoryMax=6G
+MemoryMax=$memory_max
 TasksMax=2048
 
 [Install]
@@ -102,9 +108,18 @@ WantedBy=multi-user.target
 UNIT
 done
 systemctl daemon-reload
-for slot in ci-1 ci-2 maintenance; do
+for slot in ci-1 ci-2 ci-3 maintenance; do
   systemctl enable --now "infra-canvas-runner-$slot.service"
+  cpu_quota=400%
+  memory_max=6G
+  if [[ $slot == maintenance ]]; then
+    cpu_quota=200%
+    memory_max=4G
+  fi
+  # 既存サービスにも再起動せず適用する。再起動後は上記unitの値を使う。
+  systemctl set-property --runtime "infra-canvas-runner-$slot.service" \
+    CPUQuota="$cpu_quota" MemoryMax="$memory_max"
   systemctl is-active "infra-canvas-runner-$slot.service"
 done
 rm -f "$token_file"
-echo 'runner 3台のサービスを起動しました。GitHub 側の online 状態を確認してください。'
+echo 'runner 4台のサービスを起動しました。GitHub 側の online 状態を確認してください。'
