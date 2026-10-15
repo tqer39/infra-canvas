@@ -19,6 +19,28 @@ jobs:
       matrix:
         shard: [1, 2, 3]
     steps:
+      - name: 前回失敗時の起動診断を収集
+        shell: bash
+        run: |
+          /usr/bin/python3 - <<'PY_DIAGNOSTIC'
+          import glob, json, zipfile
+          from urllib.parse import urlsplit
+          for path in glob.glob('artifacts/browser-results/**/trace.zip', recursive=True):
+              print('TRACE', path)
+              with zipfile.ZipFile(path) as archive:
+                  for name in archive.namelist():
+                      if not name.endswith(('.trace', '.network')):
+                          continue
+                      for line in archive.read(name).splitlines():
+                          event = json.loads(line)
+                          if event.get('type') == 'console' and event.get('messageType') == 'error':
+                              print('CONSOLE', event.get('text', ''))
+                          if event.get('method') == 'pageError':
+                              print('PAGEERROR', event.get('params', {}))
+                          snap = event.get('snapshot', {})
+                          if snap.get('response', {}).get('status', 0) >= 400:
+                              print('HTTP', snap['response']['status'], urlsplit(snap.get('request', {}).get('url', '')).path)
+          PY_DIAGNOSTIC
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
