@@ -12,6 +12,14 @@ const image = process.argv[2] ?? 'infra-canvas:local';
 const platform = process.argv[3] ?? `linux/${process.arch === 'arm64' ? 'arm64' : 'amd64'}`;
 const docker = async (...args) =>
   (await exec('docker', args, { timeout: 120000, maxBuffer: 4 * 1024 * 1024 })).stdout.trim();
+const reportContainerLogs = async (container) => {
+  try {
+    const { stdout, stderr } = await exec('docker', ['logs', container], { timeout: 5000 });
+    console.error(stdout + stderr);
+  } catch {
+    console.error('コンテナーの診断ログを取得できませんでした。');
+  }
+};
 // fetchがHostヘッダーを上書きする環境でも、実際のHTTPヘッダーを検証する。
 const requestStatus = (url, options) =>
   new Promise((resolve, reject) => {
@@ -26,7 +34,6 @@ const requestStatus = (url, options) =>
 const container = await docker(
   'run',
   '--detach',
-  '--rm',
   '--platform',
   platform,
   '--publish',
@@ -87,9 +94,12 @@ try {
     );
   }).toPass({ timeout: 60000, intervals: [1000] });
   console.log(`${platform}: HTTP・API保護・非root・図の編集・DSL保存/読み込み・healthcheck成功`);
+} catch (error) {
+  await reportContainerLogs(container);
+  throw error;
 } finally {
   await browser?.close();
-  await docker('stop', '--time', '5', container);
+  await docker('rm', '--force', container);
 }
 
 // CMDの上書き・読み取り専用マウントと、不正な待ち受け指定を検証する。
@@ -126,7 +136,6 @@ await assert.rejects(
 const local = await docker(
   'run',
   '--detach',
-  '--rm',
   '--platform',
   platform,
   '--publish',
@@ -144,6 +153,9 @@ try {
   const binding = await docker('port', local, '5180/tcp');
   await assert.rejects(fetch(`http://${binding}`, { signal: AbortSignal.timeout(2000) }));
   console.log(`${platform}: CLI既定のループバック限定・不正host拒否・読み取り専用マウント成功`);
+} catch (error) {
+  await reportContainerLogs(local);
+  throw error;
 } finally {
-  await docker('stop', '--time', '5', local);
+  await docker('rm', '--force', local);
 }

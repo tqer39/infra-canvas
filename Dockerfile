@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS build
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY --chmod=0644 package.json package-lock.json ./
 RUN npm ci --ignore-scripts
 COPY . .
 RUN node scripts/build.mjs
@@ -10,15 +10,15 @@ FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc
 ENV NODE_ENV=production
 LABEL org.opencontainers.image.source="https://github.com/tqer39/infra-canvas"
 WORKDIR /app
-COPY package.json package-lock.json ./
+COPY --chmod=0644 package.json package-lock.json ./
 RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/examples ./examples
-COPY --from=build /app/src/assets/SIMPLE-ICONS-LICENSE.txt ./licenses/SIMPLE-ICONS-LICENSE.txt
-COPY --from=build /app/src/assets/flags/LICENSE.txt ./licenses/flag-icons-LICENSE.txt
-COPY --from=build /app/src/assets/manifest.json ./licenses/icons-manifest.json
-COPY --from=build /app/src/assets/flags/manifest.json ./licenses/flags-manifest.json
-COPY --from=build /app/docs/assets.md ./licenses/assets.md
+COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/examples ./examples
+COPY --from=build --chown=node:node /app/src/assets/SIMPLE-ICONS-LICENSE.txt ./licenses/SIMPLE-ICONS-LICENSE.txt
+COPY --from=build --chown=node:node /app/src/assets/flags/LICENSE.txt ./licenses/flag-icons-LICENSE.txt
+COPY --from=build --chown=node:node /app/src/assets/manifest.json ./licenses/icons-manifest.json
+COPY --from=build --chown=node:node /app/src/assets/flags/manifest.json ./licenses/flags-manifest.json
+COPY --from=build --chown=node:node /app/docs/assets.md ./licenses/assets.md
 USER node
 EXPOSE 5180
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
