@@ -16,8 +16,11 @@ concurrency:
   cancel-in-progress: false
 jobs:
   update:
-    runs-on: ubuntu-24.04
+    if: ${{ github.event.repository.private }}
+    runs-on: [self-hosted, Linux, infra-canvas-maintenance]
     timeout-minutes: 30
+    env:
+      INFRA_TEST_PORT: '5183'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -45,7 +48,7 @@ jobs:
       - name: 型検査・lint・更新処理の回帰テスト・ビルド
         run: mise run check
         if: steps.collected.outputs.changed == 'true'
-      - run: mise run browser:install-ci
+      - run: mise run browser:install
         if: steps.collected.outputs.changed == 'true'
       - name: 通常画面とオフラインHTMLの表示検証
         run: mise run test:browser
