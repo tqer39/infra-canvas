@@ -60,8 +60,9 @@ mise run test:docker -- infra-canvas:amd64 linux/amd64
 ```
 
 [Docker ワークフロー](.github/workflows/docker.yml) は PR・main の push・手動実行で、
-各 CPU のネイティブ GitHub-hosted Linux ランナー上でイメージをビルドし、ブラウザー操作まで検証します。
-通常 CI の self-hosted ランナーとは別に実行します。private リポジトリでは GitHub-hosted の利用枠・課金設定が必要です。
+Ubuntu Server 上の専用 VM に置いた self-hosted runner で、両 CPU のイメージをビルドしブラウザー操作まで検証します。
+amd64 はネイティブ、arm64 は QEMU/binfmt による互換実行です。通常 CI の runner とホストの Docker は使用しません。
+構築・運用方法は [Docker runner](docs/docker-runner.md) を参照してください。
 `v0.1.0` などのバージョンタグを push すると、両 CPU の検証成功後に
 `ghcr.io/tqer39/infra-canvas:0.1.0` を配布します。安定版は `latest` も更新し、プレリリースは更新しません。
 GHCR への書き込みは公開ジョブだけに付与し、認証には `GITHUB_TOKEN` を使います。追加の PAT は不要です。
