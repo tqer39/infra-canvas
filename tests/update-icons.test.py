@@ -81,6 +81,15 @@ class UpdateIcons(unittest.TestCase):
             path.write_bytes(data)
         self.assertEqual(u.plan(self.root, self.fetch), {})
 
+    def test_fly_generic_symbol_is_not_fetched_or_overwritten(self):
+        entry = next(item for item in json.loads((Path(__file__).resolve().parents[1] / 'src/assets/manifest.json').read_text()) if item['type'] == 'saas.fly')
+        self.manifest.append(entry)
+        (self.assets / 'manifest.json').write_text(json.dumps(self.manifest))
+        (self.assets / entry['file']).write_bytes(SVG)
+        writes = u.plan(self.root, self.fetch)
+        self.assertNotIn(self.assets / entry['file'], writes)
+        self.assertEqual(next(item for item in json.loads(writes[self.assets / 'manifest.json']) if item['type'] == 'saas.fly'), entry)
+
     def test_gcp_core_and_legacy_collections_update_independently(self):
         self.manifest.extend([
             {'type': 'gcp.compute', 'file': 'core.svg', 'archivePath': 'core/compute.svg', 'sha256': u.digest(SVG)},

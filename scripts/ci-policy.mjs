@@ -28,19 +28,6 @@ export function needsBrowser(files) {
   );
 }
 
-// 別PRの同じシャードが並行しても、ホスト上のポートを共有しない。
-export function runnerPort(name) {
-  const ports = new Map([
-    ['infra-canvas-ci-1', 5181],
-    ['infra-canvas-ci-2', 5182],
-    ['infra-canvas-ci-3', 5184],
-    ['infra-canvas-maintenance', 5183],
-  ]);
-  const port = ports.get(name);
-  if (!port) throw new Error(`未登録の runner です: ${name}`);
-  return port;
-}
-
 export function changedFiles(base, head, event) {
   if (!/^[a-f0-9]{40}$/.test(base ?? '') || !/^[a-f0-9]{40}$/.test(head ?? '')) {
     throw new Error('変更判定には完全なコミット SHA が必要です');
@@ -59,9 +46,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
   if (process.argv[2] === 'changes') {
     const files = changedFiles(process.env.BASE_SHA, process.env.HEAD_SHA, process.env.EVENT_NAME);
     console.log(`browser=${files === null || needsBrowser(files)}`);
-  } else if (process.argv[2] === 'port') {
-    console.log(`INFRA_TEST_PORT=${runnerPort(process.env.RUNNER_NAME)}`);
   } else {
-    throw new Error('changes または port を指定してください');
+    throw new Error('changes を指定してください');
   }
 }
