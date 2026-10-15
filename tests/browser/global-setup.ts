@@ -18,6 +18,8 @@ export default function globalSetup(): void {
     'gcp-analytics',
     'azure-web',
     'azure-functions',
+    'architecture',
+    'expressions',
   ]) {
     execFileSync(process.execPath, [
       'dist/cli.js',
@@ -25,6 +27,20 @@ export default function globalSetup(): void {
       `examples/${name}.infra`,
       '--out',
       `artifacts/${name}.html`,
+    ]);
+  }
+  // fullyParallel の beforeAll は複数ワーカーで再実行されるため、共有出力もここで一度だけ作る。
+  for (const [format, options] of [
+    ['png', ['--scale', '0.5']],
+    ['pdf', ['--paper', 'A3']],
+  ] as const) {
+    execFileSync(process.execPath, [
+      'dist/cli.js',
+      format,
+      'examples/expressions.infra',
+      '--out',
+      `artifacts/expressions-cli.${format}`,
+      ...options,
     ]);
   }
   execFileSync(process.execPath, [

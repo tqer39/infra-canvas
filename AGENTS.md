@@ -18,7 +18,7 @@
 - セットアップは `mise bootstrap`、起動は `mise run dev`。実行コマンドの正本は `mise.toml` に集約し、npm scripts は互換入口にする。
 - 検証は `mise run check` と `mise run test:browser`。Markdown 編集後は `mise run lint`。
 - tsc、Oxlint、Oxfmt、markdownlint を継続する。チェックを削って CI を短縮しない。
-- ブラウザー CI は別ランナーの2シャード、各1ワーカー。共有生成物は開始時に一度生成する。
+- ブラウザー CI は別ランナーの2シャード、各2ワーカー。共有生成物は開始時に一度生成する。
 - 差分がないアイコン更新で通常 CI の全検証を重複実行しない。変更がある場合は全検証する。
 - CI とローカルの検証結果、未確認の環境・制約を正確に報告する。
 
