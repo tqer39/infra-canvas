@@ -28,15 +28,6 @@ export function needsBrowser(files) {
   );
 }
 
-export function workflowSucceeded({ changes, checks, browser, browserRequired }) {
-  return (
-    changes === 'success' &&
-    checks === 'success' &&
-    ((browserRequired === 'true' && browser === 'success') ||
-      (browserRequired === 'false' && browser === 'skipped'))
-  );
-}
-
 // 別PRの同じシャードが並行しても、ホスト上のポートを共有しない。
 export function runnerPort(name) {
   const ports = new Map([
@@ -70,18 +61,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.ar
     console.log(`browser=${files === null || needsBrowser(files)}`);
   } else if (process.argv[2] === 'port') {
     console.log(`INFRA_TEST_PORT=${runnerPort(process.env.RUNNER_NAME)}`);
-  } else if (process.argv[2] === 'result') {
-    const passed = workflowSucceeded({
-      changes: process.env.CHANGES_RESULT,
-      checks: process.env.CHECKS_RESULT,
-      browser: process.env.BROWSER_RESULT,
-      browserRequired: process.env.BROWSER_REQUIRED,
-    });
-    if (!passed) {
-      console.error('必要な CI ジョブが成功していません');
-      process.exitCode = 1;
-    }
   } else {
-    throw new Error('changes、port または result を指定してください');
+    throw new Error('changes または port を指定してください');
   }
 }

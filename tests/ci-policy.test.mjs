@@ -4,12 +4,7 @@ import { mkdtempSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { test } from 'node:test';
-import {
-  changedFiles,
-  needsBrowser,
-  runnerPort,
-  workflowSucceeded,
-} from '../scripts/ci-policy.mjs';
+import { changedFiles, needsBrowser, runnerPort } from '../scripts/ci-policy.mjs';
 
 test('ポートCLIはrunner名に対応した値を出力し、未知のrunnerでは設定を出力しない', () => {
   for (const name of [
@@ -88,39 +83,6 @@ test('未知のファイルと実装を含む混合変更は省略しない', ()
   assert.equal(needsBrowser(['scripts/new-build.mjs']), true);
   assert.equal(needsBrowser(['README.md', 'renovate.json5', 'src/core/model.ts']), true);
   assert.equal(needsBrowser([]), false);
-});
-
-test('集約チェックは全成功または判定済みのブラウザー省略だけを許可する', () => {
-  const accepted = new Set(['success/success/success/true', 'success/success/skipped/false']);
-  const states = ['success', 'failure', 'cancelled', 'skipped', ''];
-  for (const changes of states) {
-    for (const checks of states) {
-      for (const browser of states) {
-        for (const browserRequired of ['true', 'false', '', 'invalid']) {
-          assert.equal(
-            workflowSucceeded({ changes, checks, browser, browserRequired }),
-            accepted.has([changes, checks, browser, browserRequired].join('/')),
-            JSON.stringify({ changes, checks, browser, browserRequired }),
-          );
-        }
-      }
-    }
-  }
-});
-
-test('集約CLIは必要なブラウザーテストの失敗・スキップを終了コードで拒否する', () => {
-  for (const browser of ['success', 'failure', 'cancelled', 'skipped']) {
-    const result = spawnSync(process.execPath, ['scripts/ci-policy.mjs', 'result'], {
-      env: {
-        ...process.env,
-        CHANGES_RESULT: 'success',
-        CHECKS_RESULT: 'success',
-        BROWSER_REQUIRED: 'true',
-        BROWSER_RESULT: browser,
-      },
-    });
-    assert.equal(result.status, browser === 'success' ? 0 : 1);
-  }
 });
 
 test('初回pushは全検証し、不正なSHAや未対応イベントは判定を失敗させる', () => {
