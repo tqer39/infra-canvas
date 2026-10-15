@@ -60,7 +60,10 @@ mise run test:docker -- infra-canvas:amd64 linux/amd64
 ```
 
 [Docker ワークフロー](.github/workflows/docker.yml) は PR・main の push・手動実行で、
-各 CPU のネイティブ Linux ランナー上でイメージをビルドし、ブラウザー操作まで検証します。
+既存の self-hosted Linux ランナー上で両 CPU のイメージをビルドし、ブラウザー操作まで検証します。
+Docker を利用できることと、異なる CPU の互換実行環境（binfmt/QEMU）が事前に必要です。
+現在の通常 CI 用ランナーは Docker ソケットを隠す構成なので、管理者による Docker 実行環境の準備が必要です。
+ワークフローでは sudo・Docker グループへの追加・ホストの binfmt 設定変更を行いません。
 `v0.1.0` などのバージョンタグを push すると、両 CPU の検証成功後に
 `ghcr.io/tqer39/infra-canvas:0.1.0` を配布します。安定版は `latest` も更新し、プレリリースは更新しません。
 GHCR への書き込みは公開ジョブだけに付与し、認証には `GITHUB_TOKEN` を使います。追加の PAT は不要です。
