@@ -18,7 +18,7 @@
 - セットアップは `mise bootstrap`、起動は `mise run dev`。実行コマンドの正本は `mise.toml` に集約し、npm scripts は互換入口にする。
 - 検証は `mise run check` と `mise run test:browser`。Markdown 編集後は `mise run lint`。
 - tsc、Oxlint、Oxfmt、markdownlint を継続する。チェックを削って CI を短縮しない。
-- ブラウザー CI は別ランナーの3シャード、各2ワーカー。共有生成物は開始時に一度生成する。
+- CI は GitHub-hosted runner を使う。ブラウザー CI は別ランナーの3シャード、各2ワーカー。共有生成物は開始時に一度生成する。
 - 差分がないアイコン更新で通常 CI の全検証を重複実行しない。変更がある場合は全検証する。
 - CI とローカルの検証結果、未確認の環境・制約を正確に報告する。
 
@@ -48,6 +48,6 @@
 
 - アイコンは公式クラウド配布物や Simple Icons から取得し、公式色・ハッシュ・出典・ライセンスを記録する。Kubernetes の共通ロゴとリソース固有アイコンを区別する。
 - 新しいアイコンは manifest を通じて月初の更新対象にする。商標条件を守り、SVG の外部参照や実行コードを含めない。
-- シークレットは 1Password を使用し、GitHub Actions 連携は kazokubi リポジトリの運用を参考にする。
-- このリポジトリ用の Vault は `infra-canvas-secrets`。GitHub App の参照は `GitHub/app-id`、`GitHub/client-id`、`GitHub/private-key`。値をコード・ログ・チャット・生成物へ出さない。
+- シークレットは 1Password を使用し、実値と個人環境固有の参照先をコード・文書に含めない。
+- GitHub App の秘密情報の参照先とサービスアカウントのトークンは Actions secrets で設定する。値をコード・ログ・チャット・生成物へ出さない。
 - Vault・サービスアカウント・GitHub App の権限は必要範囲に限定し、既存の認証・アクセス設定を勝手に変更しない。

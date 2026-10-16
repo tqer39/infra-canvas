@@ -4,6 +4,11 @@
 構成モデルは React から独立した TypeScript ライブラリです。
 React Flow が探索操作を、ELK.js が境界を含む自動配置を担当します。
 
+本体は [MIT License](LICENSE) です。商用利用も可能です。
+同梱アイコンなどには提供元の別条件が適用されます。
+[第三者素材の条件](THIRD_PARTY_NOTICES.md) と [ライセンス方針](docs/licensing.md) を確認してください。
+公開準備の変更と未完了の確認事項は [監査記録](docs/publication-audit.md) にまとめています。
+
 ## 起動
 
 mise を導入し、リポジトリを clone したディレクトリで実行します。Node.js 24.21.0、Python 3.14.7、Lefthook 2.2.1 は mise が管理します。
@@ -156,7 +161,8 @@ mise run test:browser
 
 CI は同じ型検査・lint・整形チェック・回帰テスト・ビルド・ブラウザテストを実行します。
 読み取り権限だけを持ち、シークレットを必要としません。
-将来シークレット設定が必要になった場合は、kazokubi の運用を参照し、1Password から取得します。
+通常 CI の実行環境は [CI の運用](docs/ci.md) を参照してください。
+アイコン更新の PR 作成だけは、1Password から専用の認証情報を取得します。
 値をコード、モデル、ログへ出力する手順は使用しません。
 
 ## 初期版の範囲と制約
@@ -171,7 +177,7 @@ Google Cloud・Azure の Terraform、HCL の全面的な式評価、外部 modul
 カード寸法の固定、セマンティックズーム、ホスティング、npm 公開は未対応です。
 同じ入力と配置版での再現性は検証します。固定したノードの座標は維持します。未固定ノードの配置の安定性は保証しません。
 
-リポジトリ設定は [terraform-github](https://github.com/tqer39/terraform-github) が管理します。
+リポジトリ管理者は CI の必須チェックと、アイコン更新用の Actions secrets を設定してください。
 
 ## ブラウザー内の構成図チャット
 

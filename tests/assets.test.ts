@@ -5,6 +5,19 @@ import { createHash } from 'node:crypto';
 import { getResourceIconType } from '../src/assets/resource-icons.js';
 import { parseDSL, validateDiagram } from '../src/core/index.js';
 
+test('Fly.io はブランド画像を配布せず、月次取得されない独自の汎用記号を使う', () => {
+  const manifest = JSON.parse(readFileSync('src/assets/manifest.json', 'utf8'));
+  const entry = manifest.find((item: { type: string }) => item.type === 'saas.fly');
+  assert.ok(entry);
+  assert.equal(entry.provider, 'Infra Canvas');
+  assert.equal(entry.downloadURL, undefined);
+  assert.equal(entry.archivePath, undefined);
+  assert.equal(entry.homepage, 'https://fly.io');
+  const svg = readFileSync(`src/assets/${entry.file}`, 'utf8');
+  assert.match(svg, /<rect\b/);
+  assert.doesNotMatch(svg, /brandmark|fly\.io/i);
+});
+
 test('同梱アイコンは記録したハッシュと一致し、外部資産や実行コードを含まない', () => {
   const manifest = JSON.parse(readFileSync('src/assets/manifest.json', 'utf8')) as {
     type: string;

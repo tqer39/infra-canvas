@@ -1,6 +1,7 @@
 {
   "name": "infra-canvas",
   "version": "0.1.0",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "description": "独自 DSL と Terraform から対話型のインフラ構成図を生成します",
