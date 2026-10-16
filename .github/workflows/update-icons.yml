@@ -16,8 +16,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   update:
-    if: ${{ github.event.repository.private }}
-    runs-on: [self-hosted, Linux, infra-canvas-maintenance]
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       INFRA_TEST_PORT: '5183'
@@ -49,7 +48,7 @@ jobs:
       - name: 型検査・lint・更新処理の回帰テスト・ビルド
         run: mise run check
         if: steps.collected.outputs.changed == 'true'
-      - run: mise run browser:install
+      - run: mise run browser:install-ci
         if: steps.collected.outputs.changed == 'true'
       - name: 通常画面とオフラインHTMLの表示検証
         run: mise run test:browser -- --workers=1
@@ -74,8 +73,8 @@ jobs:
           export-env: false
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          APP_CLIENT_ID: op://infra-canvas-secrets/GitHub/client-id
-          APP_PRIVATE_KEY: op://infra-canvas-secrets/GitHub/private-key
+          APP_CLIENT_ID: ${{ secrets.ICON_UPDATER_CLIENT_ID_REFERENCE }}
+          APP_PRIVATE_KEY: ${{ secrets.ICON_UPDATER_PRIVATE_KEY_REFERENCE }}
       - name: このリポジトリだけに有効なAppトークンを発行
         if: steps.diff.outputs.changed == 'true' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false))
         id: app
@@ -84,7 +83,7 @@ jobs:
           client-id: ${{ steps.secrets.outputs.APP_CLIENT_ID }}
           private-key: ${{ steps.secrets.outputs.APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
-          repositories: infra-canvas
+          repositories: ${{ github.event.repository.name }}
           permission-contents: write
           permission-pull-requests: write
       - name: 更新ブランチとPRを作成・更新

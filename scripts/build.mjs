@@ -3,13 +3,16 @@ import { build as viteBuild } from 'vite';
 import { mkdir, readFile, writeFile, chmod } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
+import { bundleLicenseNotices, licenseNoticeHTML } from './build-licenses.mjs';
 await mkdir('dist', { recursive: true });
-await build({
+const viewer = await build({
   entryPoints: ['src/viewer/main.tsx'],
   bundle: true,
   format: 'iife',
   platform: 'browser',
   minify: true,
+  metafile: true,
+  legalComments: 'inline',
   outfile: 'dist/viewer.js',
   loader: { '.svg': 'dataurl', '.png': 'dataurl', '.infra': 'text' },
   define: { 'process.env.NODE_ENV': '"production"' },
@@ -33,6 +36,8 @@ const js = await readFile('dist/viewer.js', 'utf8');
 const css = await readFile('dist/viewer.css', 'utf8');
 const flagManifest = JSON.parse(await readFile('src/assets/flags/manifest.json', 'utf8'));
 const flagLicense = await readFile('src/assets/flags/LICENSE.txt', 'utf8');
+const notices = await bundleLicenseNotices(viewer.metafile);
+await writeFile('dist/THIRD_PARTY_LICENSES.txt', notices);
 const template =
   '<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Infra Canvas</title><style>' +
   css +
@@ -42,7 +47,9 @@ const template =
   flagManifest.version +
   '\n' +
   flagLicense +
-  '--></body></html>';
+  '-->' +
+  licenseNoticeHTML(notices) +
+  '</body></html>';
 await writeFile('dist/template.html', template);
 await build({
   entryPoints: ['src/assets/icons.ts'],
@@ -67,3 +74,4 @@ execFileSync(process.execPath, ['node_modules/typescript/bin/tsc', '-p', 'tsconf
   stdio: 'inherit',
 });
 await viteBuild();
+await writeFile('dist/web/THIRD_PARTY_LICENSES.txt', notices);

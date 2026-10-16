@@ -38,7 +38,7 @@ Infra Canvas の色に合わせて作成した素材で、外部ライブラリ�
 
 ## SaaS・IaaS のサービスアイコン
 
-指定された9サービスをローカル SVG として同梱しています。外部 CDN や認証情報は不要です。
+指定された9サービスをローカル SVG で表示します。Fly.io は独自の汎用サービス記号です。外部 CDN や認証情報は不要です。
 単一 HTML にも埋め込みます。対応する型は次のとおりです。
 
 | サービス      | DSL の型                                             | 配布元・利用条件                                                                                  |
@@ -48,12 +48,12 @@ Infra Canvas の色に合わせて作成した素材で、外部ライブラリ�
 | Linear        | `saas.linear`                                        | [公式ブランドキット](https://linear.app/brand) の logo-dark.svg                                   |
 | GitLab        | `saas.gitlab`、`gitlab.repository`、`gitlab.ci`      | [公式プレスキット](https://about.gitlab.com/press/press-kit/) の RGB logomark                     |
 | Neon          | `saas.neon`                                          | [公式ブランドキット](https://neon.com/brand) のカラー logomark                                    |
-| Fly.io        | `saas.fly`                                           | [公式ブランドキット・利用条件](https://docs.fly.io/about/brand) の Dark Brandmark                 |
+| Fly.io        | `saas.fly`                                           | 独自の汎用サービス記号（ブランド素材を含まない）                                                  |
 | Resend        | `saas.resend`                                        | [公式ブランドキット](https://resend.com/brand) の Black icon                                      |
 | Elasticsearch | `saas.elasticsearch`                                 | Simple Icons（版はマニフェスト参照）。[Elastic 商標規約](https://www.elastic.co/legal/trademarks) |
 | Kibana        | `saas.kibana`                                        | Simple Icons（版はマニフェスト参照）。[Elastic 商標規約](https://www.elastic.co/legal/trademarks) |
 
-公式6サービスの SVG は取得したファイルを変更せずに保存しています。
+公式5サービスの SVG は取得したファイルを変更せずに保存しています。
 1Password・Elasticsearch・Kibana は [Simple Icons](https://github.com/simple-icons/simple-icons) が提供する
 SVG に同じ固定版のブランドカラー（`hex`）を適用したものです。形状は維持します。
 各社公式から直接取得した資産ではありません。原本と着色後のハッシュ・カラーの出典を記録しています。
@@ -63,8 +63,10 @@ CC0 は各社の商標利用の許諾を意味しません。各ブランドの�
 
 構成図でサービスを識別する用途に限定し、Infra Canvas 自体のロゴや提携・承認の表示に使いません。
 Linear・Neon・Resend は配布ファイルの変更を禁じています。形状・色の変更を行いません。
-Fly.io の条件は書面による利用許可を要求しています。公開資料などで使う前に提供元の条件を確認してください。
-Fly.io のカードのアイコンと名前には、条件に従って公式ホームページへのリンクを付けています。
+2026年10月16日に [Fly.io の公式ブランド規約](https://docs.fly.io/about/brand/) を再確認しました。
+ブランド素材の利用には書面での明示許可を要求し、構成図への同梱を無条件に認める例外は確認できませんでした。
+許諾を前提としない配布のため、公式ブランド画像を独自の汎用サービス記号に置き換えています。
+サービス名・DSL の型・公式サイトへのリンクは維持します。代替記号は月次の外部取得対象から除外しています。
 このリンクは利用者がクリックするまで通信しません。
 
 取得 URL、版、取得日、ファイルの SHA-256、ZIP 内のパスと ZIP の SHA-256 は
@@ -125,10 +127,15 @@ npm run test:browser
 
 ### GitHub App と1Passwordの初期設定
 
-専用 App `infra-canvas-icon-updater` は private、Webhook無効で登録します。
+専用 GitHub App は private、Webhook無効で登録します。
 Repository permissions は Contents と Pull requests の Read and write、Metadata の Read-onlyだけです。
-インストール対象は `tqer39/infra-canvas` だけに限定します。
-1Password の `infra-canvas-secrets` Vault の `GitHub` 項目に `client-id`・`app-id`・`private-key` を保存します。
+インストール対象は運用するリポジトリだけに限定します。
+1Password に App の client ID・秘密鍵を保存し、参照先を次の Actions secrets に設定します。
+
+- `ICON_UPDATER_CLIENT_ID_REFERENCE`: client ID の `op://<vault>/<item>/<field>` 参照
+- `ICON_UPDATER_PRIVATE_KEY_REFERENCE`: 秘密鍵の `op://<vault>/<item>/<field>` 参照
+
+上記の secrets には秘密値自体ではなく参照先を保存します。Vault・項目名をソースや実行ログに露出しないため、参照先も secrets にします。
 ワークフローは公式 `1Password/load-secrets-action` と `actions/create-github-app-token` を固定SHAで使い、
 このリポジトリと必要な権限だけに限定した短期トークンを発行します。
 

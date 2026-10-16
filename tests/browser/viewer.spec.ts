@@ -1306,6 +1306,11 @@ for (const offline of [false, true]) {
       'https://fly.io',
     );
     if (offline) {
+      const notices = page.locator('#infra-canvas-license-notices');
+      await expect(notices).toBeHidden();
+      await expect(notices).toContainText('MIT License');
+      await expect(notices).toContainText('Eclipse Public License');
+      await expect(notices).toContainText('TypeScript ThirdPartyNotices');
       expect(
         await icons.evaluateAll((images) =>
           images.every((image) => image.getAttribute('src')?.startsWith('data:image/svg+xml')),
