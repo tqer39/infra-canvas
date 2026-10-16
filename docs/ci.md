@@ -21,11 +21,11 @@ PR のコードを秘密情報付きで実行する `pull_request_target` は使
 
 ## 旧 runner からの移行
 
-この変更を既定ブランチに反映して通常 CI とアイコン更新の動作を確認した後、
-リポジトリに登録された旧 self-hosted runner を解除し、管理ホストのサービスを停止します。
+旧 self-hosted runner 5台の登録は2026年10月17日に解除し、登録数0件を確認しました。
+管理ホスト上のサービス停止は別途確認が必要です。
 他のブランチや未マージ PR に self-hosted を使うワークフローが残っていないかも確認してください。
 登録の解除とホストの停止は本リポジトリのファイル変更だけでは完了しません。
-public 化はそれらの完了後に別途実施します。
+同日に管理者の指示で Terraform を通じて public 化しました。経緯は [監査記録](publication-audit.md) を参照してください。
 
 [GitHub のセキュリティ指針](https://docs.github.com/en/actions/reference/security/secure-use) に従い、
 外部 PR の実行先に個人環境の常設 runner を使わないでください。
