@@ -3,7 +3,9 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { request } from 'node:http';
 import { text } from 'node:stream/consumers';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
+import { mkdtemp, copyFile, chmod, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { chromium, expect } from '@playwright/test';
 
 const exec = promisify(execFile);
@@ -48,9 +50,18 @@ try {
   await expect(async () => {
     const response = await fetch(url, { signal: AbortSignal.timeout(2000) });
     assert.equal(response.status, 200);
-    assert.match(await response.text(), /<title>Infra Canvas<\/title>/);
+    const html = await response.text();
+    assert.match(html, /<title>Infra Canvas<\/title>/);
+    assert.match(html, /id="infra-canvas-license-notices"/);
   }).toPass({ timeout: 60000 });
   assert.notEqual(await docker('exec', container, 'id', '-u'), '0');
+  await docker(
+    'exec',
+    container,
+    'node',
+    '-e',
+    "for (const file of ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'dist/THIRD_PARTY_LICENSES.txt']) { if (!require('node:fs').readFileSync(file, 'utf8').trim()) process.exit(1); }",
+  );
   const status = await fetch(`${url}/api/llm/status`);
   assert.equal(status.status, 200);
   assert.equal((await status.json()).storageError, undefined);
@@ -103,20 +114,29 @@ try {
 }
 
 // CMDの上書き・読み取り専用マウントと、不正な待ち受け指定を検証する。
-assert.match(
-  await docker(
-    'run',
-    '--rm',
-    '--platform',
-    platform,
-    '--mount',
-    `type=bind,source=${resolve('examples')},target=/data,readonly`,
-    image,
-    'validate',
-    '/data/gcp-web.infra',
-  ),
-  /DSL は有効です/,
-);
+// checkoutはUMask=0077の所有者専用。UIDの異なるコンテナーには公開サンプルだけ渡す。
+const fixture = await mkdtemp(join(tmpdir(), 'infra-canvas-mount-'));
+try {
+  await chmod(fixture, 0o755);
+  await copyFile(resolve('examples/gcp-web.infra'), join(fixture, 'example.infra'));
+  await chmod(join(fixture, 'example.infra'), 0o644);
+  assert.match(
+    await docker(
+      'run',
+      '--rm',
+      '--platform',
+      platform,
+      '--mount',
+      `type=bind,source=${fixture},target=/data,readonly`,
+      image,
+      'validate',
+      '/data/example.infra',
+    ),
+    /DSL は有効です/,
+  );
+} finally {
+  await rm(fixture, { recursive: true, force: true });
+}
 await assert.rejects(
   docker(
     'run',

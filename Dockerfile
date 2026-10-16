@@ -19,6 +19,8 @@ COPY --from=build --chown=node:node /app/src/assets/flags/LICENSE.txt ./licenses
 COPY --from=build --chown=node:node /app/src/assets/manifest.json ./licenses/icons-manifest.json
 COPY --from=build --chown=node:node /app/src/assets/flags/manifest.json ./licenses/flags-manifest.json
 COPY --from=build --chown=node:node /app/docs/assets.md ./licenses/assets.md
+COPY --from=build --chown=node:node /app/LICENSE ./LICENSE
+COPY --from=build --chown=node:node /app/THIRD_PARTY_NOTICES.md ./THIRD_PARTY_NOTICES.md
 USER node
 EXPOSE 5180
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \

@@ -12,14 +12,17 @@ concurrency:
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 jobs:
   test:
-    if: ${{ github.event.repository.private }}
     name: Docker起動検証（${{ matrix.arch }}）
-    runs-on: [self-hosted, Linux, infra-canvas-docker]
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        arch: [amd64, arm64]
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -44,7 +47,7 @@ jobs:
           cache-from: type=gha,scope=docker-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=docker-${{ matrix.arch }}
       - run: mise run install
-      - run: mise run browser:install
+      - run: mise run browser:install-ci
       - name: HTTP・API保護・ブラウザー操作を検証
         run: mise run test:docker -- infra-canvas:test-${{ github.run_id }}-${{ matrix.arch }} linux/${{ matrix.arch }}
       - name: 検証用イメージを削除
@@ -53,8 +56,8 @@ jobs:
   publish:
     name: GHCRへ配布
     needs: test
-    if: ${{ github.event.repository.private && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
-    runs-on: [self-hosted, Linux, infra-canvas-docker]
+    if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
@@ -63,6 +66,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:

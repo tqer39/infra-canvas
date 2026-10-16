@@ -50,6 +50,10 @@ GitHub の公開リポジトリは取得でき、非公開リポジトリは画�
 docker run --rm -p 127.0.0.1:5180:5180 --mount "type=bind,source=$(pwd),target=/data,readonly" ghcr.io/tqer39/infra-canvas:latest preview /data/example.infra --host 0.0.0.0 --port 5180
 ```
 
+コンテナーの既定ユーザーは UID/GID 1000 です。Linux ではマウントするファイル・ディレクトリーをこのユーザーが読める必要があります。
+所有者専用ファイルを使う場合は、`docker run` に `--user "$(id -u):$(id -g)"` を追加してホストと UID/GID を合わせます。
+ファイルの権限を一括で緩める必要はありません。画面の「ファイルを開く」から読み込む方法も利用できます。
+
 ### Docker イメージのビルド・検証・配布
 
 リポジトリ内では `mise run docker:build` で `infra-canvas:local` をビルドできます。
@@ -65,9 +69,9 @@ mise run test:docker -- infra-canvas:amd64 linux/amd64
 ```
 
 [Docker ワークフロー](.github/workflows/docker.yml) は PR・main の push・手動実行で、
-Ubuntu Server 上の専用 VM に置いた self-hosted runner で、両 CPU のイメージをビルドしブラウザー操作まで検証します。
-amd64 はネイティブ、arm64 は QEMU/binfmt による互換実行です。通常 CI の runner とホストの Docker は使用しません。
-構築・運用方法は [Docker runner](docs/docker-runner.md) を参照してください。
+GitHub-hosted Linux ランナーで両 CPU のイメージをビルドし、ブラウザー操作まで検証します。
+amd64 は `ubuntu-24.04`、arm64 は `ubuntu-24.04-arm` で、それぞれネイティブ実行します。
+ビルドしたイメージには本体の MIT License、第三者素材の条件、依存の許諾文を同梱します。
 `v0.1.0` などのバージョンタグを push すると、両 CPU の検証成功後に
 `ghcr.io/tqer39/infra-canvas:0.1.0` を配布します。安定版は `latest` も更新し、プレリリースは更新しません。
 GHCR への書き込みは公開ジョブだけに付与し、認証には `GITHUB_TOKEN` を使います。追加の PAT は不要です。

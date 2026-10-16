@@ -8,6 +8,7 @@
 !index.html
 !scripts/
 !scripts/build.mjs
+!scripts/build-licenses.mjs
 !src/
 !src/**
 !examples/
@@ -15,6 +16,7 @@
 !docs/
 !docs/assets.md
 !LICENSE*
+!THIRD_PARTY_NOTICES.md
 **/.env*
 **/*.tfstate*
 **/*.tfplan
