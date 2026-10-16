@@ -9,7 +9,76 @@ React Flow が探索操作を、ELK.js が境界を含む自動配置を担当�
 [第三者素材の条件](THIRD_PARTY_NOTICES.md) と [ライセンス方針](docs/licensing.md) を確認してください。
 公開準備の変更と未完了の確認事項は [監査記録](docs/publication-audit.md) にまとめています。
 
-## 起動
+## クイックスタート（Docker）
+
+Docker が動作する環境で実行します。clone・mise・Node.js のインストールは不要です。
+イメージは `linux/arm64`（Apple Silicon など）と `linux/amd64` に対応し、CPU に合うものが選択されます。
+初回は下記の配布ワークフローによる安定版の公開後に利用できます。
+
+```bash
+docker run --rm --name infra-canvas -p 127.0.0.1:5180:5180 ghcr.io/tqer39/infra-canvas:latest
+```
+
+ブラウザーで `http://127.0.0.1:5180/` を開くと AWS サンプルを表示します。終了は `Ctrl+C` です。
+「ファイルを開く」で手元の `.infra`・取り込み済みモデル JSON を読み込み、図や属性を編集できます。
+編集結果は「DSL を保存」でホストへダウンロードしてください。コンテナーを削除してもダウンロードしたファイルは残ります。
+コンテナーのファイルシステムへの変更は `--rm` により削除されます。
+
+公開先は端末内だけに限定しています。コンテナー内部は `0.0.0.0` で待ち受けますが、
+ホスト側の `-p 127.0.0.1:5180:5180` を維持してください。認証付きの共有サーバー用途には対応していません。
+5180 が使用中なら `-p 127.0.0.1:5181:5180` とし、ブラウザーでは 5181 を開きます。
+バージョンを固定する場合は `:latest` を `:0.1.0` などの公開済みタグに置き換えてください。
+`latest` を更新する場合は、起動前に `docker pull ghcr.io/tqer39/infra-canvas:latest` を実行します。
+
+Docker 版はブラウザーでの図の編集・保存・SVG/PNG出力・印刷と、CLI の validate・import・dsl・html・svg に対応します。
+CLI の png/pdf 用の headless Chromium は同梱しません。CLI での実行が必要な場合は開発環境を使用してください。
+単一 HTML のオフライン利用も引き続き可能です。
+
+ホストの GitHub CLI 認証・AWS プロファイル・OS の資格情報ストアは自動では引き継ぎません。
+GitHub の公開リポジトリは取得でき、非公開リポジトリは画面内の読み取り用トークン欄を使用できます。
+ブラウザー内 LLM は対応ブラウザーと WebGPU が必要で、初回はモデルを取得します。
+外部 LLM の API キーを画面から永続保存する機能は Docker 版の対象外です。
+環境変数での外部 LLM 接続は `--env-file` で設定できますが、キーをイメージへ含めないでください。
+設定例は [.env.example](.env.example) を参照してください。
+コンテナー内の `localhost` はホストとは別なので、ホスト上の LLM への接続は追加のネットワーク設定が必要です。
+
+### 手元のファイルを起動時に指定する
+
+カレントディレクトリを読み取り専用でマウントします（PowerShell では `$(pwd)` を `${PWD}` に置き換えます）。
+
+```bash
+docker run --rm -p 127.0.0.1:5180:5180 --mount "type=bind,source=$(pwd),target=/data,readonly" ghcr.io/tqer39/infra-canvas:latest preview /data/example.infra --host 0.0.0.0 --port 5180
+```
+
+コンテナーの既定ユーザーは UID/GID 1000 です。Linux ではマウントするファイル・ディレクトリーをこのユーザーが読める必要があります。
+所有者専用ファイルを使う場合は、`docker run` に `--user "$(id -u):$(id -g)"` を追加してホストと UID/GID を合わせます。
+ファイルの権限を一括で緩める必要はありません。画面の「ファイルを開く」から読み込む方法も利用できます。
+
+### Docker イメージのビルド・検証・配布
+
+リポジトリ内では `mise run docker:build` で `infra-canvas:local` をビルドできます。
+`mise run install` と `mise run browser:install` の後、`mise run test:docker` で
+起動・非 root 実行・API の Host/Origin 保護・図の編集・DSL 保存/読み込み・healthcheck を検証します。
+別アーキテクチャも実行できる Docker 環境では、次のように両方をローカル検証できます。
+
+```bash
+docker buildx build --platform linux/arm64 --load -t infra-canvas:arm64 .
+mise run test:docker -- infra-canvas:arm64 linux/arm64
+docker buildx build --platform linux/amd64 --load -t infra-canvas:amd64 .
+mise run test:docker -- infra-canvas:amd64 linux/amd64
+```
+
+[Docker ワークフロー](.github/workflows/docker.yml) は PR・main の push・手動実行で、
+GitHub-hosted Linux ランナーで両 CPU のイメージをビルドし、ブラウザー操作まで検証します。
+amd64 は `ubuntu-24.04`、arm64 は `ubuntu-24.04-arm` で、それぞれネイティブ実行します。
+ビルドしたイメージには本体の MIT License、第三者素材の条件、依存の許諾文を同梱します。
+`v0.1.0` などのバージョンタグを push すると、両 CPU の検証成功後に
+`ghcr.io/tqer39/infra-canvas:0.1.0` を配布します。安定版は `latest` も更新し、プレリリースは更新しません。
+GHCR への書き込みは公開ジョブだけに付与し、認証には `GITHUB_TOKEN` を使います。追加の PAT は不要です。
+初回の公開後、管理者が GHCR パッケージの可視性を Public に設定すると、ログインなしで取得できます。
+ワークフローは可視性やリポジトリのアクセス設定を変更しません。
+
+## 開発環境での起動
 
 mise を導入し、リポジトリを clone したディレクトリで実行します。Node.js 24.21.0、Python 3.14.7、Lefthook 2.2.1 は mise が管理します。
 
