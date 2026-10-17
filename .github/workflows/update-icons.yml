@@ -68,7 +68,7 @@ jobs:
       - name: 1PasswordからApp認証情報を取得
         if: steps.diff.outputs.changed == 'true' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.dry_run == false))
         id: secrets
-        uses: 1Password/load-secrets-action@0f7285a1c0907145ff20deb48335ccc41244817a # v3.3.0
+        uses: 1Password/load-secrets-action@70062d7a876d3eb6334754fa26efd2fbd90c32f2 # v5.0.1
         with:
           export-env: false
         env:
