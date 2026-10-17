@@ -107,3 +107,19 @@ tools = { "npm:rulesync" = "33.0.0" }
 description = "各AI設定と共通ルールの同期を検証する"
 run = ["rulesync generate --check", "node --test tests/rulesync.test.mjs"]
 tools = { "npm:rulesync" = "33.0.0" }
+
+[tasks."release:prepare"]
+description = "main CI・版・日本語ノートを確認しリリースタグを作成（Release workflow専用）"
+run = "node scripts/release/pipeline.mjs prepare"
+
+[tasks."release:plan"]
+description = "公開済みバージョンイメージの版・SHA・digestを照合する"
+run = "node scripts/release/pipeline.mjs plan"
+
+[tasks."release:verify"]
+description = "GHCRの匿名取得・両CPU・配布digestを照合する"
+run = "node scripts/release/pipeline.mjs verify"
+
+[tasks."release:finalize"]
+description = "検証済みdigestのlatest昇格と日本語Release公開（Release workflow専用）"
+run = "node scripts/release/pipeline.mjs finalize"
