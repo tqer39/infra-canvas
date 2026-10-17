@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { runInNewContext } from 'node:vm';
 import { parse } from 'yaml';
 
 const workflow = parse(readFileSync('.github/workflows/docker.yml', 'utf8'));
@@ -27,18 +26,8 @@ test('publicのPRでも両CPUのDocker検証を独立したGitHub-hosted VMで�
   assert.deepEqual(workflow.permissions, { contents: 'read' });
 });
 
-test('配布は両CPUの成功後かつバージョンタグのpushだけに限定する', () => {
-  const job = workflow.jobs.publish;
-  assert.equal(job.needs, 'test');
-  assert.equal(job['runs-on'], 'ubuntu-24.04');
-  assert.equal(job.permissions.packages, 'write');
-  for (const event of ['push', 'pull_request', 'workflow_dispatch']) {
-    for (const ref of ['refs/heads/main', 'refs/tags/v0.1.0', 'refs/pull/27/merge']) {
-      const actual = runInNewContext(job.if.slice(3, -2), {
-        github: { event_name: event, ref },
-        startsWith: (value, prefix) => value.startsWith(prefix),
-      });
-      assert.equal(actual, event === 'push' && ref === 'refs/tags/v0.1.0');
-    }
-  }
+test('Docker CI は公開を行わず、Release ワークフローに公開を集約する', () => {
+  assert.deepEqual(Object.keys(workflow.jobs), ['test']);
+  assert.equal(workflow.on.push.tags, undefined);
+  assert.deepEqual(workflow.on.push.branches, ['main']);
 });

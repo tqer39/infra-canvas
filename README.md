@@ -74,11 +74,14 @@ mise run test:docker -- infra-canvas:amd64 linux/amd64
 GitHub-hosted Linux ランナーで両 CPU のイメージをビルドし、ブラウザー操作まで検証します。
 amd64 は `ubuntu-24.04`、arm64 は `ubuntu-24.04-arm` で、それぞれネイティブ実行します。
 ビルドしたイメージには本体の MIT License、第三者素材の条件、依存の許諾文を同梱します。
-`v0.1.0` などのバージョンタグを push すると、両 CPU の検証成功後に
-`ghcr.io/tqer39/infra-canvas:0.1.0` を配布します。安定版は `latest` も更新し、プレリリースは更新しません。
-GHCR への書き込みは公開ジョブだけに付与し、認証には `GITHUB_TOKEN` を使います。追加の PAT は不要です。
+配布は [Release ワークフロー](.github/workflows/release.yml) で main と版を指定して開始します。
+main CI の成功と版・日本語ノートを確認してタグを作成し、バージョン固定イメージを配布します。
+配布済み digest を arm64/amd64 で匿名 pull・起動検証し、成功後に安定版の `latest` 更新と GitHub Release 公開を行います。
+プレリリースは `latest` を更新しません。通常の Docker CI と手動のタグ push は配布を行いません。
+既存タグ・イメージ・Release は SHA と digest を照合して再利用し、不一致は上書きせず停止します。
+準備・再実行・権限の詳細は [リリース運用](docs/releasing.md) を参照してください。
 GHCR パッケージは Public で公開済みです。`0.1.0` と `latest` をログインなしで取得できます。
-ワークフローは可視性やリポジトリのアクセス設定を変更しません。
+パイプラインは可視性やリポジトリのアクセス設定を変更しません。
 
 ## 開発環境での起動
 
