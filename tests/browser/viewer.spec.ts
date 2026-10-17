@@ -1681,8 +1681,8 @@ for (const reference of [
   'aws-web',
   'gcp-delivery',
   'azure-private-link',
-  'classmethod-websocket',
-  'serverworks-inspection',
+  'cloudfront-websocket',
+  'centralized-inspection',
   'eks-single-account-single-cluster',
   'eks-single-account-multi-cluster',
   'eks-multi-account-single-cluster',
@@ -1715,7 +1715,7 @@ for (const reference of [
       expect(bounds.bottom).toBeLessThanOrEqual(bounds.parent + 1);
       expect(bounds.scroll).toBeLessThanOrEqual(bounds.width + 1);
     }
-    if (reference === 'serverworks-inspection') {
+    if (reference === 'centralized-inspection') {
       await expect(page.getByRole('table', { name: 'Inspection TGW routes' })).toContainText(
         '10.100.6.0/24',
       );

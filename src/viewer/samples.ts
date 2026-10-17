@@ -3,8 +3,8 @@ import subnetSecuritySource from '../../examples/subnet-security.infra?raw';
 import ecsBeanstalkSource from '../../examples/ecs-beanstalk.infra?raw';
 import organizationsSource from '../../examples/organizations.infra?raw';
 import referenceAwsWebSource from '../../examples/reference/aws-web.infra?raw';
-import referenceClassmethodWebsocketSource from '../../examples/reference/classmethod-websocket.infra?raw';
-import referenceServerworksInspectionSource from '../../examples/reference/serverworks-inspection.infra?raw';
+import referenceCloudfrontWebsocketSource from '../../examples/reference/cloudfront-websocket.infra?raw';
+import referenceCentralizedInspectionSource from '../../examples/reference/centralized-inspection.infra?raw';
 import referenceEksSingleAccountSingleClusterSource from '../../examples/reference/eks-single-account-single-cluster.infra?raw';
 import referenceEksSingleAccountMultiClusterSource from '../../examples/reference/eks-single-account-multi-cluster.infra?raw';
 import referenceEksMultiAccountSingleClusterSource from '../../examples/reference/eks-multi-account-single-cluster.infra?raw';
@@ -50,14 +50,14 @@ export const sampleGroups = [
       },
       { id: 'reference/aws-web', label: 'AWS公式・多層Web構成', source: referenceAwsWebSource },
       {
-        id: 'reference/classmethod-websocket',
-        label: 'クラスメソッド・CloudFront VPC Origin WebSocket',
-        source: referenceClassmethodWebsocketSource,
+        id: 'reference/cloudfront-websocket',
+        label: 'CloudFront VPC Origin WebSocket',
+        source: referenceCloudfrontWebsocketSource,
       },
       {
-        id: 'reference/serverworks-inspection',
-        label: 'サーバーワークス・集中検査VPC',
-        source: referenceServerworksInspectionSource,
+        id: 'reference/centralized-inspection',
+        label: 'Transit Gateway・集中検査VPC',
+        source: referenceCentralizedInspectionSource,
       },
     ],
   },

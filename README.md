@@ -205,7 +205,7 @@ npm 公開はしていません。ビルド後、ローカルのパス依存と�
 [Functions の Blob trigger](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-storage-blob-trigger) と
 [Blob 出力binding](https://learn.microsoft.com/en-us/azure/azure-functions/functions-bindings-storage-blob-output) です。
 
-[公開構成図5件の対応確認](docs/architecture-coverage.md) と [再記述サンプル](examples/reference) では、3クラウド公式・クラスメソッド・サーバーワークスの図を検証しています。
+[公開構成図5件の対応確認](docs/architecture-coverage.md) と [再記述サンプル](examples/reference) では、3クラウドの公式構成図と、WebSocket配信・集中検査VPCの公開構成図を検証しています。
 
 [DSL 仕様](docs/dsl.md) に LLM 向け生成指示、例、修正例を用意しています。
 [アイコンと一次資料](docs/assets.md) に取得元、版、利用条件を記録しています。

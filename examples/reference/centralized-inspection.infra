@@ -1,7 +1,7 @@
-# サーバーワークス 2021-05-25「Centralized Inspection at Inspection VPC」図
+# 2021-05-25「Centralized Inspection at Inspection VPC」図
 # https://blog.serverworks.co.jp/aws-network-firewall-and-transit-gateway
 # 2AZをサービス単位へ集約。ルート表は元図のTGW表の再記述（到達性評価ではない）。
-diagram "サーバーワークス・集中検査VPC" version=1 {
+diagram "Transit Gateway・集中検査VPC" version=1 {
   external.network internet "Internet"
   account cloud "AWS" {
     aws.transit-gateway tgw "Transit Gateway"
