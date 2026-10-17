@@ -38,6 +38,11 @@ for (const offline of [false, true]) {
       const picker = page.getByRole('combobox', { name: 'サンプル', exact: true });
       await expect(picker.locator('optgroup')).toHaveCount(7);
       await expect(picker.locator('option')).toHaveCount(samples.length + 1);
+      if (
+        sample.id === 'reference/cloudfront-websocket' ||
+        sample.id === 'reference/centralized-inspection'
+      )
+        await expect(picker.locator(`option[value="${sample.id}"]`)).toHaveText(sample.title);
       await picker.selectOption(sample.id);
       await expect(page.locator('.document-title')).toHaveText(sample.title);
       await expect(page.locator('.layout-status')).toHaveCount(0);

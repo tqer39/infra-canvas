@@ -1,6 +1,6 @@
-# DevelopersIO 2026-05-25「検証環境」図と付属CDKの構成要素
+# 2026-05-25「検証環境」図と付属CDKの構成要素
 # https://dev.classmethod.jp/articles/amazon-cloudfront-websockets-vpc-origins/
-diagram "クラスメソッド・CloudFront VPC Origin WebSocket" version=1 {
+diagram "CloudFront VPC Origin WebSocket" version=1 {
   external.user user "WebSocket client"
   account cloud "AWS" {
     aws.cloudfront cdn "CloudFront"

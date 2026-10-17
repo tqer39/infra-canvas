@@ -14,8 +14,8 @@ const samples = [
   'aws-web',
   'gcp-delivery',
   'azure-private-link',
-  'classmethod-websocket',
-  'serverworks-inspection',
+  'cloudfront-websocket',
+  'centralized-inspection',
   'eks-single-account-single-cluster',
   'eks-single-account-multi-cluster',
   'eks-multi-account-single-cluster',
@@ -75,7 +75,7 @@ test('Azure: App Service本体はVNetの外、送信と受信Endpointは別ノ�
   );
 });
 test('CloudFront: 私有Subnet内の単一Taskと複数SubnetのALBを区別し、IGWを通信ホップにしない', () => {
-  const d = read('classmethod-websocket');
+  const d = read('cloudfront-websocket');
   assert.equal(d.resources.filter((r) => r.type === 'aws.ecs-task').length, 1);
   assert.deepEqual(d.resources.find((r) => r.id === 'alb')!.attributes.subnets, [
     'isolated_a',
@@ -88,7 +88,7 @@ test('CloudFront: 私有Subnet内の単一Taskと複数SubnetのALBを区別し�
   );
 });
 test('TGW: 検査前後の逆方向と経路表を保持', () => {
-  const d = read('serverworks-inspection');
+  const d = read('centralized-inspection');
   assert.ok(d.connections.some((e) => e.source === 'tgw' && e.target === 'firewall'));
   assert.ok(d.connections.some((e) => e.source === 'firewall' && e.target === 'tgw'));
   const content = resourceContent(d.resources.find((r) => r.id === 'inspection_routes')!);
@@ -110,7 +110,7 @@ test('表・リスト: malformed DSLと外部JSONを拒否、HTML文字列はテ
       ),
     );
   }
-  const invalid = read('serverworks-inspection');
+  const invalid = read('centralized-inspection');
   invalid.resources[0]!.attributes = { display: 'table', columns: ['a', 'b'], rows: ['one'] };
   assert.throws(() => validateDiagram(invalid));
   assert.ok(
