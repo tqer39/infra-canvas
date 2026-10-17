@@ -4,6 +4,8 @@
 構成モデルは React から独立した TypeScript ライブラリです。
 React Flow が探索操作を、ELK.js が境界を含む自動配置を担当します。
 
+[v0.1.0 を公開しました](https://github.com/tqer39/infra-canvas/releases/tag/v0.1.0)。主な機能・対応環境はリリースノートを参照してください。
+
 本体は [MIT License](LICENSE) です。商用利用も可能です。
 同梱アイコンなどには提供元の別条件が適用されます。
 [第三者素材の条件](THIRD_PARTY_NOTICES.md) と [ライセンス方針](docs/licensing.md) を確認してください。
@@ -13,10 +15,10 @@ React Flow が探索操作を、ELK.js が境界を含む自動配置を担当�
 
 Docker が動作する環境で実行します。clone・mise・Node.js のインストールは不要です。
 イメージは `linux/arm64`（Apple Silicon など）と `linux/amd64` に対応し、CPU に合うものが選択されます。
-初回は下記の配布ワークフローによる安定版の公開後に利用できます。
+[GHCR の公開イメージ](https://github.com/tqer39/infra-canvas/pkgs/container/infra-canvas)をログインなしで取得できます。
 
 ```bash
-docker run --rm --name infra-canvas -p 127.0.0.1:5180:5180 ghcr.io/tqer39/infra-canvas:latest
+docker run --rm --name infra-canvas -p 127.0.0.1:5180:5180 ghcr.io/tqer39/infra-canvas:0.1.0
 ```
 
 ブラウザーで `http://127.0.0.1:5180/` を開くと AWS サンプルを表示します。終了は `Ctrl+C` です。
@@ -27,7 +29,7 @@ docker run --rm --name infra-canvas -p 127.0.0.1:5180:5180 ghcr.io/tqer39/infra-
 公開先は端末内だけに限定しています。コンテナー内部は `0.0.0.0` で待ち受けますが、
 ホスト側の `-p 127.0.0.1:5180:5180` を維持してください。認証付きの共有サーバー用途には対応していません。
 5180 が使用中なら `-p 127.0.0.1:5181:5180` とし、ブラウザーでは 5181 を開きます。
-バージョンを固定する場合は `:latest` を `:0.1.0` などの公開済みタグに置き換えてください。
+上記は `:0.1.0` にバージョンを固定しています。最新の安定版を使う場合は `:latest` に置き換えてください。
 `latest` を更新する場合は、起動前に `docker pull ghcr.io/tqer39/infra-canvas:latest` を実行します。
 
 Docker 版はブラウザーでの図の編集・保存・SVG/PNG出力・印刷と、CLI の validate・import・dsl・html・svg に対応します。
@@ -47,7 +49,7 @@ GitHub の公開リポジトリは取得でき、非公開リポジトリは画�
 カレントディレクトリを読み取り専用でマウントします（PowerShell では `$(pwd)` を `${PWD}` に置き換えます）。
 
 ```bash
-docker run --rm -p 127.0.0.1:5180:5180 --mount "type=bind,source=$(pwd),target=/data,readonly" ghcr.io/tqer39/infra-canvas:latest preview /data/example.infra --host 0.0.0.0 --port 5180
+docker run --rm -p 127.0.0.1:5180:5180 --mount "type=bind,source=$(pwd),target=/data,readonly" ghcr.io/tqer39/infra-canvas:0.1.0 preview /data/example.infra --host 0.0.0.0 --port 5180
 ```
 
 コンテナーの既定ユーザーは UID/GID 1000 です。Linux ではマウントするファイル・ディレクトリーをこのユーザーが読める必要があります。
@@ -75,7 +77,7 @@ amd64 は `ubuntu-24.04`、arm64 は `ubuntu-24.04-arm` で、それぞれネイ
 `v0.1.0` などのバージョンタグを push すると、両 CPU の検証成功後に
 `ghcr.io/tqer39/infra-canvas:0.1.0` を配布します。安定版は `latest` も更新し、プレリリースは更新しません。
 GHCR への書き込みは公開ジョブだけに付与し、認証には `GITHUB_TOKEN` を使います。追加の PAT は不要です。
-初回の公開後、管理者が GHCR パッケージの可視性を Public に設定すると、ログインなしで取得できます。
+GHCR パッケージは Public で公開済みです。`0.1.0` と `latest` をログインなしで取得できます。
 ワークフローは可視性やリポジトリのアクセス設定を変更しません。
 
 ## 開発環境での起動
