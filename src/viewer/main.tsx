@@ -2,6 +2,7 @@ import { sampleGroups } from './samples';
 import { resourceTypeLabel, resourceAppearance } from '../core/presentation';
 import { renderSVG, printDocument, type PrintOptions } from '../core/static-svg';
 import { ChatPanel } from './ChatPanel';
+import { Magnifier } from './Magnifier';
 import {
   absolutePlacements,
   bridgePath,
@@ -622,6 +623,27 @@ function App() {
     [],
   );
   const flow = useReactFlow<ResourceNode>();
+  const [magnifierZoom, setMagnifierZoom] = useState<number>();
+  const magnifierActive = magnifierZoom !== undefined;
+  const magnifierZoomRef = useRef(magnifierZoom);
+  magnifierZoomRef.current = magnifierZoom;
+  const fitView = (options: Parameters<typeof flow.fitView>[0]) => {
+    const zoom = magnifierZoomRef.current;
+    return flow.fitView({
+      ...options,
+      ...(zoom !== undefined
+        ? { minZoom: zoom, maxZoom: zoom, interpolate: 'linear' as const }
+        : {}),
+    });
+  };
+  useEffect(() => {
+    if (!magnifierActive) return;
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !event.defaultPrevented) setMagnifierZoom(undefined);
+    };
+    window.addEventListener('keydown', dismiss);
+    return () => window.removeEventListener('keydown', dismiss);
+  }, [magnifierActive]);
   const canvas = useRef<HTMLDivElement>(null);
   const mousePan = useRef<MouseEvent | undefined>(undefined);
   useEffect(() => {
@@ -703,6 +725,16 @@ function App() {
     if (!element) return;
     const onWheel = (event: WheelEvent) => {
       if (
+        magnifierActive &&
+        event.target instanceof Element &&
+        event.target.closest('.react-flow') &&
+        (event.ctrlKey || event.metaKey || (!event.deltaX && !event.shiftKey))
+      ) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      if (
         event.ctrlKey ||
         event.metaKey ||
         !(event.target instanceof Element) ||
@@ -720,7 +752,7 @@ function App() {
     };
     element.addEventListener('wheel', onWheel, { capture: true, passive: false });
     return () => element.removeEventListener('wheel', onWheel, { capture: true });
-  }, [flow]);
+  }, [flow, magnifierActive]);
   const selectConnection = useCallback((id: string) => {
     setSelected(undefined);
     setSelectedEdge(id);
@@ -1002,7 +1034,7 @@ function App() {
     }
     const frame = requestAnimationFrame(() => {
       autoFitContext.current = context;
-      void flow.fitView({ padding: lastLayout?.compact ? 0.06 : 0.14, duration: 250 });
+      void fitView({ padding: lastLayout?.compact ? 0.06 : 0.14, duration: 250 });
     });
     return () => cancelAnimationFrame(frame);
   }, [graph, flow]);
@@ -1183,7 +1215,7 @@ function App() {
       );
     if (!needsLayout) {
       pendingFocus.current = undefined;
-      void flow.fitView({ nodes: [{ id }], padding: 0.7, maxZoom: 1.2, duration: 450 });
+      void fitView({ nodes: [{ id }], padding: 0.7, maxZoom: 1.2, duration: 450 });
       return;
     }
     pendingFocus.current = { id, previousGraph: graph };
@@ -1204,7 +1236,7 @@ function App() {
     const representative = pending.id;
     if (nodes.some((node) => node.id === representative)) {
       const frame = requestAnimationFrame(() => {
-        void flow.fitView({
+        void fitView({
           nodes: [{ id: representative }],
           padding: 0.7,
           maxZoom: 1.2,
@@ -1675,6 +1707,22 @@ function App() {
         >
           <div className="canvas-toolbar" role="group" aria-label="図の操作">
             <div className="display-controls toolbar-group" role="group" aria-label="表示">
+              <button
+                className="toolbar-button"
+                aria-label="ルーペ"
+                aria-pressed={magnifierActive}
+                title="ポインター周辺を2倍に拡大（起動中は縮尺を固定・Escで終了）"
+                onClick={() => {
+                  if (magnifierActive) setMagnifierZoom(undefined);
+                  else {
+                    const viewport = flow.getViewport();
+                    void flow.setViewport(viewport);
+                    setMagnifierZoom(viewport.zoom);
+                  }
+                }}
+              >
+                ルーペ {magnifierActive ? 'ON' : 'OFF'}
+              </button>
               <label className="detail-picker">
                 構成の詳しさ
                 <select
@@ -2154,8 +2202,12 @@ function App() {
               setSelected(node.id);
             }}
             onPaneClick={clearSelection}
-            minZoom={0.05}
-            maxZoom={2.5}
+            minZoom={magnifierZoom ?? 0.05}
+            maxZoom={magnifierZoom ?? 2.5}
+            zoomOnScroll={!magnifierActive}
+            zoomOnPinch={!magnifierActive}
+            zoomOnDoubleClick={!magnifierActive}
+            zoomActivationKeyCode={magnifierActive ? null : undefined}
             nodesDraggable={editLayout && !scope}
             nodesConnectable={false}
             elevateNodesOnSelect={false}
@@ -2221,7 +2273,12 @@ function App() {
               ))}
             </ViewportPortal>
             <Background gap={24} size={1} color="#d9e1ea" />
-            <Controls showInteractive={false} />
+            <Controls
+              showInteractive={false}
+              fitViewOptions={
+                magnifierActive ? { minZoom: magnifierZoom, maxZoom: magnifierZoom } : undefined
+              }
+            />
             <MiniMap
               style={{ width: 155, height: 100 }}
               ariaLabel="構成図のミニマップ"
@@ -2229,8 +2286,9 @@ function App() {
                 isBoundary((node.data as ResourceData).resource) ? '#d9e7ed' : '#9ab6c1'
               }
               pannable
-              zoomable
+              zoomable={!magnifierActive}
             />
+            {magnifierActive && <Magnifier />}
           </ReactFlow>
           {busy && (
             <div className="layout-status" role="status">
