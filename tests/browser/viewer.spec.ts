@@ -1991,12 +1991,39 @@ for (const offline of [false, true]) {
     await expect(summary).toBeVisible();
     await summary.click();
     await expect(panel).toBeVisible();
+    await expect(page.locator('.edge-legend')).toBeVisible();
     const bounds = await panel.boundingBox();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(640);
     expect(bounds!.y).toBeGreaterThanOrEqual(0);
     expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(720);
-    await summary.click();
+    await page.setViewportSize({ width: 320, height: 520 });
+    const traffic = panel.locator('.edge-legend-item[data-kind="traffic"]');
+    await traffic.focus();
+    const tooltip = page.getByRole('tooltip');
+    await expect(tooltip).toContainText('通信やデータの流れ');
+    const content = panel.locator('.connection-help-content');
+    await content.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    const tipBounds = (await tooltip.boundingBox())!;
+    expect(tipBounds.x).toBeGreaterThanOrEqual(0);
+    expect(tipBounds.x + tipBounds.width).toBeLessThanOrEqual(320);
+    expect(tipBounds.y + tipBounds.height).toBeLessThanOrEqual(520);
+    // 表示領域が小さくても、説明がスクロール領域に切り取られない。
+    expect(
+      await tooltip.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return [0.1, 0.9].every((ratio) =>
+          element.contains(
+            document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height * ratio),
+          ),
+        );
+      }),
+    ).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(tooltip).toHaveCount(0);
+    await page.keyboard.press('Escape');
     await expect(panel).toBeHidden();
   });
 }
@@ -2012,6 +2039,14 @@ for (const offline of [false, true]) {
         ? 'file://' + resolve('artifacts/aws.html')
         : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
     );
+    await page.getByRole('button', { name: '配置を移動', exact: true }).click();
+    const info = page.getByRole('group', { name: '接続・囲み', exact: true });
+    const infoBounds = (await info.boundingBox())!;
+    const canvasBounds = (await page.locator('.canvas-area > .react-flow').boundingBox())!;
+    expect(infoBounds.y + infoBounds.height).toBeLessThanOrEqual(canvasBounds.y);
+    const hintBounds = (await page.locator('.layout-help').boundingBox())!;
+    expect(hintBounds.y + hintBounds.height).toBeLessThanOrEqual(canvasBounds.y);
+    await page.locator('.connection-help summary').click();
     const tooltip = page.getByRole('tooltip');
     await expect(tooltip).toHaveCount(0);
     const meanings = [
@@ -2033,6 +2068,19 @@ for (const offline of [false, true]) {
       const bounds = await tooltip.boundingBox();
       expect(bounds!.x).toBeGreaterThanOrEqual(0);
       expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(1440);
+      expect(bounds!.y).toBeGreaterThanOrEqual(infoBounds.y + infoBounds.height);
+      expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(900);
+      // 可視判定だけでは他要素に覆われる不具合を検出できないため、実際の最前面を調べる。
+      expect(
+        await tooltip.evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          return [0.2, 0.8].every((ratio) =>
+            element.contains(
+              document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height * ratio),
+            ),
+          );
+        }),
+      ).toBe(true);
       await page.mouse.move(20, 80);
       await expect(tooltip).toHaveCount(0);
       await item.focus();
@@ -2099,7 +2147,7 @@ for (const offline of [false, true]) {
     await page.mouse.move(600, 400);
     await page.mouse.wheel(100, 0);
     const before = await viewport.getAttribute('style');
-    await setDisplayOptions(page, true);
+    await page.locator('.connection-help summary').click();
     for (const [index, kind] of kinds.entries()) {
       const button = page
         .locator('.edge-legend')
@@ -2110,8 +2158,10 @@ for (const offline of [false, true]) {
         includeHidden: true,
       });
       await expect(button).toHaveAttribute('aria-pressed', 'true');
+      await page.locator('.connection-help summary').click();
       await page.locator(`.connection-label[data-kind="${kind}"]`).first().click();
       await expect(page.locator('.connection-editor')).toBeVisible();
+      await page.locator('.connection-help summary').click();
       await button.click();
       await expect(button).toHaveAttribute('aria-pressed', 'false');
       await expect(checkbox).not.toBeChecked();
@@ -2127,6 +2177,7 @@ for (const offline of [false, true]) {
     const traffic = page.locator('.edge-legend').getByRole('button', { name: '通信', exact: true });
     await setDisplayOptions(page, true);
     await page.getByRole('checkbox', { name: '通信', exact: true }).uncheck();
+    await setDisplayOptions(page, false);
     await expect(traffic).toHaveAttribute('aria-pressed', 'false');
     await traffic.click();
     await expect(

@@ -38,8 +38,9 @@ textarea:focus-visible {
   background: #fff;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 0 25px;
+  gap: 10px;
+  padding: 0 18px;
+  overflow-x: auto;
 }
 .brand-mark {
   color: #fff;
@@ -78,6 +79,19 @@ textarea:focus-visible {
   gap: 6px;
   flex-shrink: 0;
 }
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding-left: 10px;
+  border-left: 1px solid #e1e7ed;
+}
+.topbar .toolbar-button,
+.topbar .sample-picker {
+  padding: 6px 8px;
+  font-size: 12px;
+}
 .toolbar-button {
   border: 1px solid #d9e2e9;
   background: white;
@@ -109,19 +123,54 @@ textarea:focus-visible {
 .canvas-toolbar {
   position: relative;
   flex: none;
-  margin: 20px 23px;
+  margin: 10px 14px;
   z-index: 10;
   display: flex;
-  justify-content: space-between;
-  gap: 15px;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 6px;
   pointer-events: none;
   flex-wrap: wrap;
 }
 .canvas-toolbar > * {
   pointer-events: auto;
 }
-.clear-selection {
-  margin-right: auto;
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 4px 6px;
+  border: 1px solid #dce5eb;
+  border-radius: 8px;
+  background: #fff;
+}
+.toolbar-group-label {
+  color: #687e8b;
+  font-size: 10px;
+  white-space: nowrap;
+  margin-right: 3px;
+}
+.canvas-toolbar .toolbar-button {
+  font-size: 11px;
+  padding: 5px 7px;
+  border-color: transparent;
+  border-radius: 5px;
+}
+.canvas-toolbar .toolbar-button[aria-pressed='true'],
+.canvas-toolbar .toolbar-button[aria-checked='true'] {
+  background: #e7f2ef;
+  color: #226d64;
+}
+.canvas-toolbar .search-box {
+  width: 170px;
+  padding: 0 7px;
+  box-shadow: none;
+}
+.canvas-toolbar .search-box input {
+  height: 27px;
   font-size: 11px;
 }
 .edge-shape-control {
@@ -624,25 +673,21 @@ textarea:focus-visible {
   color: #a67b30;
 }
 .canvas-footer {
-  position: relative;
-  flex: none;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
   font-size: 10px;
   color: #8a9ba8;
-  min-height: 34px;
-  background: #f9fbfcf5;
-  border-top: 1px solid #e1e9ee;
-  padding: 6px 20px;
-  z-index: 5;
 }
 .edge-legend {
+  position: relative;
+  margin-bottom: 8px;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 5px 13px;
+  gap: 5px 8px;
+  font-size: 10px;
 }
 .edge-legend-item {
   display: flex;
@@ -654,6 +699,7 @@ textarea:focus-visible {
   border-radius: 3px;
 }
 .edge-legend svg {
+  width: 24px;
   flex-shrink: 0;
 }
 .edge-legend-item:hover {
@@ -670,7 +716,7 @@ textarea:focus-visible {
 }
 .edge-legend-tooltip {
   position: absolute;
-  bottom: calc(100% + 8px);
+  top: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%);
   width: min(360px, calc(100% - 24px));
@@ -704,11 +750,13 @@ textarea:focus-visible {
 }
 .connection-help-panel {
   position: absolute;
+  display: flex;
+  flex-direction: column;
   right: 12px;
-  bottom: calc(100% + 8px);
+  top: calc(100% + 8px);
   width: min(560px, calc(100% - 24px));
-  max-height: min(560px, calc(100dvh - 180px));
-  overflow: auto;
+  max-height: min(480px, 40dvh);
+  overflow: visible;
   padding: 16px;
   border: 1px solid #dce5eb;
   border-radius: 8px;
@@ -716,6 +764,23 @@ textarea:focus-visible {
   box-shadow: 0 4px 20px #304d6426;
   font-size: 12px;
   line-height: 1.6;
+}
+.connection-help-panel > .edge-legend {
+  flex-shrink: 0;
+}
+.connection-help-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+@media (max-width: 480px) {
+  .connection-help-panel {
+    position: fixed;
+    top: 76px;
+    right: 12px;
+    width: calc(100vw - 24px);
+    max-height: calc(100dvh - 100px);
+  }
 }
 .connection-help-panel h2 {
   margin: 0 0 8px;
@@ -889,8 +954,8 @@ textarea:focus-visible {
     padding: 24px 17px;
   }
   .canvas-toolbar {
-    margin: 14px;
-    gap: 8px;
+    margin: 8px 10px;
+    gap: 6px;
   }
   .search-box {
     width: 170px;
@@ -915,6 +980,7 @@ textarea:focus-visible {
     height: 64px;
     padding: 0 12px;
     gap: 8px;
+    overflow-x: auto;
   }
   .brand span,
   .document-title {
@@ -941,12 +1007,7 @@ textarea:focus-visible {
     width: 100%;
     max-width: 240px;
   }
-  .canvas-footer .edge-legend {
-    display: none;
-  }
-  .canvas-footer {
-    padding: 0 10px;
-  }
+
   .editor-panel {
     position: absolute;
     top: 64px;
@@ -1262,23 +1323,6 @@ textarea:focus-visible {
   margin: 0;
   color: #637987;
 }
-.expression-legend {
-  position: absolute;
-  bottom: 52px;
-  left: 90px;
-  max-width: 350px;
-  background: #ffffffee;
-  border: 1px solid #d9e1ea;
-  border-radius: 7px;
-  padding: 8px 12px;
-  font-size: 11px;
-  z-index: 10;
-  color: #526d7c;
-}
-.expression-legend summary {
-  cursor: pointer;
-}
-
 .react-flow__node .annotation-card {
   position: relative;
   width: 100%;
@@ -1302,17 +1346,15 @@ textarea:focus-visible {
 }
 
 .layout-help {
-  position: absolute;
-  bottom: 52px;
-  left: 70px;
-  right: 70px;
-  z-index: 10;
-  padding: 12px 16px;
+  flex: none;
+  margin: 8px 20px;
+  padding: 10px 14px;
   border: 1px solid #218f82;
   border-radius: 8px;
   background: #fff;
   color: #24463f;
-  font-size: 14px;
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .canvas-area > .react-flow {
