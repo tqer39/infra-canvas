@@ -1363,6 +1363,38 @@ textarea:focus-visible {
   height: auto;
 }
 
+.magnifier {
+  position: absolute;
+  z-index: 20;
+  overflow: hidden;
+  border: 3px solid #20796f;
+  border-radius: 50%;
+  background: #f6f9fb;
+  box-shadow: 0 4px 20px #26394c40;
+  pointer-events: none;
+}
+.magnifier[hidden] {
+  display: none;
+}
+.magnifier-content {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+.magnifier-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: 12px;
+  color: #fff;
+  background: #20796f;
+  font-size: 12px;
+}
+
 .chat-panel {
   width: 380px;
   flex: 0 0 380px;
