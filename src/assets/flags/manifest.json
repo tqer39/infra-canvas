@@ -1,9 +1,9 @@
 {
   "source": "https://github.com/lipis/flag-icons",
-  "version": "7.5.0",
+  "version": "7.6.0",
   "license": "MIT",
-  "download": "https://registry.npmjs.org/flag-icons/-/flag-icons-7.5.0.tgz",
-  "archiveSHA256": "c0b80bf0e08006a60f56621d6bc49f8c7131f4d1fef6737a165a673431f4b518",
+  "download": "https://registry.npmjs.org/flag-icons/-/flag-icons-7.6.0.tgz",
+  "archiveSHA256": "99d6feb80562dcaa83700ef184094d7c7b6587cc216b3fab1546cb1643e611a9",
   "path": "flags/4x3/",
   "files": [
     {
@@ -54,7 +54,7 @@
     {
       "country": "FR",
       "file": "fr.svg",
-      "sha256": "8cdacc8d79bcf210cdca2777a2c0de1f9e5862526877bd3026c9d59ecdcd4578"
+      "sha256": "a526851c372e3372b1596be71af355ea72b1650bbc4c06e6e2c226900d3de6cc"
     },
     {
       "country": "IT",
@@ -94,7 +94,7 @@
     {
       "country": "PL",
       "file": "pl.svg",
-      "sha256": "369bb3e14ee718df1ee15fd2fb3ad0dae713f78f622e277710fb2b30a313f2aa"
+      "sha256": "06687a4b90fc00195d0795aea1c26a9f73f1b6ea6a76e358724b2f1f32b7c8f4"
     },
     {
       "country": "NO",
