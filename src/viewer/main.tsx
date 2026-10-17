@@ -623,6 +623,45 @@ function App() {
   );
   const flow = useReactFlow<ResourceNode>();
   const canvas = useRef<HTMLDivElement>(null);
+  const mousePan = useRef<MouseEvent | undefined>(undefined);
+  useEffect(() => {
+    const onMouseUp = (event: MouseEvent) => {
+      if (event.button === mousePan.current?.button) mousePan.current = undefined;
+    };
+    const finishPan = () => {
+      const start = mousePan.current;
+      if (!start) return;
+      mousePan.current = undefined;
+      // React Flow の d3-zoom は window の mouseup でパンと選択抑止を解除する。
+      // 画面外での解除を取り逃した場合も、同じ終了処理を通す。
+      window.dispatchEvent(
+        new MouseEvent('mouseup', {
+          view: window,
+          button: start.button,
+          clientX: start.clientX,
+          clientY: start.clientY,
+        }),
+      );
+    };
+    const onMouseMove = (event: MouseEvent) => {
+      if (mousePan.current && event.buttons === 0) finishPan();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') finishPan();
+    };
+    // d3-zoom がドラッグ開始時に登録する window の capture リスナーより先に処理する。
+    window.addEventListener('mouseup', onMouseUp, true);
+    window.addEventListener('mousemove', onMouseMove, true);
+    window.addEventListener('blur', finishPan);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      finishPan();
+      window.removeEventListener('mouseup', onMouseUp, true);
+      window.removeEventListener('mousemove', onMouseMove, true);
+      window.removeEventListener('blur', finishPan);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
   const displayOptionsAnchor = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!filtersOpen) return;
@@ -2068,6 +2107,10 @@ function App() {
             </aside>
           )}
           <ReactFlow<ResourceNode>
+            onMoveStart={(event) => {
+              if (event instanceof MouseEvent && event.type === 'mousedown')
+                mousePan.current = event;
+            }}
             nodes={renderedNodes.map((node) => ({
               ...node,
               draggable: editLayout && !scope && node.data.resource.type !== 'note',
