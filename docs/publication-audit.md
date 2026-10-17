@@ -74,7 +74,27 @@ GitHub のログ保持・削除・新規実行により対象は変わります�
 GitHub-hosted 移行後の [手動 dry-run](https://github.com/tqer39/infra-canvas/actions/runs/38992776007) を `dry_run=true` で実行し、成功しました。
 アイコン差分を検出したため、型・lint・単体テスト・ビルドと通常画面/オフライン HTML の全118件を検証しました。
 1Password の取得・App トークン発行・更新 PR 作成は3ステップとも skipped であることを実行結果で確認しました。
-この dry-run では収集した更新をリポジトリへ反映していません。実際の更新 PR 発行は今回の検証対象外です。
+この dry-run 自体では収集した更新をリポジトリへ反映していません。
+
+続く [本実行](https://github.com/tqer39/infra-canvas/actions/runs/38994817953) は `dry_run=false` で成功しました。
+1Password からの認証情報取得、リポジトリ限定の App トークン発行、更新 PR 作成の各ステップが成功し、
+[PR #33](https://github.com/tqer39/infra-canvas/pull/33) が自動作成されました。
+flag-icons を7.5.0から7.6.0へ更新し、フランス・ポーランドの SVG と manifest の出典・ハッシュを更新しました。
+本実行では型・lint・整形・ビルド、単体259件、アイコン更新11件、ルール生成の回帰1件、ブラウザ118件の検証が成功しました。
+
+PR #33 の [通常 CI（2回目）](https://github.com/tqer39/infra-canvas/actions/runs/38995503875/attempts/2) と
+[Docker CI](https://github.com/tqer39/infra-canvas/actions/runs/38995503882) は成功しました。
+通常 CI の初回は1シャードがステップ未開始のまま進行しなかったためキャンセルし、コード変更なしで再実行しました。
+PR #33 は2026年10月17日にマージ済みで、main の対象コミットは `20cbf9af65c071f10454dffd58ec81b803e70c20` です。
+マージ後の [main の通常 CI](https://github.com/tqer39/infra-canvas/actions/runs/38997839563) は3シャードと結果集約がすべて成功し、
+[main の Docker CI](https://github.com/tqer39/infra-canvas/actions/runs/38997839440) も amd64・arm64 の両方が成功しました。
+
+同じ main コミットで [差分なしの本実行](https://github.com/tqer39/infra-canvas/actions/runs/38998093639) を
+`dry_run=false` で再実行し、成功しました。最新版の収集と差分判定は実行され、更新差分はありませんでした。
+依存関係インストール、整形、型・lint・回帰テスト・ビルド、ブラウザ導入・全検証、差分記録はすべて skipped でした。
+1Password の取得・App トークン発行・更新 PR 作成もすべて skipped で、
+`codex/update-icons` を head とする未マージの PR がないことも確認しました。
+これにより、差分がある場合の全検証と PR 作成、差分がない場合の不要な全検証と PR 作成のスキップを確認しました。
 
 ### 継続して残る対象
 
