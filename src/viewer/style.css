@@ -750,11 +750,13 @@ textarea:focus-visible {
 }
 .connection-help-panel {
   position: absolute;
+  display: flex;
+  flex-direction: column;
   right: 12px;
   top: calc(100% + 8px);
   width: min(560px, calc(100% - 24px));
   max-height: min(480px, 40dvh);
-  overflow: auto;
+  overflow: visible;
   padding: 16px;
   border: 1px solid #dce5eb;
   border-radius: 8px;
@@ -762,6 +764,23 @@ textarea:focus-visible {
   box-shadow: 0 4px 20px #304d6426;
   font-size: 12px;
   line-height: 1.6;
+}
+.connection-help-panel > .edge-legend {
+  flex-shrink: 0;
+}
+.connection-help-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+@media (max-width: 480px) {
+  .connection-help-panel {
+    position: fixed;
+    top: 76px;
+    right: 12px;
+    width: calc(100vw - 24px);
+    max-height: calc(100dvh - 100px);
+  }
 }
 .connection-help-panel h2 {
   margin: 0 0 8px;

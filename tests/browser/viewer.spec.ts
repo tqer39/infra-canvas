@@ -1997,7 +1997,33 @@ for (const offline of [false, true]) {
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(640);
     expect(bounds!.y).toBeGreaterThanOrEqual(0);
     expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(720);
-    await summary.click();
+    await page.setViewportSize({ width: 320, height: 520 });
+    const traffic = panel.locator('.edge-legend-item[data-kind="traffic"]');
+    await traffic.focus();
+    const tooltip = page.getByRole('tooltip');
+    await expect(tooltip).toContainText('通信やデータの流れ');
+    const content = panel.locator('.connection-help-content');
+    await content.evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    const tipBounds = (await tooltip.boundingBox())!;
+    expect(tipBounds.x).toBeGreaterThanOrEqual(0);
+    expect(tipBounds.x + tipBounds.width).toBeLessThanOrEqual(320);
+    expect(tipBounds.y + tipBounds.height).toBeLessThanOrEqual(520);
+    // 表示領域が小さくても、説明がスクロール領域に切り取られない。
+    expect(
+      await tooltip.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return [0.1, 0.9].every((ratio) =>
+          element.contains(
+            document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height * ratio),
+          ),
+        );
+      }),
+    ).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(tooltip).toHaveCount(0);
+    await page.keyboard.press('Escape');
     await expect(panel).toBeHidden();
   });
 }

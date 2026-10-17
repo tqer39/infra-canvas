@@ -231,25 +231,27 @@ function ConnectionHelp({
       <section className="connection-help-panel" aria-label="線種の意味と例">
         <h2>線種の意味</h2>
         <ConnectionLegend visibleKinds={visibleKinds} onToggle={onToggle} />
-        <p>矢印は送信元から接続先へ向きます。色と線の模様を組み合わせて、次の関係を表します。</p>
-        <dl>
-          {edgeKinds.map((kind) => (
-            <div key={kind} data-kind={kind}>
-              <dt>
-                <ConnectionSample kind={kind} />
-                {kindLabels[kind]}
-                <small>{connectionDescriptions[kind].pattern}</small>
-              </dt>
-              <dd>
-                {connectionDescriptions[kind].meaning}
-                <small>{connectionDescriptions[kind].example}</small>
-              </dd>
-            </div>
-          ))}
-        </dl>
-        <p>
-          線は構成上の関係や設計の意図を表します。実際の通信・権限・複製・切替の成立を保証するものではありません。
-        </p>
+        <div className="connection-help-content">
+          <p>矢印は送信元から接続先へ向きます。色と線の模様を組み合わせて、次の関係を表します。</p>
+          <dl>
+            {edgeKinds.map((kind) => (
+              <div key={kind} data-kind={kind}>
+                <dt>
+                  <ConnectionSample kind={kind} />
+                  {kindLabels[kind]}
+                  <small>{connectionDescriptions[kind].pattern}</small>
+                </dt>
+                <dd>
+                  {connectionDescriptions[kind].meaning}
+                  <small>{connectionDescriptions[kind].example}</small>
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <p>
+            線は構成上の関係や設計の意図を表します。実際の通信・権限・複製・切替の成立を保証するものではありません。
+          </p>
+        </div>
       </section>
     </details>
   );
