@@ -1,14 +1,6 @@
-import {
-  resourceTypeLabel,
-  resourceAppearance,
-  exposureLabels,
-  evidenceLabels,
-  changeLabels,
-} from '../core/presentation';
+import { sampleGroups } from './samples';
+import { resourceTypeLabel, resourceAppearance } from '../core/presentation';
 import { renderSVG, printDocument, type PrintOptions } from '../core/static-svg';
-import expressionSource from '../../examples/expressions.infra?raw';
-import architectureSource from '../../examples/architecture.infra?raw';
-import subnetSecuritySource from '../../examples/subnet-security.infra?raw';
 import { ChatPanel } from './ChatPanel';
 import {
   absolutePlacements,
@@ -212,12 +204,24 @@ function ConnectionLegend({
   );
 }
 
-function ConnectionHelp() {
+function ConnectionHelp({
+  visibleKinds,
+  onToggle,
+}: {
+  visibleKinds: readonly EdgeKind[];
+  onToggle: (kind: EdgeKind) => void;
+}) {
   return (
     <details
       className="connection-help"
       onKeyDown={(event) => {
         if (event.key === 'Escape') {
+          // 凡例の説明を先に閉じ、次のEscapeでパネルを閉じる。
+          if (
+            event.target instanceof Element &&
+            event.target.closest('[aria-describedby="connection-legend-tooltip"]')
+          )
+            return;
           event.currentTarget.open = false;
           event.currentTarget.querySelector('summary')?.focus();
         }
@@ -226,6 +230,7 @@ function ConnectionHelp() {
       <summary>線種の意味</summary>
       <section className="connection-help-panel" aria-label="線種の意味と例">
         <h2>線種の意味</h2>
+        <ConnectionLegend visibleKinds={visibleKinds} onToggle={onToggle} />
         <p>矢印は送信元から接続先へ向きます。色と線の模様を組み合わせて、次の関係を表します。</p>
         <dl>
           {edgeKinds.map((kind) => (
@@ -1457,66 +1462,74 @@ function App() {
             やり直す
           </button>
         </div>
-        <button className="toolbar-button" onClick={() => upload.current?.click()}>
-          ファイルを開く
-        </button>
-        <select
-          className="sample-picker"
-          aria-label="サンプル"
-          value=""
-          onChange={(event) => {
-            const sample = {
-              aws: defaultSource,
-              architecture: architectureSource,
-              expressions: expressionSource,
-              subnetSecurity: subnetSecuritySource,
-            }[event.target.value as 'aws' | 'architecture' | 'expressions' | 'subnetSecurity'];
-            if (!sample) return;
-            const parsed = parseDSL(sample);
-            if (parsed.diagram) acceptDiagram(parsed.diagram);
-          }}
-        >
-          <option value="">サンプルを表示</option>
-          <option value="aws">AWS 構成</option>
-          <option value="architecture">経路・跨る囲み</option>
-          <option value="expressions">P2・P3 表現一覧</option>
-          <option value="subnetSecurity">AWS Subnet・セキュリティグループ</option>
-        </select>
-        <button
-          className="toolbar-button"
-          aria-expanded={exportOpen}
-          onClick={() => setExportOpen(!exportOpen)}
-        >
-          ダウンロード・印刷
-        </button>
-        <button
-          className="toolbar-button"
-          onClick={() => {
-            if (!diagram) return;
-            const data = serializeDSL(diagram);
-            const url = URL.createObjectURL(new Blob([data], { type: 'text/plain;charset=utf-8' }));
-            const anchor = document.createElement('a');
-            anchor.href = url;
-            anchor.download = 'diagram.infra';
-            anchor.click();
-            setTimeout(() => URL.revokeObjectURL(url), 1000);
-          }}
-        >
-          DSL を保存
-        </button>
-        <button
-          className={`toolbar-button ${editorOpen ? 'active' : ''}`}
-          onClick={() => setEditorOpen(!editorOpen)}
-        >
-          DSL を編集
-        </button>
-        <button
-          className={`toolbar-button ${chatOpen ? 'active' : ''}`}
-          aria-expanded={chatOpen}
-          onClick={() => setChatOpen(!chatOpen)}
-        >
-          チャット
-        </button>
+        <div className="header-actions" role="group" aria-label="ファイル">
+          <button className="toolbar-button" onClick={() => upload.current?.click()}>
+            ファイルを開く
+          </button>
+          <select
+            className="sample-picker"
+            aria-label="サンプル"
+            value=""
+            onChange={(event) => {
+              const sample = sampleGroups
+                .flatMap((group) => group.samples)
+                .find((item) => item.id === event.target.value);
+              if (!sample) return;
+              const parsed = parseDSL(sample.source);
+              if (parsed.diagram) acceptDiagram(parsed.diagram);
+            }}
+          >
+            <option value="">サンプルを表示</option>
+            {sampleGroups.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.samples.map((sample) => (
+                  <option key={sample.id} value={sample.id}>
+                    {sample.label}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <button
+            className="toolbar-button"
+            aria-expanded={exportOpen}
+            onClick={() => setExportOpen(!exportOpen)}
+          >
+            ダウンロード・印刷
+          </button>
+          <button
+            className="toolbar-button"
+            onClick={() => {
+              if (!diagram) return;
+              const data = serializeDSL(diagram);
+              const url = URL.createObjectURL(
+                new Blob([data], { type: 'text/plain;charset=utf-8' }),
+              );
+              const anchor = document.createElement('a');
+              anchor.href = url;
+              anchor.download = 'diagram.infra';
+              anchor.click();
+              setTimeout(() => URL.revokeObjectURL(url), 1000);
+            }}
+          >
+            DSL を保存
+          </button>
+        </div>
+        <div className="header-actions" role="group" aria-label="編集・相談">
+          <button
+            className={`toolbar-button ${editorOpen ? 'active' : ''}`}
+            onClick={() => setEditorOpen(!editorOpen)}
+          >
+            DSL を編集
+          </button>
+          <button
+            className={`toolbar-button ${chatOpen ? 'active' : ''}`}
+            aria-expanded={chatOpen}
+            onClick={() => setChatOpen(!chatOpen)}
+          >
+            チャット
+          </button>
+        </div>
         <input
           ref={upload}
           type="file"
@@ -1619,8 +1632,8 @@ function App() {
           ref={canvas}
           style={{ '--edge-label-z-index': labelLayer } as CSSProperties}
         >
-          <div className="canvas-toolbar">
-            <div className="display-controls">
+          <div className="canvas-toolbar" role="group" aria-label="図の操作">
+            <div className="display-controls toolbar-group" role="group" aria-label="表示">
               <label className="detail-picker">
                 構成の詳しさ
                 <select
@@ -1915,7 +1928,48 @@ function App() {
                 {showMembership ? ' · 囲みあり' : ''}
               </span>
             </div>
-            <div className="boundary-actions" aria-label="境界の一括操作">
+            <div className="toolbar-group" role="group" aria-label="検索・選択">
+              <span className="toolbar-group-label">検索・選択</span>
+              <button
+                className="toolbar-button clear-selection"
+                disabled={!selectionActive}
+                onClick={clearSelection}
+                title="全体をカラー表示に戻す（パン・ズームは維持）"
+              >
+                選択を解除
+              </button>
+              <div className="search-box">
+                <span aria-hidden="true">⌕</span>
+                <input
+                  placeholder="リソースを検索…"
+                  aria-label="リソース検索"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+                {query && (
+                  <div className="search-results">
+                    {matches.length ? (
+                      matches.map((resource) => (
+                        <button key={resource.id} onClick={() => focusResource(resource.id)}>
+                          <strong>{resource.label}</strong>
+                          <span>
+                            {resource.type} · {resource.id}
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <p>該当するリソースがありません</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div
+              className="toolbar-group boundary-actions"
+              role="group"
+              aria-label="境界の一括操作"
+            >
+              <span className="toolbar-group-label">境界</span>
               <button
                 className="toolbar-button"
                 disabled={
@@ -1941,71 +1995,51 @@ function App() {
                 すべて展開する
               </button>
             </div>
-            <button
-              className="toolbar-button"
-              aria-pressed={editLayout}
-              disabled={Boolean(scope)}
-              title={
-                scope ? '配置は全体表示で編集できます' : 'ノードを移動し、DSLへ位置を保存します'
-              }
-              onClick={() => setEditLayout(!editLayout)}
-            >
-              {editLayout ? '移動を完了' : '配置を移動'}
-            </button>
-            <button
-              className="toolbar-button"
-              disabled={!diagram?.resources.some((resource) => resource.attributes.fixed)}
-              onClick={() => {
-                if (!diagram) return;
-                const next = {
-                  ...diagram,
-                  resources: diagram.resources.map((resource) => {
-                    const attributes = { ...resource.attributes };
-                    delete attributes.x;
-                    delete attributes.y;
-                    delete attributes.fixed;
-                    return { ...resource, attributes };
-                  }),
-                };
-                autoFitContext.current = { diagram: next, view, scope };
-                setSource(serializeDSL(next));
-                setDiagram(next);
-              }}
-            >
-              固定を解除
-            </button>
-            <button
-              className="toolbar-button clear-selection"
-              disabled={!selectionActive}
-              onClick={clearSelection}
-              title="全体をカラー表示に戻す（パン・ズームは維持）"
-            >
-              選択を解除
-            </button>
-            <div className="search-box">
-              <span aria-hidden="true">⌕</span>
-              <input
-                placeholder="リソースを検索…"
-                aria-label="リソース検索"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-              {query && (
-                <div className="search-results">
-                  {matches.length ? (
-                    matches.map((resource) => (
-                      <button key={resource.id} onClick={() => focusResource(resource.id)}>
-                        <strong>{resource.label}</strong>
-                        <span>
-                          {resource.type} · {resource.id}
-                        </span>
-                      </button>
-                    ))
-                  ) : (
-                    <p>該当するリソースがありません</p>
-                  )}
-                </div>
-              )}
+            <div className="toolbar-group" role="group" aria-label="配置">
+              <span className="toolbar-group-label">配置</span>
+              <button
+                className="toolbar-button"
+                aria-pressed={editLayout}
+                disabled={Boolean(scope)}
+                title={
+                  scope ? '配置は全体表示で編集できます' : 'ノードを移動し、DSLへ位置を保存します'
+                }
+                onClick={() => setEditLayout(!editLayout)}
+              >
+                {editLayout ? '移動を完了' : '配置を移動'}
+              </button>
+              <button
+                className="toolbar-button"
+                disabled={!diagram?.resources.some((resource) => resource.attributes.fixed)}
+                onClick={() => {
+                  if (!diagram) return;
+                  const next = {
+                    ...diagram,
+                    resources: diagram.resources.map((resource) => {
+                      const attributes = { ...resource.attributes };
+                      delete attributes.x;
+                      delete attributes.y;
+                      delete attributes.fixed;
+                      return { ...resource, attributes };
+                    }),
+                  };
+                  autoFitContext.current = { diagram: next, view, scope };
+                  setSource(serializeDSL(next));
+                  setDiagram(next);
+                }}
+              >
+                固定を解除
+              </button>
+            </div>
+            <div className="canvas-footer" role="group" aria-label="構成情報">
+              <span>
+                {graph?.resources.length ?? 0} 要素 · {graph?.connections.length ?? 0} 接続
+              </span>
+              <span>配置 {Math.round(layoutTime)} ms</span>
+            </div>
+            <div className="toolbar-group" role="group" aria-label="接続・囲み">
+              <span className="toolbar-group-label">接続・囲み</span>
+              <ConnectionHelp visibleKinds={effectiveKinds} onToggle={toggleKind} />
             </div>
             {scope && (
               <div className="scope-bar">
@@ -2158,23 +2192,6 @@ function App() {
               構成を配置しています…
             </div>
           )}
-          <details className="expression-legend">
-            <summary>表示の凡例</summary>
-            <p>公開範囲: {Object.values(exposureLabels).join(' / ')}</p>
-            <p>根拠: {Object.values(evidenceLabels).join(' / ')}</p>
-            <p>変更: {Object.values(changeLabels).join(' / ')}</p>
-            <p>
-              緑の破線＝追加、黄の破線＝変更、赤の破線＝削除予定。×Nは台数、範囲は最小〜最大です。
-            </p>
-          </details>
-          <div className="canvas-footer">
-            <span>
-              {graph?.resources.length ?? 0} 要素 · {graph?.connections.length ?? 0} 接続
-            </span>
-            <ConnectionLegend visibleKinds={effectiveKinds} onToggle={toggleKind} />
-            <ConnectionHelp />
-            <span>配置 {Math.round(layoutTime)} ms</span>
-          </div>
         </div>
         <aside className="detail-panel">
           {graph?.resources.some((resource) => graph.collapsed.includes(resource.id)) && (
