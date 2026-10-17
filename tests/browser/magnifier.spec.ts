@@ -45,6 +45,33 @@ for (const offline of [false, true]) {
     await expect(lens).toHaveAttribute('inert', '');
     expect(await viewport(page)).toEqual(initial);
 
+    const canvasBounds = (await page.locator('.canvas-area > .react-flow').boundingBox())!;
+    for (const [x, y] of [
+      [canvasBounds.x + 10, canvasBounds.y + 10],
+      // 右下のReact Flow帰属表示を避け、図の表示領域で確認する。
+      [canvasBounds.x + canvasBounds.width - 10, canvasBounds.y + canvasBounds.height - 40],
+      [originalBounds.x + originalBounds.width / 2, originalBounds.y + originalBounds.height / 2],
+    ]) {
+      await page.mouse.move(x, y);
+      // 端でルーペの位置が補正されても、ポインターを中心に2倍になる。
+      await expect
+        .poll(async () => {
+          const source = await original.boundingBox();
+          const enlarged = await copy.boundingBox();
+          if (!source || !enlarged) return Infinity;
+          return Math.max(
+            Math.abs(enlarged.x - (x + (source.x - x) * 2)),
+            Math.abs(enlarged.y - (y + (source.y - y) * 2)),
+          );
+        })
+        .toBeLessThan(0.1);
+      const bounds = (await lens.boundingBox())!;
+      expect(bounds.x).toBeGreaterThanOrEqual(canvasBounds.x);
+      expect(bounds.y).toBeGreaterThanOrEqual(canvasBounds.y);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(canvasBounds.x + canvasBounds.width);
+      expect(bounds.y + bounds.height).toBeLessThanOrEqual(canvasBounds.y + canvasBounds.height);
+    }
+
     await page.mouse.wheel(0, 200);
     expect(await viewport(page)).toEqual(initial);
     await page.keyboard.down('Control');

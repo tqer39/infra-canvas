@@ -22,12 +22,16 @@ export function Magnifier() {
       const bounds = host.getBoundingClientRect();
       const size = Math.min(diameter, bounds.width, bounds.height);
       const radius = size / 2;
+      const left = Math.max(0, Math.min(bounds.width - size, point.x - radius));
+      const top = Math.max(0, Math.min(bounds.height - size, point.y - radius));
       copy.style.width = `${bounds.width}px`;
       copy.style.height = `${bounds.height}px`;
       element.style.width = element.style.height = `${size}px`;
-      element.style.left = `${Math.max(0, Math.min(bounds.width - size, point.x - radius))}px`;
-      element.style.top = `${Math.max(0, Math.min(bounds.height - size, point.y - radius))}px`;
-      copy.style.transform = `translate(${radius - point.x * magnification}px, ${radius - point.y * magnification}px) scale(${magnification})`;
+      element.style.left = `${left}px`;
+      element.style.top = `${top}px`;
+      element.hidden = false;
+      // 端でルーペを内側へ寄せても、枠線を除いたポインターの位置を拡大の基準にする。
+      copy.style.transform = `translate(${point.x - left - element.clientLeft - point.x * magnification}px, ${point.y - top - element.clientTop - point.y * magnification}px) scale(${magnification})`;
       if (dirty) {
         const clone = viewport.cloneNode(true) as HTMLElement;
         // SVGのマーカー参照を複製内で完結させ、元の図のIDと衝突させない。
@@ -47,7 +51,6 @@ export function Magnifier() {
         copy.replaceChildren(clone);
         dirty = false;
       }
-      element.hidden = false;
     };
     const schedule = () => {
       if (frame === undefined) frame = requestAnimationFrame(render);
