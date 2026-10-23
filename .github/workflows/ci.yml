@@ -11,7 +11,7 @@ concurrency:
 jobs:
   verify:
     name: 検証（分割 ${{ matrix.shard }}/3）
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 20
     strategy:
       fail-fast: false
@@ -48,7 +48,7 @@ jobs:
   workflow-result:
     needs: verify
     if: ${{ always() }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 2
     steps:
       - name: 全検証の成功を確認
