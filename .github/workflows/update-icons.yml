@@ -16,7 +16,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   update:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 30
     env:
       INFRA_TEST_PORT: '5183'
