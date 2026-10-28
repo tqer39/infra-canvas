@@ -18,7 +18,8 @@ export const githubCLIFetch: typeof fetch = async (input, init) => {
       ['api', url.pathname + url.search, '--method', 'GET', '--hostname', 'github.com'],
       {
         timeout: 30000,
-        maxBuffer: 2000000,
+        // 大規模リポジトリの再帰ツリーは数十MBになり得る（GitHubの切り詰め上限は10万件）。
+        maxBuffer: 64000000,
         signal: init?.signal ?? undefined,
         env: { ...process.env, GH_PAGER: 'cat', GH_PROMPT_DISABLED: '1' },
       },
@@ -33,7 +34,14 @@ export const githubCLIFetch: typeof fetch = async (input, init) => {
     )
       return fetch(input, init);
     const stderr = String((error as { stderr?: string }).stderr ?? '');
-    const status = stderr.includes('HTTP 404') ? 404 : stderr.includes('HTTP 403') ? 403 : 401;
+    // 出力上限超過やタイムアウトを認証エラーと誤認させない。
+    const status = stderr.includes('HTTP 404')
+      ? 404
+      : stderr.includes('HTTP 403')
+        ? 403
+        : stderr.includes('HTTP 401')
+          ? 401
+          : 502;
     return new Response(JSON.stringify({ message: 'GitHubの認証・権限を確認してください。' }), {
       status,
     });
