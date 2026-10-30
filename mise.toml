@@ -101,12 +101,12 @@ run = "bash scripts/publish-icon-update.sh"
 [tasks."rules:generate"]
 description = "共通ルールから各AIの設定を生成する"
 run = "rulesync generate"
-tools = { "npm:rulesync" = "33.0.0" }
+tools = { "npm:rulesync" = "35.0.0" }
 
 [tasks."rules:check"]
 description = "各AI設定と共通ルールの同期を検証する"
 run = ["rulesync generate --check", "node --test tests/rulesync.test.mjs"]
-tools = { "npm:rulesync" = "33.0.0" }
+tools = { "npm:rulesync" = "35.0.0" }
 
 [tasks."release:prepare"]
 description = "main CI・版・日本語ノートを確認しリリースタグを作成（Release workflow専用）"
