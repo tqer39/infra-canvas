@@ -38,7 +38,7 @@
     "test:icons": "mise run test:icons"
   },
   "dependencies": {
-    "@aws-sdk/client-bedrock-runtime": "3.1151.0",
+    "@aws-sdk/client-bedrock-runtime": "3.1152.0",
     "@mlc-ai/web-llm": "0.2.86",
     "@napi-rs/keyring": "2.1.1",
     "@xyflow/react": "12.12.0",
