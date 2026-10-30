@@ -2,6 +2,7 @@ import { sampleGroups } from './samples';
 import { resourceTypeLabel, resourceAppearance } from '../core/presentation';
 import { renderSVG, printDocument, type PrintOptions } from '../core/static-svg';
 import { ChatPanel } from './ChatPanel';
+import { CvePanel } from './CvePanel';
 import { Magnifier } from './Magnifier';
 import {
   absolutePlacements,
@@ -538,6 +539,7 @@ function App() {
   const [source, setSource] = useState(() => (initial ? serializeDSL(initial) : defaultSource));
   const [editorOpen, setEditorOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [cveOpen, setCveOpen] = useState(false);
   const [diagnostics, setDiagnostics] = useState<string[]>([]);
   const [lastLayout, setLastLayout] = useState<LayoutResult>();
   const [exportOpen, setExportOpen] = useState(false);
@@ -1590,6 +1592,13 @@ function App() {
         </div>
         <div className="header-actions" role="group" aria-label="編集・相談">
           <button
+            className={`toolbar-button ${cveOpen ? 'active' : ''}`}
+            aria-expanded={cveOpen}
+            onClick={() => setCveOpen(!cveOpen)}
+          >
+            脆弱性情報
+          </button>
+          <button
             className={`toolbar-button ${editorOpen ? 'active' : ''}`}
             onClick={() => setEditorOpen(!editorOpen)}
           >
@@ -1676,6 +1685,21 @@ function App() {
         </section>
       )}
       <section className="workspace">
+        {cveOpen && (
+          <CvePanel
+            onClose={() => setCveOpen(false)}
+            onApply={(next) => {
+              if (diagram && source !== serializeDSL(diagram)) {
+                setDiagnostics([
+                  'DSL エディターに未反映の変更があります。先に解析して反映してください。',
+                ]);
+                return false;
+              }
+              acceptDiagram(next);
+              return true;
+            }}
+          />
+        )}
         <ChatPanel
           open={chatOpen}
           source={source}

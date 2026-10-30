@@ -1626,3 +1626,39 @@ textarea:focus-visible {
   font-size: 11px;
   padding: 8px 0;
 }
+
+.cve-panel {
+  width: 360px;
+  flex: 0 0 360px;
+  overflow: auto;
+  padding: 16px;
+  background: #fff;
+  border-right: 1px solid #dce2e9;
+  font-size: 13px;
+}
+.cve-panel input {
+  max-width: 100%;
+}
+.cve-list {
+  max-height: 240px;
+  overflow: auto;
+}
+.cve-list button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px;
+  border: 1px solid #dce2e9;
+  background: white;
+  cursor: pointer;
+}
+.cve-list button[aria-pressed='true'] {
+  background: #e8f1ff;
+}
+.cve-list span {
+  display: block;
+  font-size: 11px;
+}
+.cve-detail {
+  overflow-wrap: anywhere;
+}
