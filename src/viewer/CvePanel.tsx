@@ -6,6 +6,8 @@ import { cveExamples } from './cve-examples';
 import { catalogSnapshot } from '../cve/catalog';
 
 const databaseName = 'infra-canvas-cve';
+let generation = 0;
+let pendingSave: Promise<void> = Promise.resolve();
 function database(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(databaseName, 1);
@@ -15,30 +17,40 @@ function database(): Promise<IDBDatabase> {
   });
 }
 async function readSnapshot(): Promise<CveSnapshot | undefined> {
+  await pendingSave.catch(() => {});
   const db = await database();
   try {
     return await new Promise((resolve, reject) => {
       const request = db.transaction('snapshots').objectStore('snapshots').get('latest');
-      request.onsuccess = () => resolve(request.result as CveSnapshot | undefined);
+      request.onsuccess = () =>
+        resolve(isCveSnapshot(request.result, true) ? request.result : undefined);
       request.onerror = () => reject(request.error);
     });
   } finally {
     db.close();
   }
 }
-async function saveSnapshot(snapshot: CveSnapshot): Promise<void> {
-  const db = await database();
-  try {
-    await new Promise<void>((resolve, reject) => {
-      const transaction = db.transaction('snapshots', 'readwrite');
-      transaction.objectStore('snapshots').put(snapshot, 'latest');
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-      transaction.onabort = () => reject(transaction.error);
+function saveSnapshot(snapshot: CveSnapshot, version: number): Promise<void> {
+  const save = pendingSave
+    .catch(() => {})
+    .then(async () => {
+      if (version !== generation) return;
+      const db = await database();
+      try {
+        if (version !== generation) return;
+        await new Promise<void>((resolve, reject) => {
+          const transaction = db.transaction('snapshots', 'readwrite');
+          transaction.objectStore('snapshots').put(snapshot, 'latest');
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => reject(transaction.error);
+          transaction.onabort = () => reject(transaction.error);
+        });
+      } finally {
+        db.close();
+      }
     });
-  } finally {
-    db.close();
-  }
+  pendingSave = save;
+  return save;
 }
 
 export function CvePanel({
@@ -50,6 +62,8 @@ export function CvePanel({
 }) {
   const [snapshot, setSnapshot] = useState<CveSnapshot>();
   const refreshed = useRef(false);
+  const busyRef = useRef(false);
+  const controller = useRef<AbortController | undefined>(undefined);
   useEffect(() => {
     let active = true;
     void readSnapshot()
@@ -59,6 +73,8 @@ export function CvePanel({
       .catch(() => {});
     return () => {
       active = false;
+      generation++;
+      controller.current?.abort();
     };
   }, []);
   const [query, setQuery] = useState('');
@@ -76,40 +92,65 @@ export function CvePanel({
     (item) => item.cveId === selected || record?.aliases?.includes(item.cveId),
   );
   const importSnapshot = async (file: File) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    const version = ++generation;
     setMessage('');
     try {
       const value: unknown = JSON.parse(await file.text());
       const imported = catalogSnapshot(value) ?? (isCveSnapshot(value) ? value : undefined);
       if (!imported) throw new Error('脆弱性一覧ファイルの形式を確認してください。');
+      if (version !== generation) return;
       refreshed.current = true;
       setSnapshot(imported);
       setSelected(undefined);
       try {
-        await saveSnapshot(imported);
+        await saveSnapshot(imported, version);
       } catch {
         setMessage('読み込みましたが、このブラウザーには保存できませんでした。');
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : '読み込みに失敗しました。');
+      if (version === generation)
+        setMessage(error instanceof Error ? error.message : '読み込みに失敗しました。');
+    } finally {
+      if (version === generation) {
+        busyRef.current = false;
+        setBusy(false);
+      }
     }
   };
   const refresh = async () => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    const version = ++generation;
+    controller.current = new AbortController();
     setBusy(true);
     setMessage('');
     try {
-      const next = await fetchRecentCves();
+      const next = await fetchRecentCves(
+        undefined,
+        undefined,
+        undefined,
+        controller.current.signal,
+      );
+      if (version !== generation) return;
       refreshed.current = true;
       setSnapshot(next);
       setSelected(undefined);
       try {
-        await saveSnapshot(next);
+        await saveSnapshot(next, version);
       } catch {
         setMessage('取得しましたが、このブラウザーには保存できませんでした。');
       }
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : 'CVE を取得できませんでした。');
+      if (version === generation)
+        setMessage(error instanceof Error ? error.message : 'CVE を取得できませんでした。');
     } finally {
-      setBusy(false);
+      if (version === generation) {
+        busyRef.current = false;
+        setBusy(false);
+      }
     }
   };
   return (
@@ -127,13 +168,14 @@ export function CvePanel({
         disabled={busy}
         onClick={() => void refresh()}
       >
-        {busy ? '取得中…' : '直近7日間を取得'}
+        {busy ? '処理中…' : '直近7日間を取得'}
       </button>
       <label className="cve-import">
         保存済み一覧を開く{' '}
         <input
           type="file"
           accept=".json,application/json"
+          disabled={busy}
           onChange={(event) => {
             const file = event.target.files?.[0];
             if (file) void importSnapshot(file);

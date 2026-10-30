@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cveDiagram, fetchRecentCves, normalizeCve } from '../src/cve/nvd';
+import { cveDiagram, fetchRecentCves, isCveSnapshot, normalizeCve } from '../src/cve/nvd';
 import { serializeDSL } from '../src/core/serialize';
 import { parseDSL } from '../src/core/parser';
 
@@ -95,4 +95,30 @@ test('複数ページを読み込み、重複や途中の件数変化を検出�
     });
   };
   await assert.rejects(fetchRecentCves(new Date(), changed, noWait), /件数が変わりました/);
+});
+
+test('保存された一覧の任意フィールドとカタログ由来の ID を検証する', () => {
+  const record = normalizeCve(sample);
+  const snapshot = { start: 'start', end: 'end', fetchedAt: 'now', records: [record] };
+  assert.ok(isCveSnapshot(snapshot));
+  for (const invalid of [
+    { aliases: 'x' },
+    { sourceUrl: 'javascript:alert(1)' },
+    { retrievedAt: 12 },
+    { source: 3 },
+    { products: [{ ...record.products[0], ecosystem: 2 }] },
+  ]) {
+    assert.equal(isCveSnapshot({ ...snapshot, records: [{ ...record, ...invalid }] }), false);
+  }
+  const catalog = {
+    ...snapshot,
+    origin: 'catalog',
+    records: [{ ...record, id: 'GHSA-aaaa-bbbb-cccc', aliases: [] }],
+  };
+  assert.equal(isCveSnapshot(catalog), false);
+  assert.ok(isCveSnapshot(catalog, true));
+  assert.equal(
+    isCveSnapshot({ ...catalog, records: [{ ...catalog.records[0], aliases: 'bad' }] }, true),
+    false,
+  );
 });

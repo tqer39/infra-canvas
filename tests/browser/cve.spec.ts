@@ -201,3 +201,170 @@ test('別リポジトリの GHSA 一覧を読み込み、CVE 以外を出典付�
     /github\.com\/advisories\/GHSA-aaaa-bbbb-cccc/,
   );
 });
+
+test('壊れた保存済みデータと不正な任意項目を拒否して画面を維持する', async ({ page }) => {
+  await page.goto(`http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`);
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve, reject) => {
+      const open = indexedDB.open('infra-canvas-cve', 1);
+      open.onupgradeneeded = () => open.result.createObjectStore('snapshots');
+      open.onsuccess = () => {
+        const tx = open.result.transaction('snapshots', 'readwrite');
+        tx.objectStore('snapshots').put(
+          {
+            start: 'start',
+            end: 'end',
+            fetchedAt: 'now',
+            records: [
+              {
+                id: 'CVE-2026-12345',
+                published: 'date',
+                modified: 'date',
+                status: 'Published',
+                description: 'Test',
+                aliases: 'bad',
+                products: [],
+                references: [],
+              },
+            ],
+          },
+          'latest',
+        );
+        tx.oncomplete = () => {
+          open.result.close();
+          resolve();
+        };
+        tx.onerror = () => reject(tx.error);
+      };
+      open.onerror = () => reject(open.error);
+    });
+  });
+  await page.getByRole('button', { name: '脆弱性情報', exact: true }).click();
+  const panel = page.getByRole('complementary', { name: '脆弱性情報' });
+  await expect(panel).toBeVisible();
+  await expect(panel).not.toContainText('CVE-2026-12345');
+  await panel.locator('input[type=file]').setInputFiles({
+    name: 'bad.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(
+      JSON.stringify({
+        start: 'start',
+        end: 'end',
+        fetchedAt: 'now',
+        records: [
+          {
+            id: 'CVE-2026-12345',
+            published: 'date',
+            modified: 'date',
+            status: 'Published',
+            description: 'Test',
+            sourceUrl: 'javascript:alert(1)',
+            products: [],
+            references: [],
+          },
+        ],
+      }),
+    ),
+  });
+  await expect(panel.getByRole('status')).toContainText('形式');
+  await expect(page.locator('.document-title')).toBeVisible();
+});
+
+test('取得中の読み込みを防ぎ、閉じた後の古い応答で新しい一覧を上書きしない', async ({ page }) => {
+  let release!: () => void;
+  let started!: () => void;
+  const waiting = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const requestStarted = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  await page.route('https://services.nvd.nist.gov/rest/json/cves/2.0**', async (route) => {
+    started();
+    await waiting;
+    await route
+      .fulfill({ json: { totalResults: 0, startIndex: 0, vulnerabilities: [] } })
+      .catch(() => {});
+  });
+  await page.goto(`http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`);
+  await page.getByRole('button', { name: '脆弱性情報', exact: true }).click();
+  let panel = page.getByRole('complementary', { name: '脆弱性情報' });
+  await panel.getByRole('button', { name: '直近7日間を取得' }).click();
+  await requestStarted;
+  await expect(panel.locator('input[type=file]')).toBeDisabled();
+  await panel.getByRole('button', { name: '脆弱性情報を閉じる' }).click();
+  await page.getByRole('button', { name: '脆弱性情報', exact: true }).click();
+  panel = page.getByRole('complementary', { name: '脆弱性情報' });
+  await panel.locator('input[type=file]').setInputFiles({
+    name: 'new.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(
+      JSON.stringify({
+        start: 'start',
+        end: 'end',
+        fetchedAt: 'now',
+        records: [
+          {
+            id: 'CVE-2026-12345',
+            published: 'date',
+            modified: 'date',
+            status: 'Published',
+            description: 'New',
+            products: [],
+            references: [],
+          },
+        ],
+      }),
+    ),
+  });
+  await expect(panel).toContainText('CVE-2026-12345');
+  release();
+  await page.reload();
+  await page.getByRole('button', { name: '脆弱性情報', exact: true }).click();
+  await expect(panel).toContainText('CVE-2026-12345');
+});
+
+test('保存失敗後に以前の保存済み一覧を再表示する', async ({ page }) => {
+  await page.goto(`http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`);
+  await page.getByRole('button', { name: '脆弱性情報', exact: true }).click();
+  const panel = page.getByRole('complementary', { name: '脆弱性情報' });
+  const input = panel.locator('input[type=file]');
+  const file = (id: string) => ({
+    name: 'snapshot.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(
+      JSON.stringify({
+        start: 'start',
+        end: 'end',
+        fetchedAt: 'now',
+        records: [
+          {
+            id,
+            published: 'date',
+            modified: 'date',
+            status: 'Published',
+            description: 'Test',
+            products: [],
+            references: [],
+          },
+        ],
+      }),
+    ),
+  });
+  await input.setInputFiles(file('CVE-2026-12345'));
+  await expect(input).toBeEnabled();
+  await expect(panel).toContainText('CVE-2026-12345');
+  await page.evaluate(() => {
+    const original = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function () {
+      IDBObjectStore.prototype.put = original;
+      throw new DOMException('Storage full', 'QuotaExceededError');
+    };
+  });
+  await input.setInputFiles(file('CVE-2026-12346'));
+  await expect(panel.getByRole('status')).toContainText('保存できません');
+  await panel.getByRole('button', { name: '脆弱性情報を閉じる' }).click();
+  await page.getByRole('button', { name: '脆弱性情報', exact: true }).click();
+  await expect(panel).toContainText('CVE-2026-12345');
+  await expect(panel).not.toContainText('CVE-2026-12346');
+});

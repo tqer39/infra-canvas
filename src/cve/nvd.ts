@@ -29,11 +29,22 @@ export interface CveSnapshot {
   dateField?: 'published' | 'modified';
 }
 
-export function isCveSnapshot(value: unknown): value is CveSnapshot {
+export function isCveSnapshot(value: unknown, allowCatalog = false): value is CveSnapshot {
   if (!value || typeof value !== 'object') return false;
   const snapshot = value as CveSnapshot;
   const str = (item: unknown): item is string => typeof item === 'string';
+  const url = (item: unknown): boolean => {
+    if (!str(item)) return false;
+    try {
+      return ['http:', 'https:'].includes(new URL(item).protocol);
+    } catch {
+      return false;
+    }
+  };
+  const catalog = allowCatalog && snapshot.origin === 'catalog';
   return (
+    (snapshot.origin === undefined || catalog) &&
+    (snapshot.dateField === undefined || ['published', 'modified'].includes(snapshot.dateField)) &&
     str(snapshot.start) &&
     str(snapshot.end) &&
     str(snapshot.fetchedAt) &&
@@ -41,13 +52,21 @@ export function isCveSnapshot(value: unknown): value is CveSnapshot {
     snapshot.records.every(
       (record) =>
         record &&
-        /^CVE-\d{4}-\d{4,}$/.test(record.id) &&
+        str(record.id) &&
+        (catalog
+          ? /^[A-Za-z0-9][A-Za-z0-9_.:-]*$/.test(record.id)
+          : /^CVE-\d{4}-\d{4,}$/.test(record.id)) &&
+        (record.source === undefined || str(record.source)) &&
+        (record.sourceUrl === undefined || url(record.sourceUrl)) &&
+        (record.retrievedAt === undefined || str(record.retrievedAt)) &&
+        (record.aliases === undefined ||
+          (Array.isArray(record.aliases) && record.aliases.every(str))) &&
         str(record.published) &&
         str(record.modified) &&
         str(record.status) &&
         str(record.description) &&
         Array.isArray(record.references) &&
-        record.references.every((url) => str(url) && /^https?:\/\//i.test(url)) &&
+        record.references.every(url) &&
         Array.isArray(record.products) &&
         record.products.every(
           (product) =>
@@ -55,6 +74,7 @@ export function isCveSnapshot(value: unknown): value is CveSnapshot {
             str(product.vendor) &&
             str(product.product) &&
             str(product.source) &&
+            (product.ecosystem === undefined || str(product.ecosystem)) &&
             Array.isArray(product.versions) &&
             product.versions.every(str),
         ),
@@ -124,6 +144,7 @@ export async function fetchRecentCves(
   now = new Date(),
   fetcher: typeof fetch = fetch,
   wait: () => Promise<unknown> = () => new Promise((resolve) => setTimeout(resolve, 6500)),
+  signal?: AbortSignal,
 ): Promise<CveSnapshot> {
   const end = now.toISOString();
   const start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -134,6 +155,7 @@ export async function fetchRecentCves(
   const ids = new Set<string>();
   do {
     if (index) await wait();
+    signal?.throwIfAborted();
     const url = new URL('https://services.nvd.nist.gov/rest/json/cves/2.0');
     url.search = new URLSearchParams({
       pubStartDate: start,
@@ -141,7 +163,7 @@ export async function fetchRecentCves(
       resultsPerPage: '2000',
       startIndex: String(index),
     }).toString();
-    const response = await fetcher(url);
+    const response = await fetcher(url, { signal });
     if (!response.ok) throw new Error(`NVD の取得に失敗しました（HTTP ${response.status}）。`);
     const page = (await response.json()) as {
       totalResults: number;
