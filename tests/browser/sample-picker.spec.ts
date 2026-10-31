@@ -36,7 +36,7 @@ for (const offline of [false, true]) {
           : (baseURL ?? `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`),
       );
       const picker = page.getByRole('combobox', { name: 'サンプル', exact: true });
-      await expect(picker.locator('optgroup')).toHaveCount(7);
+      await expect(picker.locator('optgroup')).toHaveCount(8);
       await expect(picker.locator('option')).toHaveCount(samples.length + 1);
       if (
         sample.id === 'reference/cloudfront-websocket' ||

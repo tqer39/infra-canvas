@@ -1,3 +1,4 @@
+import { cveExamples } from './cve-examples';
 import awsSource from '../../examples/aws.infra?raw';
 import subnetSecuritySource from '../../examples/subnet-security.infra?raw';
 import ecsBeanstalkSource from '../../examples/ecs-beanstalk.infra?raw';
@@ -29,6 +30,7 @@ import llmCatalogSource from '../../examples/llm-catalog.infra?raw';
 import largeSource from '../../examples/large.infra?raw';
 
 export const sampleGroups = [
+  { label: 'CVE 事例', samples: cveExamples },
   {
     label: 'AWS',
     samples: [
