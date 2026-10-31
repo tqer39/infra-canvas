@@ -238,6 +238,39 @@ it('認証付きローカルAPIは外部Origin・GET・過大入力・別ホス�
   );
 });
 
+// execFileはshebangのスクリプトも.cmdも直接起動できないため、偽のghはWindowsで使えない。
+it(
+  'gh経由の大規模リポジトリの応答を出力上限で失敗させず、不明な失敗を認証エラーにしない',
+  { skip: process.platform === 'win32' },
+  async () => {
+    const { mkdtempSync, writeFileSync, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { join, delimiter } = await import('node:path');
+    const { githubCLIFetch } = await import('../src/assistant/server.js');
+    const dir = mkdtempSync(join(tmpdir(), 'fake-gh-'));
+    const originalPath = process.env.PATH;
+    try {
+      // 約8MBの再帰ツリー応答（実在の大規模リポジトリ相当）を返す偽のgh。
+      writeFileSync(
+        join(dir, 'gh'),
+        `#!/usr/bin/env node
+if (process.argv[3].includes('fail')) { process.stderr.write('unexpected'); process.exit(1); }
+process.stdout.write(JSON.stringify({ tree: Array.from({ length: 30000 }, (_, i) => ({ path: 'p'.repeat(250) + i })) }));`,
+        { mode: 0o755 },
+      );
+      process.env.PATH = `${dir}${delimiter}${originalPath}`;
+      const response = await githubCLIFetch('https://api.github.com/repos/a/b/git/trees/x');
+      assert.equal(response.status, 200);
+      assert.equal(((await response.json()) as { tree: unknown[] }).tree.length, 30000);
+      const failed = await githubCLIFetch('https://api.github.com/repos/a/b/fail');
+      assert.equal(failed.status, 502);
+    } finally {
+      process.env.PATH = originalPath;
+      rmSync(dir, { recursive: true, force: true });
+    }
+  },
+);
+
 it('Markdownで囲まれた完全なDSLは外枠だけ除去し、内部の不正な参照は拒否する', () => {
   const wrapped = '```infra\n' + sample + '\n```';
   assert.equal(
