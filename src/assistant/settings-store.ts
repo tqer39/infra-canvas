@@ -2,6 +2,7 @@ import { mkdir, lstat, readFile, open, rename, unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import type { Configuration } from './llm-server.js';
 import type { RemoteProvider } from './remote-contract.js';
 
@@ -16,6 +17,7 @@ export interface SecretStore {
   set(id: string, secret: string): Promise<void>;
   remove(id: string): Promise<void>;
 }
+// 改名前に保存したAPIキーを引き続き参照するため、資格情報のサービスIDは維持する。
 export const osSecrets: SecretStore = {
   async get(id) {
     const { AsyncEntry } = await import('@napi-rs/keyring');
@@ -40,15 +42,20 @@ export function settingsDirectory(
   env: NodeJS.ProcessEnv = process.env,
   platform = process.platform,
 ): string {
-  if (env.INFRA_LLM_CONFIG_DIR) return resolve(env.INFRA_LLM_CONFIG_DIR);
-  if (platform === 'darwin')
-    return join(homedir(), 'Library', 'Application Support', 'Infra Canvas');
-  if (platform === 'win32')
-    return join(
-      env.LOCALAPPDATA || env.APPDATA || join(homedir(), 'AppData', 'Local'),
-      'Infra Canvas',
-    );
-  return join(env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'infra-canvas');
+  const configured = env.OMNODI_LLM_CONFIG_DIR || env.INFRA_LLM_CONFIG_DIR;
+  if (configured) return resolve(configured);
+  let parent: string;
+  if (platform === 'darwin') parent = join(homedir(), 'Library', 'Application Support');
+  else if (platform === 'win32')
+    parent = env.LOCALAPPDATA || env.APPDATA || join(homedir(), 'AppData', 'Local');
+  else parent = env.XDG_CONFIG_HOME || join(homedir(), '.config');
+  const directory = join(parent, ['darwin', 'win32'].includes(platform) ? 'Omnodi' : 'omnodi');
+  const legacy = join(
+    parent,
+    ['darwin', 'win32'].includes(platform) ? 'Infra Canvas' : 'infra-canvas',
+  );
+  // 新しい保存先がなければ既存設定をその場で利用する。コピーや資格情報の移動は行わない。
+  return !existsSync(directory) && existsSync(legacy) ? legacy : directory;
 }
 type StoredConfiguration = Omit<Configuration, 'apiKey'> & { keyId?: string };
 type StoredSettings = Partial<Record<RemoteProvider, StoredConfiguration>>;

@@ -1,11 +1,11 @@
 ---
 root: true
 targets: ["*"]
-description: Infra Canvas の共通開発方針と製品要件
+description: Omnodi の共通開発方針と製品要件
 globs: ["**/*"]
 ---
 
-# Infra Canvas 開発ガイド
+# Omnodi 開発ガイド
 
 共通ルールの正本は `.rulesync/rules/overview.md` です。各 AI 向けの生成ファイルは直接編集せず、`mise run rules:generate` で更新します。
 

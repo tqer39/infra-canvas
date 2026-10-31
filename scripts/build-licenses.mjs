@@ -14,7 +14,7 @@ export async function bundleLicenseNotices(metafile) {
     await readFile('src/assets/SIMPLE-ICONS-LICENSE.txt', 'utf8'),
     await readFile('src/assets/SIMPLE-ICONS-DISCLAIMER.txt', 'utf8'),
     await readFile('src/assets/flags/LICENSE.txt', 'utf8'),
-    'ELK.js is distributed under EPL-2.0. Its Source Code is available under EPL-2.0 at https://github.com/kieler/elkjs (see the tag matching the version below), with the underlying ELK sources at https://github.com/eclipse/elk. Infra Canvas does not modify these upstream sources.',
+    'ELK.js is distributed under EPL-2.0. Its Source Code is available under EPL-2.0 at https://github.com/kieler/elkjs (see the tag matching the version below), with the underlying ELK sources at https://github.com/eclipse/elk. Omnodi does not modify these upstream sources.',
   ];
   for (const root of [...roots].sort()) {
     const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
@@ -36,5 +36,5 @@ export async function bundleLicenseNotices(metafile) {
 
 export function licenseNoticeHTML(notices) {
   const escaped = notices.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  return `<pre hidden id="infra-canvas-license-notices">${escaped}</pre>`;
+  return `<pre hidden id="omnodi-license-notices">${escaped}</pre>`;
 }

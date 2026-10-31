@@ -1,10 +1,14 @@
-# Infra Canvas
+# Omnodi
 
-独自 DSL と Terraform から対話型のインフラ構成図を生成します。
+独自 DSL と Terraform から対話型の構成図を生成します。
 構成モデルは React から独立した TypeScript ライブラリです。
 React Flow が探索操作を、ELK.js が境界を含む自動配置を担当します。
 
-[v0.1.1 を公開しました](https://github.com/tqer39/infra-canvas/releases/tag/v0.1.1)。主な機能・対応環境はリリースノートを参照してください。
+旧名称は Infra Canvas です。CLI・パッケージ名は `omnodi`、リポジトリは `tqer39/omnodi` に変更しました。
+公開済みの v0.1.0・v0.1.1 の Docker イメージは、引き続き `ghcr.io/tqer39/infra-canvas` から取得します。
+Omnodi 名の Docker イメージはまだ公開していません。
+
+[v0.1.1 を公開しました](https://github.com/tqer39/omnodi/releases/tag/v0.1.1)。主な機能・対応環境はリリースノートを参照してください。
 
 本体は [MIT License](LICENSE) です。商用利用も可能です。
 同梱アイコンなどには提供元の別条件が適用されます。
@@ -15,10 +19,10 @@ React Flow が探索操作を、ELK.js が境界を含む自動配置を担当�
 
 Docker が動作する環境で実行します。clone・mise・Node.js のインストールは不要です。
 イメージは `linux/arm64`（Apple Silicon など）と `linux/amd64` に対応し、CPU に合うものが選択されます。
-[GHCR の公開イメージ](https://github.com/tqer39/infra-canvas/pkgs/container/infra-canvas)をログインなしで取得できます。
+[GHCR の公開イメージ](https://github.com/tqer39/omnodi/pkgs/container/infra-canvas)をログインなしで取得できます。
 
 ```bash
-docker run --rm --name infra-canvas -p 127.0.0.1:5180:5180 ghcr.io/tqer39/infra-canvas:0.1.1
+docker run --rm --name omnodi -p 127.0.0.1:5180:5180 ghcr.io/tqer39/infra-canvas:0.1.1
 ```
 
 ブラウザーで `http://127.0.0.1:5180/` を開くと AWS サンプルを表示します。終了は `Ctrl+C` です。
@@ -58,16 +62,16 @@ docker run --rm -p 127.0.0.1:5180:5180 --mount "type=bind,source=$(pwd),target=/
 
 ### Docker イメージのビルド・検証・配布
 
-リポジトリ内では `mise run docker:build` で `infra-canvas:local` をビルドできます。
+リポジトリ内では `mise run docker:build` で `omnodi:local` をビルドできます。
 `mise run install` と `mise run browser:install` の後、`mise run test:docker` で
 起動・非 root 実行・API の Host/Origin 保護・図の編集・DSL 保存/読み込み・healthcheck を検証します。
 別アーキテクチャも実行できる Docker 環境では、次のように両方をローカル検証できます。
 
 ```bash
-docker buildx build --platform linux/arm64 --load -t infra-canvas:arm64 .
-mise run test:docker -- infra-canvas:arm64 linux/arm64
-docker buildx build --platform linux/amd64 --load -t infra-canvas:amd64 .
-mise run test:docker -- infra-canvas:amd64 linux/amd64
+docker buildx build --platform linux/arm64 --load -t omnodi:arm64 .
+mise run test:docker -- omnodi:arm64 linux/arm64
+docker buildx build --platform linux/amd64 --load -t omnodi:amd64 .
+mise run test:docker -- omnodi:amd64 linux/amd64
 ```
 
 [Docker ワークフロー](.github/workflows/docker.yml) は PR・main の push・手動実行で、
@@ -173,8 +177,8 @@ CLI は Terraform を実行せず、ローカルのファイルを読み取り�
 ## 公開 API
 
 ```typescript
-import { parseDSL, buildDisplayGraph, layoutGraph, serializeDSL } from 'infra-canvas';
-import { importTerraformRepository } from 'infra-canvas/terraform';
+import { parseDSL, buildDisplayGraph, layoutGraph, serializeDSL } from 'omnodi';
+import { importTerraformRepository } from 'omnodi/terraform';
 
 const result = parseDSL(source);
 if (result.diagram) {
@@ -303,13 +307,16 @@ URL・モデル名・AWSプロファイル・リージョンなどは次の `llm
 ファイルにはAPIキーを含めず、資格情報ストア内の参照IDだけを記録します。
 POSIXでは専用ディレクトリを0700、設定ファイルを0600で作成し、原子的に更新します。
 
-| OS      | 標準の設定ディレクトリ                                          |
-| ------- | --------------------------------------------------------------- |
-| macOS   | `~/Library/Application Support/Infra Canvas`                    |
-| Windows | `%LOCALAPPDATA%\\Infra Canvas`                                  |
-| Linux   | `$XDG_CONFIG_HOME/infra-canvas` または `~/.config/infra-canvas` |
+| OS      | 標準の設定ディレクトリ                              |
+| ------- | --------------------------------------------------- |
+| macOS   | `~/Library/Application Support/Omnodi`              |
+| Windows | `%LOCALAPPDATA%\\Omnodi`                            |
+| Linux   | `$XDG_CONFIG_HOME/omnodi` または `~/.config/omnodi` |
 
-`INFRA_LLM_CONFIG_DIR` で専用ディレクトリを指定できます。設定だけを別端末へコピーしてもAPIキーは移行されません。
+`OMNODI_LLM_CONFIG_DIR` で専用ディレクトリを指定できます。旧 `INFRA_LLM_CONFIG_DIR` も引き続き利用できます。
+新しい保存先がまだなく、旧 `Infra Canvas` / `infra-canvas` ディレクトリが存在する場合は、旧設定をそのまま使用します。
+OS の資格情報ストアのサービスID `infra-canvas.llm` も、保存済みAPIキーを参照するため維持しています。
+設定だけを別端末へコピーしてもAPIキーは移行されません。
 「起動時の設定に戻す」は永続設定と保存したキーを解除し、環境変数の設定へ戻します。
 既存の環境変数・`.env.llm` は自動変更しません。フォーム経由のAPIキー保存にはOSの資格情報ストアを使用します。
 外部LLMで「DSLを生成」「LLMで概要を補足」を実行すると、会話・DSL・コードの抜粋と解析根拠を接続先へ送信します。

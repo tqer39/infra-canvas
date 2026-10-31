@@ -75,6 +75,7 @@ import { connectionStyles, connectionDescriptions } from './connection-style';
 
 declare global {
   interface Window {
+    __OMNODI__?: Diagram;
     __INFRA_CANVAS__?: Diagram;
   }
 }
@@ -507,7 +508,10 @@ function RoutedConnection(props: EdgeProps) {
 const edgeTypes = { routed: RoutedConnection };
 
 function App() {
-  const initial = useMemo(() => window.__INFRA_CANVAS__ ?? parseDSL(defaultSource).diagram, []);
+  const initial = useMemo(
+    () => window.__OMNODI__ ?? window.__INFRA_CANVAS__ ?? parseDSL(defaultSource).diagram,
+    [],
+  );
   const [history, dispatchHistory] = useReducer(
     historyReducer,
     {
@@ -1515,8 +1519,8 @@ function App() {
           ▧
         </div>
         <div className="brand">
-          <strong>Infra Canvas</strong>
-          <span>インフラを、見渡す。</span>
+          <strong>Omnodi</strong>
+          <span>構造と流れを、見渡す。</span>
         </div>
         <div className="document-title">{diagram?.title ?? '構成図'}</div>
         <div className="history-actions" role="group" aria-label="操作履歴">

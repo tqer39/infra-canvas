@@ -69,7 +69,7 @@ test('初回pushは全検証し、不正なSHAや未対応イベントは判定�
 });
 
 test('実際のGit差分でPRのmerge-base、複数コミット、削除・改名・特殊なファイル名を扱う', (t) => {
-  const directory = mkdtempSync(join(tmpdir(), 'infra-canvas-ci-'));
+  const directory = mkdtempSync(join(tmpdir(), 'omnodi-ci-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   const git = (...args) =>
     execFileSync('git', args, { cwd: directory, stdio: ['ignore', 'pipe', 'pipe'] })

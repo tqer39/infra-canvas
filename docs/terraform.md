@@ -6,7 +6,7 @@
 root は repository 内の対象ディレクトリを指定します。
 
 ```typescript
-import { importTerraformRepository, importTerraformJSON } from 'infra-canvas/terraform';
+import { importTerraformRepository, importTerraformJSON } from 'omnodi/terraform';
 const diagram = await importTerraformRepository({
   repository: '/path/to/terraform-repository',
   root: 'environments/production',

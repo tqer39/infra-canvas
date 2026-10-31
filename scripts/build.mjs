@@ -39,9 +39,9 @@ const flagLicense = await readFile('src/assets/flags/LICENSE.txt', 'utf8');
 const notices = await bundleLicenseNotices(viewer.metafile);
 await writeFile('dist/THIRD_PARTY_LICENSES.txt', notices);
 const template =
-  '<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Infra Canvas</title><style>' +
+  '<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Omnodi</title><style>' +
   css +
-  '</style></head><body><div id="root"></div><script>window.__INFRA_CANVAS__=__INFRA_CANVAS_MODEL__;</script><script>' +
+  '</style></head><body><div id="root"></div><script>window.__OMNODI__=__OMNODI_MODEL__;</script><script>' +
   js.replace(/<\/script/gi, '<\\/script') +
   '</script><!-- flag-icons ' +
   flagManifest.version +

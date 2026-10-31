@@ -15,7 +15,7 @@ if [[ -n "$old_head" ]]; then
   fi
 fi
 git switch -C "$branch"
-git config user.name 'infra-canvas icon updater'
+git config user.name 'omnodi icon updater'
 git config user.email 'icon-updater@users.noreply.github.com'
 git add src/assets docs/assets.md docs/service-icons.md docs/regions.md
 git commit -m 'chore: update bundled icons'

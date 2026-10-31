@@ -1,4 +1,4 @@
-# Infra Canvas DSL 仕様 v1
+# Omnodi DSL 仕様 v1
 
 DSL は宣言的な構成図です。構文と参照の検証は、実際のクラウド構成の妥当性を保証しません。
 設計案を記述でき、HTML、JavaScript、ループ、条件分岐は実行しません。
@@ -199,7 +199,7 @@ diagram "修正後" {
 ## 公開 API
 
 ```typescript
-import { parseDSL, validateDiagram, buildDisplayGraph, layoutGraph, serializeDSL } from 'infra-canvas';
+import { parseDSL, validateDiagram, buildDisplayGraph, layoutGraph, serializeDSL } from 'omnodi';
 
 const result = parseDSL(source);
 if (!result.diagram) throw new Error(JSON.stringify(result.diagnostics));

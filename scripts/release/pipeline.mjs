@@ -158,7 +158,7 @@ export async function prepare(ctx, { api, read = (path) => readFileSync(path, 'u
   assert.equal(lock.packages[''].version, ctx.version);
   const notes = read(`docs/release-notes-${ctx.tag}.md`);
   assert.ok(
-    notes.includes(`# Infra Canvas ${ctx.tag}`) && /[ぁ-んァ-ヶ一-龠]/.test(notes),
+    notes.includes(`# Omnodi ${ctx.tag}`) && /[ぁ-んァ-ヶ一-龠]/.test(notes),
     '日本語のリリースノートが必要です',
   );
   for (const workflow of ['ci.yml', 'docker.yml']) {
@@ -183,7 +183,8 @@ export async function prepare(ctx, { api, read = (path) => readFileSync(path, 'u
 }
 export function releaseBody(ctx, digest, notes) {
   assert.match(digest, digestPattern);
-  return `${notes.trim()}\n\n## Docker で起動する\n\n\`\`\`bash\ndocker run --rm --name infra-canvas -p 127.0.0.1:5180:5180 ${ctx.image}:${ctx.version}\n\`\`\`\n\n<http://127.0.0.1:5180/> を開いてください。終了は Ctrl+C、編集結果は「DSL を保存」でダウンロードできます。\n\n## 対応環境・検証結果\n\n- linux/arm64・linux/amd64 に対応し、Docker が CPU に合うイメージを選択します。\n- 両 CPU のネイティブ GitHub-hosted runner で、GHCR から匿名 pull した digest 固定イメージの起動・HTTP・API 保護・非 root・図の編集・DSL 保存/読み込み・healthcheck・読み取り専用マウントを検証しました。\n- CLI の PNG/PDF 用 Chromium は同梱しません。ブラウザーからの PNG 出力・印刷を利用できます。\n- イメージ digest: \`${digest}\`\n- ソース: [${ctx.sha}](https://github.com/${ctx.repo}/commit/${ctx.sha})\n- [使い方・ライセンス](https://github.com/${ctx.repo}/blob/${ctx.tag}/README.md)\n\n<!-- infra-canvas-release ${ctx.tag} ${ctx.sha} ${digest} -->\n`;
+  // 公開済みReleaseの再実行を識別できるよう、本文の内部マーカーは旧名を維持する。
+  return `${notes.trim()}\n\n## Docker で起動する\n\n\`\`\`bash\ndocker run --rm --name omnodi -p 127.0.0.1:5180:5180 ${ctx.image}:${ctx.version}\n\`\`\`\n\n<http://127.0.0.1:5180/> を開いてください。終了は Ctrl+C、編集結果は「DSL を保存」でダウンロードできます。\n\n## 対応環境・検証結果\n\n- linux/arm64・linux/amd64 に対応し、Docker が CPU に合うイメージを選択します。\n- 両 CPU のネイティブ GitHub-hosted runner で、GHCR から匿名 pull した digest 固定イメージの起動・HTTP・API 保護・非 root・図の編集・DSL 保存/読み込み・healthcheck・読み取り専用マウントを検証しました。\n- CLI の PNG/PDF 用 Chromium は同梱しません。ブラウザーからの PNG 出力・印刷を利用できます。\n- イメージ digest: \`${digest}\`\n- ソース: [${ctx.sha}](https://github.com/${ctx.repo}/commit/${ctx.sha})\n- [使い方・ライセンス](https://github.com/${ctx.repo}/blob/${ctx.tag}/README.md)\n\n<!-- infra-canvas-release ${ctx.tag} ${ctx.sha} ${digest} -->\n`;
 }
 export async function finalize(
   ctx,
@@ -226,7 +227,7 @@ export async function finalize(
   }
   const fields = {
     tag_name: ctx.tag,
-    name: `Infra Canvas ${ctx.tag}`,
+    name: `Omnodi ${ctx.tag}`,
     body,
     draft: false,
     prerelease: ctx.prerelease,

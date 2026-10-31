@@ -9,7 +9,7 @@ test('Fly.io はブランド画像を配布せず、月次取得されない独�
   const manifest = JSON.parse(readFileSync('src/assets/manifest.json', 'utf8'));
   const entry = manifest.find((item: { type: string }) => item.type === 'saas.fly');
   assert.ok(entry);
-  assert.equal(entry.provider, 'Infra Canvas');
+  assert.equal(entry.provider, 'Omnodi');
   assert.equal(entry.downloadURL, undefined);
   assert.equal(entry.archivePath, undefined);
   assert.equal(entry.homepage, 'https://fly.io');

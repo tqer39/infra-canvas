@@ -177,7 +177,7 @@ def plan(root, fetch=download):
                 cloud_archives[provider] = (page, links[0], digest(blob), archive_files(blob, 'zip'))
             page, url, archive_hash, files = cloud_archives[provider]
             archive_path, data = select_file(files, entry['archivePath'])
-        elif entry.get('provider') not in {'Simple Icons', 'Infra Canvas'}:
+        elif entry.get('provider') not in {'Simple Icons', 'Omnodi'}:
             url = entry['downloadURL']
             blob = get(url)
             page = entry['source']

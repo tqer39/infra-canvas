@@ -43,10 +43,10 @@
 値はこの文書に記載しません。次の成果物を公開前の処理対象として特定しました。
 初回監査では削除せず、10月17日に管理者の依頼で4件とも削除しました。
 
-| 実行                                                                           | 成果物ID                 |
-| ------------------------------------------------------------------------------ | ------------------------ |
-| [38757952023](https://github.com/tqer39/infra-canvas/actions/runs/38757952023) | 11985186588、11984602359 |
-| [38756383138](https://github.com/tqer39/infra-canvas/actions/runs/38756383138) | 11983819459、11983488222 |
+| 実行                                                                     | 成果物ID                 |
+| ------------------------------------------------------------------------ | ------------------------ |
+| [38757952023](https://github.com/tqer39/omnodi/actions/runs/38757952023) | 11985186588、11984602359 |
+| [38756383138](https://github.com/tqer39/omnodi/actions/runs/38756383138) | 11983819459、11983488222 |
 
 実行ID順の `ID:取得ZIPのSHA-256` を改行で連結した監査対象一覧の SHA-256 は
 `20405355a83bcaeab54e1bdd5255ce8becbc7e33c5508af00ffe955c3e0e57b9` です。
@@ -54,10 +54,10 @@ GitHub のログ保持・削除・新規実行により対象は変わります�
 
 ## 2026年10月17日の現在の状態
 
-- [PR #27](https://github.com/tqer39/infra-canvas/pull/27) はマージ済みです。Docker も GitHub-hosted の amd64・arm64 で検証し、private/self-hosted 前提の条件は除去済みです。
-- [PR #28](https://github.com/tqer39/infra-canvas/pull/28) と公開後の main CI は成功しています。公開前に発生した課金制限の失敗は過去の記録です。課金設定は変更していません。
-- [v0.1.0](https://github.com/tqer39/infra-canvas/releases/tag/v0.1.0) と [v0.1.1](https://github.com/tqer39/infra-canvas/releases/tag/v0.1.1) は公開済みで、GHCR のイメージを匿名取得できます。
-- [PR #30](https://github.com/tqer39/infra-canvas/pull/30) のパイプラインと [PR #31](https://github.com/tqer39/infra-canvas/pull/31) の版更新はマージ済みです。[v0.1.1 の自動 Release](https://github.com/tqer39/infra-canvas/actions/runs/38992266132) は初回・全ジョブ再実行とも成功しました。両 CPU の匿名 pull・起動検証を通過し、再実行前後でタグ SHA・配布 digest・Release の ID/日時/本文が同一であることを比較済みです。
+- [PR #27](https://github.com/tqer39/omnodi/pull/27) はマージ済みです。Docker も GitHub-hosted の amd64・arm64 で検証し、private/self-hosted 前提の条件は除去済みです。
+- [PR #28](https://github.com/tqer39/omnodi/pull/28) と公開後の main CI は成功しています。公開前に発生した課金制限の失敗は過去の記録です。課金設定は変更していません。
+- [v0.1.0](https://github.com/tqer39/omnodi/releases/tag/v0.1.0) と [v0.1.1](https://github.com/tqer39/omnodi/releases/tag/v0.1.1) は公開済みで、GHCR のイメージを匿名取得できます。
+- [PR #30](https://github.com/tqer39/omnodi/pull/30) のパイプラインと [PR #31](https://github.com/tqer39/omnodi/pull/31) の版更新はマージ済みです。[v0.1.1 の自動 Release](https://github.com/tqer39/omnodi/actions/runs/38992266132) は初回・全ジョブ再実行とも成功しました。両 CPU の匿名 pull・起動検証を通過し、再実行前後でタグ SHA・配布 digest・Release の ID/日時/本文が同一であることを比較済みです。
 - API で旧 self-hosted runner の登録数0件を再確認しました。ホスト側4サービスと専用 VM 側1サービスはすべて停止状態（inactive）を確認しました。VM 側の自動起動を無効化し、ホスト側4サービスは管理者が sudo で無効化しました。その後、全5サービスが inactive/disabled であることを SSH で再確認しました。ホスト・VM の削除は実施していません。
 - シークレットスキャン・push protection は有効です。再確認時点の未解決シークレットアラート・Dependabot 脆弱性アラートはともに0件です。全履歴や任意形式の秘密値が存在しないことを保証する結果ではありません。
 
@@ -65,34 +65,34 @@ GitHub のログ保持・削除・新規実行により対象は変わります�
 
 初回監査の4件は削除済みですが、その後の自動アップロードにより、再確認時点では別の19件が残存しています。
 保持期限は90日で、2027年1月14〜15日に失効予定です。新しい19件の内容は、過去の4件を対象にした内部検査の結果には含みません。
-[PR #32](https://github.com/tqer39/infra-canvas/pull/32) で Docker CI と Release の記録アップロードを無効化済みです。
-[PR #35](https://github.com/tqer39/infra-canvas/pull/35) のマージ後も、
-[main の Docker CI](https://github.com/tqer39/infra-canvas/actions/runs/38999406437) は amd64・arm64 とも成功し、成果物が0件であることを API で確認しました。
+[PR #32](https://github.com/tqer39/omnodi/pull/32) で Docker CI と Release の記録アップロードを無効化済みです。
+[PR #35](https://github.com/tqer39/omnodi/pull/35) のマージ後も、
+[main の Docker CI](https://github.com/tqer39/omnodi/actions/runs/38999406437) は amd64・arm64 とも成功し、成果物が0件であることを API で確認しました。
 既存19件は削除せず、現在の期限で失効させます。
 通常ログ・ジョブ summary と GHCR イメージの provenance は維持します。回帰テストは、すべてのビルドステップでアップロード無効が設定されていることを検査します。
 詳細は [保存方針](ci.md#docker-ビルド記録の保存方針) を参照してください。
 
 ### 月次アイコン更新
 
-GitHub-hosted 移行後の [手動 dry-run](https://github.com/tqer39/infra-canvas/actions/runs/38992776007) を `dry_run=true` で実行し、成功しました。
+GitHub-hosted 移行後の [手動 dry-run](https://github.com/tqer39/omnodi/actions/runs/38992776007) を `dry_run=true` で実行し、成功しました。
 アイコン差分を検出したため、型・lint・単体テスト・ビルドと通常画面/オフライン HTML の全118件を検証しました。
 1Password の取得・App トークン発行・更新 PR 作成は3ステップとも skipped であることを実行結果で確認しました。
 この dry-run 自体では収集した更新をリポジトリへ反映していません。
 
-続く [本実行](https://github.com/tqer39/infra-canvas/actions/runs/38994817953) は `dry_run=false` で成功しました。
+続く [本実行](https://github.com/tqer39/omnodi/actions/runs/38994817953) は `dry_run=false` で成功しました。
 1Password からの認証情報取得、リポジトリ限定の App トークン発行、更新 PR 作成の各ステップが成功し、
-[PR #33](https://github.com/tqer39/infra-canvas/pull/33) が自動作成されました。
+[PR #33](https://github.com/tqer39/omnodi/pull/33) が自動作成されました。
 flag-icons を7.5.0から7.6.0へ更新し、フランス・ポーランドの SVG と manifest の出典・ハッシュを更新しました。
 本実行では型・lint・整形・ビルド、単体259件、アイコン更新11件、ルール生成の回帰1件、ブラウザ118件の検証が成功しました。
 
-PR #33 の [通常 CI（2回目）](https://github.com/tqer39/infra-canvas/actions/runs/38995503875/attempts/2) と
-[Docker CI](https://github.com/tqer39/infra-canvas/actions/runs/38995503882) は成功しました。
+PR #33 の [通常 CI（2回目）](https://github.com/tqer39/omnodi/actions/runs/38995503875/attempts/2) と
+[Docker CI](https://github.com/tqer39/omnodi/actions/runs/38995503882) は成功しました。
 通常 CI の初回は1シャードがステップ未開始のまま進行しなかったためキャンセルし、コード変更なしで再実行しました。
 PR #33 は2026年10月17日にマージ済みで、main の対象コミットは `20cbf9af65c071f10454dffd58ec81b803e70c20` です。
-マージ後の [main の通常 CI](https://github.com/tqer39/infra-canvas/actions/runs/38997839563) は3シャードと結果集約がすべて成功し、
-[main の Docker CI](https://github.com/tqer39/infra-canvas/actions/runs/38997839440) も amd64・arm64 の両方が成功しました。
+マージ後の [main の通常 CI](https://github.com/tqer39/omnodi/actions/runs/38997839563) は3シャードと結果集約がすべて成功し、
+[main の Docker CI](https://github.com/tqer39/omnodi/actions/runs/38997839440) も amd64・arm64 の両方が成功しました。
 
-同じ main コミットで [差分なしの本実行](https://github.com/tqer39/infra-canvas/actions/runs/38998093639) を
+同じ main コミットで [差分なしの本実行](https://github.com/tqer39/omnodi/actions/runs/38998093639) を
 `dry_run=false` で再実行し、成功しました。最新版の収集と差分判定は実行され、更新差分はありませんでした。
 依存関係インストール、整形、型・lint・回帰テスト・ビルド、ブラウザ導入・全検証、差分記録はすべて skipped でした。
 1Password の取得・App トークン発行・更新 PR 作成もすべて skipped で、
@@ -103,12 +103,12 @@ PR #33 は2026年10月17日にマージ済みで、main の対象コミットは
 
 月次アイコン更新の `1Password/load-secrets-action` は、固定 SHA に付けた版コメントが実在しない `v3.3.0` であり、
 Renovate が現在版の digest を解決できない警告が出ていました。
-[PR #36](https://github.com/tqer39/infra-canvas/pull/36) で公式の `v5.0.1` と対応 SHA
+[PR #36](https://github.com/tqer39/omnodi/pull/36) で公式の `v5.0.1` と対応 SHA
 `70062d7a876d3eb6334754fa26efd2fbd90c32f2` に固定し直しました。
 注釈付きタグをコミットまで解決して一致を確認し、警告を抑制する設定は追加していません。
 README の Release リンク・Docker 起動例も v0.1.1 に更新済みです。
 
-PR #36 のマージ後、[Dependency Dashboard #12](https://github.com/tqer39/infra-canvas/issues/12) の
+PR #36 のマージ後、[Dependency Dashboard #12](https://github.com/tqer39/omnodi/issues/12) の
 再実行用チェックボックスで Renovate の再実行を依頼しました。
 2026年10月17日04:09:13 UTC の Dashboard 更新で、再実行要求が処理され、
 検出された依存が `v5.0.1` と上記 SHA に変わり、digest 取得の警告が消えたことを API で確認しました。
@@ -116,7 +116,7 @@ PR #36 のマージ後、[Dependency Dashboard #12](https://github.com/tqer39/in
 
 ### Action 更新後の認証経路とスキップ挙動の追加確認
 
-PR #37 のマージ後、2026年10月17日に [認証確認実行](https://github.com/tqer39/infra-canvas/actions/runs/39004412600) が成功しました。
+PR #37 のマージ後、2026年10月17日に [認証確認実行](https://github.com/tqer39/omnodi/actions/runs/39004412600) が成功しました。
 検証専用ブランチの `275bf4552e94cdfed53027bd10ee3caa13d9f695` で、一時的な `verify_auth=true` と `dry_run=true` を指定しました。
 チェックアウト対象は main とし、通常の差分判定・全検証・PR 作成条件・権限設定を維持したまま、認証経路だけを明示的に実行しました。
 `1Password/load-secrets-action` v5.0.1 による認証情報取得、対象リポジトリ限定の App トークン発行、API 認証がすべて成功しました。
@@ -128,7 +128,7 @@ API でトークンの対象がこのリポジトリ1件であることを確認
 アイコン差分はなく、依存インストール・整形・型/lint/回帰テスト/ビルド・ブラウザ導入/全検証・差分記録・PR 作成は skipped でした。
 
 続いて、変更していない main の `eaa65089c3927e01a4924c919c17bde5efe7c549` で
-[通常の差分なし実行](https://github.com/tqer39/infra-canvas/actions/runs/39004480228) を `dry_run=false` で実行し、成功しました。
+[通常の差分なし実行](https://github.com/tqer39/omnodi/actions/runs/39004480228) を `dry_run=false` で実行し、成功しました。
 最新版収集と差分判定だけが実行され、上記の不要な全検証に加え、認証情報取得・App トークン発行・PR 作成も skipped でした。
 新規 PR はなく、認証検証後も main の通常のスキップ挙動を維持していることを確認しました。
 検証専用ブランチは削除済みで、一時的な認証分岐は main に取り込んでいません。
@@ -136,8 +136,8 @@ API でトークンの対象がこのリポジトリ1件であることを確認
 ### 最終確認と今後の運用
 
 最終確認の基点は main の `af6c4f5b632cc4fc9fa9aa7c208ff54bc0908197`（PR #36 のマージ）です。
-[通常 CI](https://github.com/tqer39/infra-canvas/actions/runs/39001281664) は全3シャードと結果集約が成功し、
-[Docker CI](https://github.com/tqer39/infra-canvas/actions/runs/39001281623) も amd64・arm64 とも成功しました。
+[通常 CI](https://github.com/tqer39/omnodi/actions/runs/39001281664) は全3シャードと結果集約が成功し、
+[Docker CI](https://github.com/tqer39/omnodi/actions/runs/39001281623) も amd64・arm64 とも成功しました。
 Docker CI の成果物は0件で、既存ビルド記録は19件のままでした。
 今回の監査追記に着手する前の未マージ PR は0件です。
 
@@ -184,7 +184,7 @@ Issue・PR の本文とコメント、Release、GitHub 側の全参照は初回�
 ログも再走査し、全110実行・567ファイルで上記の秘密情報パターンの候補は検出しませんでした。
 再監査対象一覧の SHA-256 は `424d15995f7e6189c21e079e1e2c86c4fd39f775a500d15c20c1e9acc0e3dd6f` です。
 
-[PR #28 の CI](https://github.com/tqer39/infra-canvas/actions/runs/38819056496) を再実行しましたが、
+[PR #28 の CI](https://github.com/tqer39/omnodi/actions/runs/38819056496) を再実行しましたが、
 2回目も支払い状況または利用上限に関する GitHub のエラーで、ジョブ開始前に失敗しました。
 コードやテストの失敗とは判定しません。課金設定は変更していません。
 その後、管理者から公開を先行する指示を受け、[terraform-github PR #1800](https://github.com/tqer39/terraform-github/pull/1800)

@@ -1,9 +1,44 @@
 import { it } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, writeFile, rm, stat } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { PersistentSettings, type SecretStore } from '../src/assistant/settings-store.js';
+import {
+  PersistentSettings,
+  settingsDirectory,
+  type SecretStore,
+} from '../src/assistant/settings-store.js';
+
+it('改名後はOmnodiに保存し、既存の旧名設定と明示した保存先は引き続き利用する', async () => {
+  const parent = await mkdtemp(join(tmpdir(), 'omnodi-settings-'));
+  try {
+    for (const [platform, env, current, legacy] of [
+      ['linux', { XDG_CONFIG_HOME: parent }, 'omnodi', 'infra-canvas'],
+      ['win32', { LOCALAPPDATA: parent }, 'Omnodi', 'Infra Canvas'],
+    ] as const) {
+      assert.equal(settingsDirectory(env, platform), join(parent, current));
+      await mkdir(join(parent, legacy), { mode: 0o700 });
+      const { adapter } = fakeSecrets();
+      await new PersistentSettings(join(parent, legacy), adapter).save('api', api);
+      assert.equal(settingsDirectory(env, platform), join(parent, legacy));
+      assert.deepEqual(
+        await new PersistentSettings(settingsDirectory(env, platform), adapter).load(),
+        { api },
+      );
+      await mkdir(join(parent, current));
+      assert.equal(settingsDirectory(env, platform), join(parent, current));
+      await rm(join(parent, current), { recursive: true });
+      await rm(join(parent, legacy), { recursive: true });
+    }
+    assert.equal(
+      settingsDirectory({ OMNODI_LLM_CONFIG_DIR: parent, INFRA_LLM_CONFIG_DIR: '/legacy' }),
+      parent,
+    );
+    assert.equal(settingsDirectory({ INFRA_LLM_CONFIG_DIR: parent }), parent);
+  } finally {
+    await rm(parent, { recursive: true, force: true });
+  }
+});
 
 const api = {
   model: 'example',
