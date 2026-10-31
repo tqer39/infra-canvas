@@ -1,6 +1,6 @@
 # 第三者素材と利用条件
 
-Infra Canvas 本体のコード・文書・独自素材は [MIT License](LICENSE) です。
+Omnodi 本体のコード・文書・独自素材は [MIT License](LICENSE) です。
 第三者のコード・素材・モデルと商標に、このライセンスを上書きして適用しません。
 
 ## 同梱アイコン
@@ -25,7 +25,7 @@ npm 依存にはそれぞれのライセンスが適用されます。固定し�
 ビルド時の第三者コードのライセンスコメントは削除せず配布物に含めます。
 バンドルされた依存の許諾原文はビルド時に `dist/THIRD_PARTY_LICENSES.txt` と
 `dist/web/THIRD_PARTY_LICENSES.txt` に収集し、単一 HTML の末尾にも埋め込みます。
-HTML 内では `infra-canvas-license-notices` 要素から確認できます。
+HTML 内では `omnodi-license-notices` 要素から確認できます。
 ELK.js は EPL-2.0 を選択して利用します。本体の MIT と区別し、依存の変更時にはその条件に従います。
 ELK.js のソースは [公式リポジトリ](https://github.com/kieler/elkjs)、
 元の ELK のソースは [公式リポジトリ](https://github.com/eclipse/elk) で提供されています。

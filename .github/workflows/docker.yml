@@ -44,13 +44,13 @@ jobs:
           context: .
           platforms: linux/${{ matrix.arch }}
           load: true
-          tags: infra-canvas:test-${{ github.run_id }}-${{ matrix.arch }}
+          tags: omnodi:test-${{ github.run_id }}-${{ matrix.arch }}
           cache-from: type=gha,scope=docker-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=docker-${{ matrix.arch }}
       - run: mise run install
       - run: mise run browser:install-ci
       - name: HTTP・API保護・ブラウザー操作を検証
-        run: mise run test:docker -- infra-canvas:test-${{ github.run_id }}-${{ matrix.arch }} linux/${{ matrix.arch }}
+        run: mise run test:docker -- omnodi:test-${{ github.run_id }}-${{ matrix.arch }} linux/${{ matrix.arch }}
       - name: 検証用イメージを削除
         if: ${{ always() }}
-        run: docker image rm infra-canvas:test-${{ github.run_id }}-${{ matrix.arch }} || true
+        run: docker image rm omnodi:test-${{ github.run_id }}-${{ matrix.arch }} || true

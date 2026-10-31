@@ -6,7 +6,7 @@
 ## リリース用 PR の準備
 
 1. `package.json`、`package-lock.json` のトップレベルと `packages[""].version` を同じ SemVer に更新します。例は `0.2.0`、プレリリースは `0.2.0-rc.1` です。先頭の `v` と build metadata（`+...`）は指定しません。
-2. `docs/release-notes-v0.2.0.md` を作成し、先頭を `# Infra Canvas v0.2.0` にして主な機能・変更点・必要な移行手順を日本語で記載します。初回版の [ノート](release-notes-v0.1.0.md) を参考にできます。Docker 起動コマンド・両 CPU の検証結果・digest・ソースのリンクはパイプラインが追記します。
+2. `docs/release-notes-v0.2.0.md` を作成し、先頭を `# Omnodi v0.2.0` にして主な機能・変更点・必要な移行手順を日本語で記載します。初回版の [ノート](release-notes-v0.1.0.md) を参考にできます。Docker 起動コマンド・両 CPU の検証結果・digest・ソースのリンクはパイプラインが追記します。
 3. README の案内と互換性を確認し、`mise run check`・`mise run test:browser` で検証して PR をレビュー・マージします。公開前の README には未配布のイメージを利用可能と記載しません。公開後の利用者向けリンクは Release の一覧を使うか、配布を確認してから更新します。
 4. マージ後の main で通常 CI と Docker CI の両方が成功するまで待ちます。
 
@@ -15,7 +15,7 @@
 GitHub Actions の **Release → Run workflow** でブランチ **main** を選び、`version` に `0.2.0` などを入力します。CLI でも開始できます。
 
 ```bash
-gh workflow run release.yml --repo tqer39/infra-canvas --ref main -f version=0.2.0
+gh workflow run release.yml --repo tqer39/omnodi --ref main -f version=0.2.0
 ```
 
 実行開始時の main の SHA に固定されます。待機中に main が進んでも、別のソースへ切り替わりません。
@@ -28,7 +28,7 @@ gh workflow run release.yml --repo tqer39/infra-canvas --ref main -f version=0.2
 4. **finalize**：両 CPU が成功した後だけ、タグと digest を再確認します。安定版は検証済み index をそのまま `latest` にコピーし、日本語 GitHub Release を公開します。プレリリースは `latest` と GitHub の Latest Release を更新しません。既存の `latest` より古い安定版や同じ版の別 digest は拒否します。
 
 `GITHUB_TOKEN` でのタグ作成による push イベントは別ワークフローを起動しないため、全工程を同じワークフロー内の依存ジョブでつないでいます。
-パッケージは Public である必要があります。現在の infra-canvas は公開済みです。他のリポジトリへ導入する際の初回 Public 設定は管理者が行い、パイプラインはアクセス設定を変更しません。
+パッケージは Public である必要があります。改名前の `infra-canvas` パッケージは公開済みですが、`omnodi` パッケージは未公開です。Omnodi 名での初回配布時は Public 設定と匿名取得を確認してください。他のリポジトリへ導入する際の初回 Public 設定は管理者が行い、パイプラインはアクセス設定を変更しません。
 
 ## 失敗・再実行
 

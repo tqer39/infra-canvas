@@ -33,7 +33,7 @@ description = "ローカルビューアーを起動する"
 run = "vite --host 127.0.0.1"
 
 [tasks.cli]
-description = "Infra Canvas CLI"
+description = "Omnodi CLI"
 run = "node --import tsx src/cli.ts"
 
 [tasks.typecheck]
@@ -76,7 +76,7 @@ run = "playwright test"
 
 [tasks."docker:build"]
 description = "現在のCPU向けのDockerイメージをビルドする"
-run = "docker build --tag infra-canvas:local ."
+run = "docker build --tag omnodi:local ."
 
 [tasks."test:docker"]
 description = "Dockerイメージの起動・API保護・ブラウザー操作を検証する（引数: イメージ platform）"

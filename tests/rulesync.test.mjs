@@ -7,7 +7,7 @@ import { test } from 'node:test';
 import { parse } from 'smol-toml';
 
 test('4対象への生成と再生成でCLAUDE.mdを出力せず、非ルートのルールも維持する', (t) => {
-  const directory = mkdtempSync(join(tmpdir(), 'infra-canvas-rulesync-'));
+  const directory = mkdtempSync(join(tmpdir(), 'omnodi-rulesync-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   const source = join(directory, '.rulesync');
   const output = join(directory, 'output');
@@ -59,7 +59,7 @@ test('4対象への生成と再生成でCLAUDE.mdを出力せず、非ルート�
     assert.equal(existsSync(join(output, 'GEMINI.md')), false);
     assert.equal(existsSync(join(output, '.cursor')), false);
     for (const file of ['AGENTS.md', '.github/copilot-instructions.md']) {
-      assert.match(readFileSync(join(output, file), 'utf8'), /Infra Canvas 開発ガイド/);
+      assert.match(readFileSync(join(output, file), 'utf8'), /Omnodi 開発ガイド/);
     }
     for (const file of [
       'AGENTS.md',

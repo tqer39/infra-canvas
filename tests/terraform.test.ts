@@ -232,7 +232,7 @@ test('static indexed repeated subnet reference cannot classify all declared inst
 
 test('Git loose, packed and common refs accept only commit hashes and never disclose arbitrary contents', async () => {
   for (const kind of ['detached', 'loose', 'packed', 'common']) {
-    const temporary = await mkdtemp(path.join(tmpdir(), 'infra-canvas-commit-'));
+    const temporary = await mkdtemp(path.join(tmpdir(), 'omnodi-commit-'));
     try {
       await writeFile(path.join(temporary, 'main.tf'), 'resource "aws_vpc" "main" {}\n');
       await mkdir(path.join(temporary, '.git', 'refs', 'heads'), { recursive: true });
@@ -261,7 +261,7 @@ test('Git loose, packed and common refs accept only commit hashes and never disc
   }
 });
 test('Git ref traversal is rejected even when target contents look like a commit hash', async () => {
-  const temporary = await mkdtemp(path.join(tmpdir(), 'infra-canvas-traversal-'));
+  const temporary = await mkdtemp(path.join(tmpdir(), 'omnodi-traversal-'));
   const hash = 'a'.repeat(40);
   try {
     await writeFile(path.join(temporary, 'main.tf'), 'resource "aws_vpc" "main" {}\n');
@@ -412,7 +412,7 @@ test('ECS 関連先の機密・未確定値を使わず、異なる版やアプ�
 });
 
 test('ECS・Beanstalk の静的直接参照を解決し、全体未確定のplanを関連解決に使わない', async () => {
-  const temporary = await mkdtemp(path.join(tmpdir(), 'infra-canvas-ecs-'));
+  const temporary = await mkdtemp(path.join(tmpdir(), 'omnodi-ecs-'));
   try {
     await writeFile(
       path.join(temporary, 'main.tf'),
@@ -725,7 +725,7 @@ test('VPNのattachment IDによる経路関連を解決し、planの未確定値
 });
 
 test('Google VPNの静的直接参照を解決し、shared_secretを表示モデルに含めない', async () => {
-  const temporary = await mkdtemp(path.join(tmpdir(), 'infra-canvas-vpn-'));
+  const temporary = await mkdtemp(path.join(tmpdir(), 'omnodi-vpn-'));
   try {
     await writeFile(
       path.join(temporary, 'main.tf'),
@@ -879,7 +879,7 @@ test('Organizationsの不明・機密・曖昧・循環した所属はRootやOU�
 });
 
 test('Organizationsの静的Root/OU/account/ポリシー直接参照を保持する', async () => {
-  const temporary = await mkdtemp(path.join(tmpdir(), 'infra-canvas-organizations-'));
+  const temporary = await mkdtemp(path.join(tmpdir(), 'omnodi-organizations-'));
   try {
     await writeFile(
       path.join(temporary, 'main.tf'),

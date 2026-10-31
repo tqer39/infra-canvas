@@ -9,9 +9,11 @@ export function embedDiagram(template: string, diagram: Diagram): string {
     .replace(/&/g, '\\u0026')
     .replace(/\u2028/g, '\\u2028')
     .replace(/\u2029/g, '\\u2029');
-  if (!template.includes('__INFRA_CANVAS_MODEL__'))
-    throw new Error('HTML テンプレートをビルドしてください。');
-  return template.replace('__INFRA_CANVAS_MODEL__', () => encoded);
+  const placeholder = template.includes('__OMNODI_MODEL__')
+    ? '__OMNODI_MODEL__'
+    : '__INFRA_CANVAS_MODEL__';
+  if (!template.includes(placeholder)) throw new Error('HTML テンプレートをビルドしてください。');
+  return template.replace(placeholder, () => encoded);
 }
 
 export async function exportHTML(diagram: Diagram, output: string): Promise<void> {

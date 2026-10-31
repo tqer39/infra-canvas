@@ -43,7 +43,7 @@ class UpdateIcons(unittest.TestCase):
             {'type': 'saas.test', 'provider': 'Simple Icons', 'file': 'test.svg', 'archivePath': 'package/icons/test.svg', 'version': 'Simple Icons 1.0.0', 'sha256': u.digest(SVG)},
             {'type': 'aws.ecs', 'file': 'aws.svg', 'archivePath': 'old/ecs.svg', 'sha256': u.digest(SVG)},
             {'type': 'saas.direct', 'file': 'direct.svg', 'provider': 'Vendor', 'source': 'https://vendor.test', 'downloadURL': 'https://vendor.test/icon.svg', 'sha256': u.digest(SVG)},
-            {'type': 'external.user', 'file': 'user.svg', 'provider': 'Infra Canvas', 'sha256': u.digest(SVG)},
+            {'type': 'external.user', 'file': 'user.svg', 'provider': 'Omnodi', 'sha256': u.digest(SVG)},
         ]
         for entry in self.manifest:
             (self.assets / entry['file']).write_bytes(SVG)

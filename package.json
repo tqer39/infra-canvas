@@ -1,15 +1,15 @@
 {
-  "name": "infra-canvas",
+  "name": "omnodi",
   "version": "0.1.1",
   "license": "MIT",
   "private": true,
   "type": "module",
-  "description": "独自 DSL と Terraform から対話型のインフラ構成図を生成します",
+  "description": "独自 DSL と Terraform から対話型の構成図を生成します",
   "engines": {
     "node": ">=24"
   },
   "bin": {
-    "infra-canvas": "dist/cli.js"
+    "omnodi": "dist/cli.js"
   },
   "exports": {
     ".": {

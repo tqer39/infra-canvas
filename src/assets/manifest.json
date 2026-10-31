@@ -202,11 +202,11 @@
     "title": "Fly.io（汎用サービス記号）",
     "file": "saas-fly.svg",
     "aliases": [],
-    "source": "https://github.com/tqer39/infra-canvas/blob/main/src/assets/saas-fly.svg",
+    "source": "https://github.com/tqer39/omnodi/blob/main/src/assets/saas-fly.svg",
     "version": "独自汎用記号 1",
     "retrievedAt": "2026-10-16",
-    "provider": "Infra Canvas",
-    "usage": "Infra Canvas 独自の汎用サービス記号。Fly.io のブランド素材は使用していない。",
+    "provider": "Omnodi",
+    "usage": "Omnodi 独自の汎用サービス記号。Fly.io のブランド素材は使用していない。",
     "sha256": "071a584fd72c8b3196aa4ebc45af2b412e1917943db72ff37d9f0183f60990b8",
     "homepage": "https://fly.io"
   },
@@ -1051,7 +1051,7 @@
     "type": "external.user",
     "title": "利用者",
     "file": "external-user.svg",
-    "provider": "Infra Canvas",
+    "provider": "Omnodi",
     "origin": "独自作成の頭と肩のシルエット",
     "createdAt": "2026-10-13",
     "sha256": "3a91f6ce7bcb84750f29e6e198223fb0f4e0ed3f75d0b57eb1b85b58cbc4a98a"

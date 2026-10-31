@@ -26,7 +26,7 @@ import type {
 export interface LayoutOptions {
   direction?: 'RIGHT' | 'DOWN';
 }
-export const layoutVersion = 'infra-canvas-layout-12';
+export const layoutVersion = 'omnodi-layout-12';
 
 export const connectionLabel = (edge: Connection): string =>
   [

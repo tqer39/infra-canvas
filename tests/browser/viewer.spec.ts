@@ -34,6 +34,8 @@ for (const offline of [false, true]) {
         : `http://127.0.0.1:${process.env.INFRA_TEST_PORT ?? '5188'}`,
     );
     const picker = page.getByRole('group', { name: '表示アイコン', exact: true });
+    await expect(page).toHaveTitle('Omnodi');
+    await expect(page.locator('strong').filter({ hasText: /^Omnodi$/ })).toBeVisible();
     for (const [id, type, group] of [
       ['api', 'aws.ecs', 'AWS'],
       ['tokyo', 'aws.region', 'AWS'],
@@ -1306,7 +1308,7 @@ for (const offline of [false, true]) {
       'https://fly.io',
     );
     if (offline) {
-      const notices = page.locator('#infra-canvas-license-notices');
+      const notices = page.locator('#omnodi-license-notices');
       await expect(notices).toBeHidden();
       await expect(notices).toContainText('MIT License');
       await expect(notices).toContainText('Eclipse Public License');

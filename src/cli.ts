@@ -11,7 +11,7 @@ import { importTerraformRepository } from './terraform/index.js';
 import { embedDiagram, exportHTML } from './export.js';
 import { fileURLToPath } from 'node:url';
 
-const help = `Infra Canvas\n\n  validate <file.infra>\n  preview <file.infra|model.json> [--port 5180] [--host 127.0.0.1|0.0.0.0]\n  import <repository> [--root .] [--json plan.json] [--out model.json] [--dsl output.infra]\n  dsl <model.json> --out output.infra\n  html <file.infra|model.json> --out diagram.html\n  svg|png|pdf <file.infra|model.json> --out output [--view id] [--scale 1]\n  pdf: [--paper A4|A3] [--orientation landscape|portrait] [--pages fit|tile]\n\nTerraform の JSON は terraform show -json で事前に生成してください。\n`;
+const help = `Omnodi\n\n  validate <file.infra>\n  preview <file.infra|model.json> [--port 5180] [--host 127.0.0.1|0.0.0.0]\n  import <repository> [--root .] [--json plan.json] [--out model.json] [--dsl output.infra]\n  dsl <model.json> --out output.infra\n  html <file.infra|model.json> --out diagram.html\n  svg|png|pdf <file.infra|model.json> --out output [--view id] [--scale 1]\n  pdf: [--paper A4|A3] [--orientation landscape|portrait] [--pages fit|tile]\n\nTerraform の JSON は terraform show -json で事前に生成してください。\n`;
 
 export async function loadDiagram(path: string): Promise<Diagram> {
   const source = await readFile(path, 'utf8');

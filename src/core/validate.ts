@@ -46,7 +46,7 @@ export function validateDiagram(value: unknown): Diagram {
     !Array.isArray(value.views) ||
     !Array.isArray(value.diagnostics)
   )
-    throw new Error('Infra Canvas Diagram JSON の形式が必要です。');
+    throw new Error('Omnodi Diagram JSON の形式が必要です。');
   const diagram = value as unknown as Diagram;
   const ids = new Set<string>();
   for (const resource of diagram.resources) {

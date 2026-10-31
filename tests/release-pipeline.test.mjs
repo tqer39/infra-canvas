@@ -22,7 +22,7 @@ const sha = 'a'.repeat(40);
 const ctx = context({ RELEASE_VERSION: '0.2.0', GITHUB_REPOSITORY: 'owner/app', GITHUB_SHA: sha });
 const digest = `sha256:${'b'.repeat(64)}`;
 const oldDigest = `sha256:${'c'.repeat(64)}`;
-const notes = '# Infra Canvas v0.2.0\n\n構成図の編集を改善しました。';
+const notes = '# Omnodi v0.2.0\n\n構成図の編集を改善しました。';
 function harness(options = {}) {
   const state = {
     tag: options.tag,

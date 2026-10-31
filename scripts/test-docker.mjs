@@ -10,7 +10,7 @@ import { chromium, expect } from '@playwright/test';
 
 const exec = promisify(execFile);
 const { fetch, AbortSignal } = globalThis;
-const image = process.argv[2] ?? 'infra-canvas:local';
+const image = process.argv[2] ?? 'omnodi:local';
 const platform = process.argv[3] ?? `linux/${process.arch === 'arm64' ? 'arm64' : 'amd64'}`;
 const docker = async (...args) =>
   (await exec('docker', args, { timeout: 120000, maxBuffer: 4 * 1024 * 1024 })).stdout.trim();
@@ -51,8 +51,8 @@ try {
     const response = await fetch(url, { signal: AbortSignal.timeout(2000) });
     assert.equal(response.status, 200);
     const html = await response.text();
-    assert.match(html, /<title>Infra Canvas<\/title>/);
-    assert.match(html, /id="infra-canvas-license-notices"/);
+    assert.match(html, /<title>Omnodi<\/title>/);
+    assert.match(html, /id="omnodi-license-notices"/);
   }).toPass({ timeout: 60000 });
   assert.notEqual(await docker('exec', container, 'id', '-u'), '0');
   await docker(
@@ -115,7 +115,7 @@ try {
 
 // CMDの上書き・読み取り専用マウントと、不正な待ち受け指定を検証する。
 // checkoutはUMask=0077の所有者専用。UIDの異なるコンテナーには公開サンプルだけ渡す。
-const fixture = await mkdtemp(join(tmpdir(), 'infra-canvas-mount-'));
+const fixture = await mkdtemp(join(tmpdir(), 'omnodi-mount-'));
 try {
   await chmod(fixture, 0o755);
   await copyFile(resolve('examples/gcp-web.infra'), join(fixture, 'example.infra'));
